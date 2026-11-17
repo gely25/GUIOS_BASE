@@ -1,0 +1,40 @@
+<div class="evaluation-stepper-container" role="navigation" aria-label="Etapas de la evaluación">
+    <ol class="stepper-list">
+        <li class="stepper-step {% if current_step == 1 %}active{% elif current_step > 1 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 1 %}&#10003;{% else %}1{% endif %}</span>
+                <span class="step-label">Ficha inicial</span>
+            </a>
+        </li>
+        <li class="stepper-step {% if current_step == 2 %}active{% elif current_step > 2 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-importancia-factores' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 2 %}&#10003;{% else %}2{% endif %}</span>
+                <span class="step-label">Valoración de factores</span>
+            </a>
+        </li>
+        <li class="stepper-step {% if current_step == 3 %}active{% elif current_step > 3 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-carga-documental' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 3 %}&#10003;{% else %}3{% endif %}</span>
+                <span class="step-label">Carga documental</span>
+            </a>
+        </li>
+        <li class="stepper-step {% if current_step == 4 %}active{% elif current_step > 4 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-revision-valoraciones' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 4 %}&#10003;{% else %}4{% endif %}</span>
+                <span class="step-label">Revisión de evidencia</span>
+            </a>
+        </li>
+        <li class="stepper-step {% if current_step == 5 %}active{% elif current_step > 5 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-resultados' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 5 %}&#10003;{% else %}5{% endif %}</span>
+                <span class="step-label">Resultados</span>
+            </a>
+        </li>
+        <li class="stepper-step {% if current_step == 6 %}active{% elif current_step > 6 %}completed{% endif %}">
+            <a href="{% url 'presentation:decisor-informe' %}" class="stepper-link">
+                <span class="step-indicator">{% if current_step > 6 %}&#10003;{% else %}6{% endif %}</span>
+                <span class="step-label">Informe</span>
+            </a>
+        </li>
+    </ol>
+</div>

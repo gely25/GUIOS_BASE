@@ -1,0 +1,26 @@
+<nav class="workspace-nav" aria-label="Navegación del Área de Administración">
+    <div class="workspace-nav-scroll">
+        <ul class="nav-tabs-list">
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:admin-inicio' %}" class="nav-tab-link {% if active_tab == 'inicio' %}active{% endif %}">
+                    Inicio Administración
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:admin-usuarios-roles' %}" class="nav-tab-link {% if active_tab == 'usuarios-y-roles' %}active{% endif %}">
+                    Usuarios y roles
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:admin-actualizacion-bibliografica' %}" class="nav-tab-link {% if active_tab == 'actualización-bibliográfica' or active_tab == 'actualizacion-bibliografica' %}active{% endif %}">
+                    Actualización bibliográfica
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:admin-catalogo-metodologico' %}" class="nav-tab-link {% if active_tab == 'catálogo-metodológico' or active_tab == 'catalogo-metodologico' %}active{% endif %}">
+                    Catálogo metodológico
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

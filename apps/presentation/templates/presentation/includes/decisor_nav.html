@@ -1,0 +1,46 @@
+<nav class="workspace-nav" aria-label="Navegación del Área del Decisor">
+    <div class="workspace-nav-scroll">
+        <ul class="nav-tabs-list">
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-inicio' %}" class="nav-tab-link {% if active_tab == 'inicio' %}active{% endif %}">
+                    Inicio
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="nav-tab-link {% if active_tab == 'ficha-inicial-de-evaluación' or active_tab == 'ficha-inicial' %}active{% endif %}">
+                    Ficha inicial
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-importancia-factores' %}" class="nav-tab-link {% if active_tab == 'importancia-de-factores' or active_tab == 'importancia-factores' %}active{% endif %}">
+                    Importancia de factores
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-carga-documental' %}" class="nav-tab-link {% if active_tab == 'carga-documental' %}active{% endif %}">
+                    Carga documental
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-revision-valoraciones' %}" class="nav-tab-link {% if active_tab == 'revisión-de-valoraciones' or active_tab == 'revision-valoraciones' %}active{% endif %}">
+                    Revisión de valoraciones
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-resultados' %}" class="nav-tab-link {% if active_tab == 'resultados' %}active{% endif %}">
+                    Resultados
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-informe' %}" class="nav-tab-link {% if active_tab == 'informe' %}active{% endif %}">
+                    Informe
+                </a>
+            </li>
+            <li class="nav-tab-item">
+                <a href="{% url 'presentation:decisor-historial-evaluaciones' %}" class="nav-tab-link {% if active_tab == 'historial-de-evaluaciones' or active_tab == 'historial-evaluaciones' %}active{% endif %}">
+                    Historial
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

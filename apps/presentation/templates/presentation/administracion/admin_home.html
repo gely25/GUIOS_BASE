@@ -1,0 +1,109 @@
+{% extends "presentation/layouts/base.html" %}
+
+{% block title %}Usuarios y roles | GUIOS PRO{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    <!-- Menú Lateral Izquierdo de Administración Fiel a Figma -->
+    {% include "presentation/includes/app_sidebar.html" with current_area="administracion" active_item="usuarios-roles" %}
+
+    <!-- Área Principal de Contenido -->
+    <div class="workspace-body-container">
+        <!-- Barra Superior (Vista previa · Administración y Volver al acceso) -->
+        {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
+
+        <!-- Contenido de Administración · Usuarios y roles -->
+        <main class="workspace-inner-content">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Usuarios y roles</h1>
+                    <p class="page-main-subheading">
+                        Administre el acceso institucional sin perder la trazabilidad de las evaluaciones.
+                    </p>
+                </div>
+                <div>
+                    <button type="button" class="btn-top-action btn-top-action-disabled" disabled aria-disabled="true">
+                        <svg class="btn-action-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="8.5" cy="7" r="4"></circle>
+                            <line x1="20" y1="8" x2="20" y2="14"></line>
+                            <line x1="23" y1="11" x2="17" y2="11"></line>
+                        </svg>
+                        <span>Nuevo usuario</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Métricas / KPI Cards del diseño -->
+            <section class="dashboard-block kpi-cards-section">
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-label">Usuarios registrados</span>
+                        <div class="kpi-value">&mdash;</div>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-label">Decisores</span>
+                        <div class="kpi-value">&mdash;</div>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-label">Administradores</span>
+                        <div class="kpi-value">&mdash;</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel «Usuarios institucionales» -->
+            <section class="dashboard-block admin-panel-section">
+                <div class="admin-panel-card">
+                    <h2 class="admin-panel-title">Usuarios institucionales</h2>
+
+                    <!-- Barra de filtros -->
+                    <div class="admin-filters-bar">
+                        <div class="filter-group filter-group-search">
+                            <label for="filter-buscar-usuario" class="filter-label">Buscar usuario</label>
+                            <input type="text" id="filter-buscar-usuario" class="filter-input" placeholder="Buscar por nombre o correo" disabled>
+                        </div>
+                        <div class="filter-group filter-group-select">
+                            <label for="filter-rol" class="filter-label">Rol</label>
+                            <select id="filter-rol" class="filter-select" disabled>
+                                <option value="">Todos los roles</option>
+                            </select>
+                        </div>
+                        <div class="filter-group filter-group-select">
+                            <label for="filter-estado" class="filter-label">Estado</label>
+                            <select id="filter-estado" class="filter-select" disabled>
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de usuarios institucionales -->
+                    <div class="admin-table-container">
+                        <table class="admin-table" aria-label="Tabla de usuarios institucionales">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Nombre</th>
+                                    <th scope="col">Correo electrónico</th>
+                                    <th scope="col">Rol</th>
+                                    <th scope="col">Último acceso</th>
+                                    <th scope="col">Activo</th>
+                                    <th scope="col">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-empty-row">
+                                    <td colspan="6" class="table-empty-cell">
+                                        <div class="table-pending-notice">
+                                            <span class="table-pending-text">Módulo no disponible</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}

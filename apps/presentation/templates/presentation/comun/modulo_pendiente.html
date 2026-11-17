@@ -1,0 +1,57 @@
+{% extends "presentation/layouts/base.html" %}
+
+{% block title %}{{ modulo.nombre_modulo }} | GUIOS PRO{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    <!-- Menú Lateral Izquierdo Fiel a Figma -->
+    {% include "presentation/includes/app_sidebar.html" with current_area=modulo.area active_item=active_tab %}
+
+    <!-- Área Principal de Contenido -->
+    <div class="workspace-body-container">
+        <!-- Barra Superior -->
+        {% include "presentation/includes/app_topbar.html" with current_area=modulo.area %}
+
+        <!-- Contenido del Módulo Pendiente -->
+        <main class="workspace-inner-content">
+            <!-- Barra de Progreso / Stepper si pertenece al flujo de evaluación del Decisor -->
+            {% if modulo.area == 'decisor' and modulo.step_number %}
+                <div class="stepper-wrapper">
+                    {% include "presentation/includes/evaluation_stepper.html" with current_step=modulo.step_number %}
+                </div>
+            {% endif %}
+
+            <div class="pending-module-center-wrap">
+                <div class="pending-module-card">
+                    <div class="pending-meta-row">
+                        <span class="badge-area-pill">{{ modulo.area_display }}</span>
+                    </div>
+
+                    <h1 class="pending-title">{{ modulo.nombre_modulo }}</h1>
+
+                    <div class="pending-notice-box">
+                        <span class="pending-notice-text">{{ modulo.mensaje }}</span>
+                    </div>
+
+                    <p class="pending-description-text">
+                        Este módulo se encuentra planificado dentro del catálogo de historias de usuario
+                        de GUIOS PRO y su funcionalidad completa estará disponible en la siguiente entrega.
+                    </p>
+
+                    {% if modulo.descripcion_extra %}
+                        <div class="pending-extra-box">
+                            <strong>Nota metodológica:</strong> {{ modulo.descripcion_extra }}
+                        </div>
+                    {% endif %}
+
+                    <div class="pending-btn-row">
+                        <a href="{% url modulo.url_retorno %}" class="btn-return-action">
+                            Volver al inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

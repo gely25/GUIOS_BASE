@@ -1,0 +1,53 @@
+<header class="workspace-header" role="banner">
+    <div class="workspace-header-inner">
+        <!-- Logotipo Institucional -->
+        <div class="workspace-brand">
+            <a href="{% if current_area == 'administracion' %}{% url 'presentation:admin-inicio' %}{% else %}{% url 'presentation:decisor-inicio' %}{% endif %}" class="brand-link" aria-label="GUIOS PRO Inicio">
+                <span class="brand-text-guios">GUIOS</span> <span class="brand-text-pro">PRO</span>
+            </a>
+            <span class="workspace-badge">
+                {% if current_area == 'administracion' %}
+                    Administración
+                {% else %}
+                    Decisor
+                {% endif %}
+            </span>
+        </div>
+
+        <!-- Controles de Usuario y Cambio de Vista Previa -->
+        <div class="workspace-user-actions">
+            <div class="user-meta">
+                <span class="user-role-label">
+                    {% if current_area == 'administracion' %}
+                        Administrador del Sistema
+                    {% else %}
+                        Decisor Institucional
+                    {% endif %}
+                </span>
+                <span class="user-email">
+                    {% if current_area == 'administracion' %}
+                        admin@guios.pro
+                    {% else %}
+                        decisor@organizacion.com
+                    {% endif %}
+                </span>
+            </div>
+
+            <!-- Navegación rápida entre áreas en Vista Previa -->
+            <div class="workspace-switch">
+                {% if current_area == 'administracion' %}
+                    <a href="{% url 'presentation:decisor-inicio' %}" class="btn-switch" title="Cambiar a vista previa del Decisor">
+                        Ir a Decisor
+                    </a>
+                {% else %}
+                    <a href="{% url 'presentation:admin-inicio' %}" class="btn-switch" title="Cambiar a vista previa de Administración">
+                        Ir a Administración
+                    </a>
+                {% endif %}
+                <a href="{% url 'presentation:home' %}" class="btn-logout" title="Volver a la pantalla de acceso">
+                    Salir
+                </a>
+            </div>
+        </div>
+    </div>
+</header>

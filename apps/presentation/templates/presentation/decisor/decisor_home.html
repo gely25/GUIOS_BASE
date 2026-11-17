@@ -1,0 +1,61 @@
+{% extends "presentation/layouts/base.html" %}
+
+{% block title %}Decisor · Inicio | GUIOS PRO{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    <!-- Menú Lateral Izquierdo Fiel a Figma -->
+    {% include "presentation/includes/app_sidebar.html" with current_area="decisor" active_item="inicio" %}
+
+    <!-- Área Principal de Contenido -->
+    <div class="workspace-body-container">
+        <!-- Barra Superior (FLOSS + Usuario + Cerrar sesión) -->
+        {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
+
+        <!-- Contenido de la Pantalla «Decisor · Inicio» -->
+        <main class="workspace-inner-content">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Bienvenido a GUIOS PRO</h1>
+                    <p class="page-main-subheading">
+                        Gestione sus procesos de toma de decisión, consulte evidencias y analice los factores organizacionales y económicos.
+                    </p>
+                </div>
+                <div>
+                    <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-top-action">
+                        + Nueva evaluación
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sección de Estado de Evaluaciones (Estado Vacío Inicial) -->
+            <section class="dashboard-block evaluation-status-block">
+                <div class="block-header">
+                    <h2 class="block-title">Estado de la Evaluación</h2>
+                    <span class="badge-neutral">Fase Inicial</span>
+                </div>
+
+                <!-- Estado Vacío Requerido -->
+                <div class="empty-state-box" role="region" aria-label="Sin evaluaciones registradas">
+                    <div class="empty-state-icon-circle" aria-hidden="true">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                    </div>
+                    <h3 class="empty-state-title">{{ dashboard.empty_state_title }}</h3>
+                    <p class="empty-state-description">{{ dashboard.empty_state_description }}</p>
+                    <div class="empty-state-action-wrap">
+                        <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-empty-state">
+                            Iniciar ficha de evaluación
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+{% endblock %}
