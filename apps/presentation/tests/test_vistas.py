@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas de las vistas de la capa de presentación.
 """
 
@@ -15,7 +15,7 @@ class PantallaAccesoTests(SimpleTestCase):
         self.assertEqual(self.respuesta.status_code, 200)
 
     def test_usa_la_plantilla_de_acceso_y_el_layout_base(self):
-        self.assertTemplateUsed(self.respuesta, 'presentation/acceso/home.html')
+        self.assertTemplateUsed(self.respuesta, 'presentation/acceso/login.html')
         self.assertTemplateUsed(self.respuesta, 'presentation/layouts/base.html')
 
     def test_muestra_el_titulo(self):

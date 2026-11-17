@@ -1,0 +1,51 @@
+﻿{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Iniciar sesión · GUIOS PRO{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/login.css' %}">
+{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block content %}
+<main class="login">
+  <aside class="login__brand">
+    <div class="login__logo">GUIOS <span>PRO</span></div>
+    <div class="login__pitch">
+      <p class="login__eyebrow">Sistema de apoyo a la decisión</p>
+      <h1 class="login__headline">La adopción de software libre empieza con evidencia.</h1>
+      <p class="login__lead">Evalúe tecnología, organización y economía con un proceso trazable y el criterio de las personas.</p>
+    </div>
+  </aside>
+
+  <section class="login__panel">
+    <div class="login__box">
+      <p class="login__eyebrow login__eyebrow--dark">Bienvenido a GUIOS PRO</p>
+      <h2 class="login__title">Iniciar sesión</h2>
+      <p class="login__subtitle">Acceda a su espacio de evaluación y gestión.</p>
+
+      {% if form.errors %}
+      <div class="login__error" role="alert">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        {% if not form.non_field_errors %}Revise el correo y la contraseña.{% endif %}
+      </div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <label class="login__label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+        {{ form.username }}
+
+        <label class="login__label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+        {{ form.password }}
+
+        <button type="submit" class="login__submit">Iniciar sesión</button>
+      </form>
+    </div>
+  </section>
+</main>
+{% endblock %}

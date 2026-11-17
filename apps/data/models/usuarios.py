@@ -74,6 +74,12 @@ class Usuario(AbstractBaseUser):
     def __str__(self):
         return f'{self.nombre} <{self.correo}>'
 
+    def get_full_name(self):
+        return self.nombre
+
+    def get_short_name(self):
+        return self.nombre.split(' ')[0] if self.nombre else ''
+
     def save(self, *args, **kwargs):
         # El correo es el identificador de acceso: se guarda siempre en minúsculas.
         self.correo = (self.correo or '').strip().lower()

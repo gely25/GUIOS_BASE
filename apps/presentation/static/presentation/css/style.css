@@ -1293,3 +1293,6 @@ html, body {
     }
 }
 
+
+.topbar-logout-form { margin: 0; }
+button.topbar-logout-link { background: none; border: 0; font: inherit; cursor: pointer; }
