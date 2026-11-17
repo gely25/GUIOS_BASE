@@ -1,0 +1,29 @@
+{% extends "presentation/layouts/base.html" %}
+
+{% comment %}
+Página TEMPORAL de vista previa de los indicadores bibliográficos (HU-03).
+Solo arma el layout (sidebar + topbar) e incluye la sección reutilizable.
+{% endcomment %}
+
+{% block title %}Indicadores bibliográficos | GUIOS PRO{% endblock %}
+
+{% block extra_head %}
+<style>
+/* El CSS global pone overflow-x:hidden en html y body; eso rompe el sticky del menú lateral. */
+body.guios-body { overflow-x: visible; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include "presentation/includes/app_sidebar.html" with current_area="administracion" active_item="actualizacion-bibliografica" %}
+
+    <div class="workspace-body-container">
+        {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
+
+        <main class="workspace-inner-content">
+            {% include "presentation/includes/indicadores_bibliograficos.html" %}
+        </main>
+    </div>
+</div>
+{% endblock %}

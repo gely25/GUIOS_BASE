@@ -1,0 +1,67 @@
+{% comment %}
+Sección "Indicadores bibliográficos por factor" (HU-03).
+Contexto: indicadores (IndicadoresLiteratura) con filas, cuartiles y simulado.
+Las filas salen del servicio; aquí no hay factores ni valores escritos a mano.
+Los estilos propios van en este mismo fragmento para que se vea igual en cualquier página que lo incluya.
+{% endcomment %}
+<style>
+.indicadores-bibliograficos .block-header { align-items: flex-start; margin-bottom: 20px; }
+.indicadores-bibliograficos .admin-panel-title { margin-bottom: 4px; }
+.indicadores-bibliograficos .btn-top-action { border: none; cursor: pointer; }
+.il-table td.num, .il-table th.num { text-align: center; font-variant-numeric: tabular-nums; }
+.il-table tbody tr:nth-child(even) { background-color: #f8fafc; }
+.il-table td { padding: 12px 16px; }
+.il-table td.factor { font-weight: 600; color: #1f2426; }
+.il-table td.ratio { font-weight: 600; }
+.aviso-datos-simulados { margin: 12px 0 0; font-size: 12px; color: #64748b; }
+.como-leer-indicadores { margin-top: 20px; padding: 14px 16px; line-height: 1.5; }
+.como-leer-indicadores strong { color: #1f2426; }
+</style>
+<section class="dashboard-block indicadores-bibliograficos">
+    <div class="admin-panel-card">
+        <div class="block-header">
+            <div>
+                <h2 class="admin-panel-title">Indicadores bibliográficos por factor</h2>
+                <p class="page-main-subheading">Una publicación puede asociarse a más de un factor.</p>
+            </div>
+            <div>
+                <button type="button" class="btn-top-action">Recalcular IL e IS</button>
+            </div>
+        </div>
+
+        <div class="admin-table-container">
+            <table class="admin-table il-table" aria-label="Indicadores bibliográficos por factor">
+                <thead>
+                    <tr>
+                        <th scope="col">Factor</th>
+                        <th scope="col" class="num">TC</th>
+                        <th scope="col" class="num">NS</th>
+                        <th scope="col" class="num">r_i = TC/NS</th>
+                        <th scope="col" class="num">IL · Cuartil</th>
+                        <th scope="col" class="num">IE</th>
+                        <th scope="col" class="num">IS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in indicadores.filas %}
+                    <tr>
+                        <td class="factor">{{ fila.nombre }}</td>
+                        <td class="num">{{ fila.tc }}</td>
+                        <td class="num">{{ fila.ns }}</td>
+                        <td class="num ratio">{{ fila.r|floatformat:2 }}</td>
+                        <td class="num">{{ fila.il }}</td>
+                        <td class="num">{{ fila.ie }}</td>
+                        <td class="num">{{ fila.is_ }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if indicadores.simulado %}
+            {% include "presentation/includes/aviso_datos_simulados.html" with texto="Datos simulados: las citas (TC) se reemplazarán por las de la actualización bibliográfica (HU02)." %}
+        {% endif %}
+
+        {% include "presentation/includes/como_leer_indicadores.html" %}
+    </div>
+</section>
