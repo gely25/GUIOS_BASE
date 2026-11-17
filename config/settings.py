@@ -136,3 +136,7 @@ STATICFILES_DIRS = [BASE_DIR / 'apps' / 'presentation' / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# --- Autenticación -----------------------------------------------------------
+# Usuario propio: tabla `usuario` del esquema del grupo, con login por correo.
+AUTH_USER_MODEL = 'data.Usuario'
+LOGIN_URL = 'presentation:home'
