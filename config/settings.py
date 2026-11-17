@@ -1,0 +1,138 @@
+"""
+Configuración de Django para el proyecto GUIOS PRO.
+
+Arquitectura modular por capas:
+- Presentación (apps.presentation)
+- Aplicación (apps.application)
+- Reglas de negocio (apps.business_rules)
+- Servicios externos (apps.external_services)
+- Datos (apps.data)
+
+Los valores sensibles (clave secreta, base de datos) se leen del archivo .env.
+Copia .env.example como .env y ajústalo en tu equipo.
+"""
+
+import os
+from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Carga .env si existe (en desarrollo local).
+load_dotenv(BASE_DIR / '.env')
+
+
+def _obligatoria(nombre):
+    """Devuelve la variable de entorno o falla con un mensaje claro."""
+    valor = os.getenv(nombre)
+    if not valor:
+        raise ImproperlyConfigured(f"Define {nombre} en el archivo .env")
+    return valor
+
+
+def _booleana(nombre, defecto=False):
+    valor = os.getenv(nombre)
+    if valor is None:
+        return defecto
+    return valor.strip().lower() in ('true', '1', 't', 'si', 'sí')
+
+
+def _lista(nombre, defecto=''):
+    return [item.strip() for item in os.getenv(nombre, defecto).split(',') if item.strip()]
+
+
+# --- Seguridad --------------------------------------------------------------
+SECRET_KEY = _obligatoria('DJANGO_SECRET_KEY')
+DEBUG = _booleana('DJANGO_DEBUG', False)
+ALLOWED_HOSTS = _lista('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = _lista('DJANGO_CSRF_TRUSTED_ORIGINS')
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = _booleana('DJANGO_SECURE_SSL_REDIRECT', False)
+
+# --- Aplicaciones -----------------------------------------------------------
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+
+    # Soporte pgvector para Django
+    'pgvector.django',
+
+    # Capas del proyecto que son aplicaciones de Django.
+    # application, business_rules y external_services son paquetes de Python
+    # puros: no se registran aquí.
+    'apps.data.apps.DataConfig',
+    'apps.presentation.apps.PresentationConfig',
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+ROOT_URLCONF = 'config.urls'
+WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
+
+# --- Plantillas -------------------------------------------------------------
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'apps' / 'presentation' / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+# --- Base de datos: PostgreSQL con pgvector ---------------------------------
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': _obligatoria('DB_NAME'),
+        'USER': _obligatoria('DB_USER'),
+        'PASSWORD': _obligatoria('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+    }
+}
+
+# --- Contraseñas ------------------------------------------------------------
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# --- Internacionalización ---------------------------------------------------
+LANGUAGE_CODE = 'es-es'
+TIME_ZONE = 'America/Guayaquil'
+USE_I18N = True
+USE_TZ = True
+
+# --- Archivos estáticos -----------------------------------------------------
+STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'apps' / 'presentation' / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

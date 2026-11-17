@@ -1,0 +1,44 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Variables de entorno (nunca se suben; se comparte solo .env.example)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Bytecode y caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Base de datos y archivos temporales locales
+*.sqlite3
+*.log
+
+# Archivos estáticos y multimedia generados
+staticfiles/
+media/
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Copias de seguridad y archivos de trabajo
+*.bak
+*.tmp
