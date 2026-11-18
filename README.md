@@ -116,22 +116,41 @@ apps/
 
 ## Historias de usuario
 
-| Historia | Responsable | Dónde se implementa | Estado |
-|----------|-------------|---------------------|--------|
-| HU01 Acceso y roles | Angely (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, roles, menú y permisos: hecho. Gestión de usuarios: pendiente |
-| HU02 Actualización bibliográfica | Merly | `application/services/bibliographic.py` y `data/` | Pendiente |
-| HU03 / HU04 Indicadores IL e IS | Angely | `business_rules/il.py`, `is_.py` y `application/services/indicadores_literatura/` | Hecho (datos simulados) |
-| HU05 Catálogo y evaluaciones | Joseph | `catalog.py`, `evaluation.py` | Pendiente |
-| HU06 IR (ID e IS, excluye IR=1) | Angely | `business_rules/ir.py` | Lógica lista; falta servicio y pantalla |
-| HU07 Documentos | Jorge | `document.py` | Pendiente |
-| HU08 Recuperación de evidencia | Jorge | `retrieval.py` (pgvector) | Pendiente |
-| HU09 Preguntas por información faltante | Angely (antes José) | `ai.py` | Pendiente |
-| HU10 IA | Jorge | `ai.py` | Pendiente |
-| HU11 Revisión humana de valoraciones | Angely (antes José) | `evaluation.py` | Pendiente |
-| HU12 PM y FODA | Angely | `business_rules/pm.py`, `foda.py` | Lógica lista y validada; falta servicio y pantalla |
-| HU13 Recomendación | Joseph | `evaluation.py` | Pendiente |
-| HU14 Informe | Merly | `report.py` | Pendiente |
-| HU15 Historial | Joseph | `evaluation.py` | Pendiente |
+Cada persona tiene su tabla. «Dónde» indica el archivo principal de la historia.
+
+### Angely (líder)
+
+| Historia | Dónde se implementa | Estado |
+|----------|---------------------|--------|
+| HU01 Acceso y roles (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, roles, menú y permisos: hecho. Gestión de usuarios: pendiente |
+| HU03 / HU04 Indicadores IL e IS | `business_rules/il.py`, `is_.py`, `application/services/indicadores_literatura/` | Hecho (datos simulados) |
+| HU06 Importancia relativa (IR) | `business_rules/ir.py` | Lógica lista; falta servicio y pantalla |
+| HU09 Preguntas por información faltante (antes José) | `application/services/ai.py` | Pendiente |
+| HU11 Revisión humana de valoraciones (antes José) | `application/services/evaluation.py` | Pendiente |
+| HU12 PM y FODA | `business_rules/pm.py`, `foda.py` | Lógica lista y validada; falta servicio y pantalla |
+
+### Jorge
+
+| Historia | Dónde se implementa | Estado |
+|----------|---------------------|--------|
+| HU07 Documentos | `application/services/document.py` | Pendiente |
+| HU08 Recuperación de evidencia | `application/services/retrieval.py` (pgvector) | Pendiente |
+| HU10 IA | `application/services/ai.py` | Pendiente |
+
+### Joseph
+
+| Historia | Dónde se implementa | Estado |
+|----------|---------------------|--------|
+| HU05 Catálogo y evaluaciones | `application/services/catalog.py`, `evaluation.py` | Pendiente |
+| HU13 Recomendación | `application/services/evaluation.py` | Pendiente |
+| HU15 Historial | `application/services/evaluation.py` | Pendiente |
+
+### Merly
+
+| Historia | Dónde se implementa | Estado |
+|----------|---------------------|--------|
+| HU02 Actualización bibliográfica | `application/services/bibliographic.py` y `data/` | Pendiente |
+| HU14 Informe | `application/services/report.py` | Pendiente |
 
 ## Estado
 
