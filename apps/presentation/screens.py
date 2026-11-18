@@ -6,21 +6,6 @@ de las pantallas del Decisor y de Administración.
 """
 
 
-def get_access_screen_data():
-    """
-    Proporciona la configuración y metadatos iniciales para la pantalla «Acceso · Decisor».
-    """
-    return {
-        'default_role': 'decisor',
-        'roles': [
-            {'value': 'decisor', 'label': 'Decisor', 'selected': True},
-            {'value': 'administrador', 'label': 'Administrador', 'selected': False},
-        ],
-        'email_placeholder': 'decisor@organizacion.com',
-        'auth_pending_note': 'La autenticación y validación de credenciales se implementarán en la HU01.',
-    }
-
-
 def get_decisor_dashboard_data():
     """
     Obtiene los datos para la pantalla «Decisor · Inicio» (nodo 7:2970).

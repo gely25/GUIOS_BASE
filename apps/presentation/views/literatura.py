@@ -15,4 +15,4 @@ def indicadores_literatura_view(request):
         'indicadores': obtener_indicadores_literatura(),
         'active_tab': 'actualizacion-bibliografica',
     }
-    return render(request, 'presentation/administracion/indicadores_literatura_preview.html', context)
+    return render(request, 'presentation/administracion/indicadores_literatura.html', context)

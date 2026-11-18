@@ -20,7 +20,7 @@ class IndicadoresLiteraturaVistaTests(TestCase):
         self.client.force_login(self.admin)
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.status_code, 200)
-        self.assertTemplateUsed(respuesta, 'presentation/administracion/indicadores_literatura_preview.html')
+        self.assertTemplateUsed(respuesta, 'presentation/administracion/indicadores_literatura.html')
         self.assertTemplateUsed(respuesta, 'presentation/includes/indicadores_bibliograficos.html')
         self.assertTemplateUsed(respuesta, 'presentation/includes/aviso_datos_simulados.html')
         self.assertIn('indicadores', respuesta.context)
