@@ -1,6 +1,6 @@
 """
-Pruebas de la clasificación FODA, incluida la validación contra la Figura 6.5
-de la tesis (evaluación de LibreOffice con GUIOS PRO).
+Pruebas de la clasificación FODA, incluida la validación contra el caso de
+referencia (evaluación de LibreOffice con GUIOS PRO).
 
 Usan unittest estándar: esta capa no depende de Django.
 """
@@ -12,8 +12,8 @@ from apps.business_rules.foda import (
     AMENAZA, DEBILIDAD, EXTERNO, FORTALEZA, INTERNO, OPORTUNIDAD, clasificar_foda,
 )
 
-# (factor, PM mostrada, alcance, FODA) tal como aparecen en la Figura 6.5 de la tesis.
-FIGURA_6_5 = [
+# (factor, PM mostrada, alcance, FODA) tal como aparecen en el caso de referencia.
+CASO_LIBREOFFICE = [
     ("Compatibilidad", "3.8", EXTERNO, OPORTUNIDAD),
     ("Personalización", "1.7", EXTERNO, AMENAZA),
     ("Prueba", "3.0", EXTERNO, OPORTUNIDAD),
@@ -37,7 +37,7 @@ FIGURA_6_5 = [
 
 class ClasificacionFodaTests(unittest.TestCase):
 
-    def test_las_cuatro_celdas_de_la_ecuacion_5_3(self):
+    def test_las_cuatro_celdas_de_la_regla_foda(self):
         self.assertEqual(clasificar_foda(3.5, INTERNO), FORTALEZA)
         self.assertEqual(clasificar_foda(3.5, EXTERNO), OPORTUNIDAD)
         self.assertEqual(clasificar_foda(2.5, INTERNO), DEBILIDAD)
@@ -78,19 +78,19 @@ class ClasificacionFodaTests(unittest.TestCase):
                     clasificar_foda(pm, INTERNO)
 
 
-class FiguraSeisPuntoCincoTests(unittest.TestCase):
+class CasoLibreOfficeTests(unittest.TestCase):
 
     def test_tiene_los_18_factores(self):
-        self.assertEqual(len(FIGURA_6_5), 18)
+        self.assertEqual(len(CASO_LIBREOFFICE), 18)
 
-    def test_los_18_factores_coinciden_con_la_tesis(self):
-        for factor, pm, alcance, esperado in FIGURA_6_5:
+    def test_los_18_factores_coinciden_con_el_caso_de_referencia(self):
+        for factor, pm, alcance, esperado in CASO_LIBREOFFICE:
             with self.subTest(factor=factor):
                 self.assertEqual(clasificar_foda(Fraction(pm), alcance), esperado)
 
-    def test_conteo_por_categoria_segun_el_texto_de_la_tesis(self):
-        """El texto del capítulo 6 describe 7 oportunidades, 4 fortalezas, 4 amenazas y 3 debilidades."""
-        resultado = [clasificar_foda(Fraction(pm), alcance) for _, pm, alcance, _ in FIGURA_6_5]
+    def test_conteo_por_categoria_segun_el_caso_de_referencia(self):
+        """El caso de referencia describe 7 oportunidades, 4 fortalezas, 4 amenazas y 3 debilidades."""
+        resultado = [clasificar_foda(Fraction(pm), alcance) for _, pm, alcance, _ in CASO_LIBREOFFICE]
         self.assertEqual(resultado.count(OPORTUNIDAD), 7)
         self.assertEqual(resultado.count(FORTALEZA), 4)
         self.assertEqual(resultado.count(AMENAZA), 4)

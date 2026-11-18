@@ -1,12 +1,12 @@
 """
-Reproduce la Tabla 5.3 de la tesis (Cap. 5, sección 5.2.3): dadas las citas
-(TC) y el número de subfactores (NS) de los 18 factores, la IL y la IS deben
-salir idénticas a las de la tesis.
+Caso de referencia de IL e IS: dadas las citas (TC) y el número de subfactores (NS)
+de los 18 factores del caso de validación, la IL y la IS deben salir idénticas a los
+valores de referencia de la metodología GUIOS.
 
 NS viene del catálogo original (Guios-Floss/guiosad_data.csv).
 
-TABLA_5_3 recoge las columnas TC, IL e IS de la tesis (Tabla 5.3, p. 88), una
-fila por factor: (factor, TC, IL esperada, IS esperada). "TCO" de la tesis es
+CASO_REFERENCIA_IL_IS recoge las columnas TC, IL e IS de la evaluación de referencia,
+una fila por factor: (factor, TC, IL esperada, IS esperada). "TCO" en la referencia es
 "Coste total de propiedad" en el catálogo.
 """
 
@@ -16,7 +16,7 @@ from fractions import Fraction
 from apps.business_rules.il import calcular_il_factores
 from apps.business_rules.is_ import calcular_is
 
-IE_ORIGINAL = 3  # Tabla 5.3: IE = 3 en los 18 factores
+IE_ORIGINAL = 3  # caso de referencia: IE = 3 en los 18 factores
 
 # Número de subfactores por factor, del catálogo original (61 en total).
 NS_POR_FACTOR = {
@@ -40,8 +40,8 @@ NS_POR_FACTOR = {
     "Coste total de propiedad": 2,
 }
 
-# (factor, TC, IL esperada, IS esperada) -- Tabla 5.3 de la tesis.
-TABLA_5_3 = [
+# (factor, TC, IL esperada, IS esperada) -- caso de referencia GUIOS.
+CASO_REFERENCIA_IL_IS = [
     ("Compatibilidad", 33, 3, 3),
     ("Fiabilidad", 19, 3, 3),
     ("Mantenibilidad", 4, 3, 3),
@@ -70,16 +70,16 @@ class CatalogoTests(unittest.TestCase):
         self.assertEqual(sum(NS_POR_FACTOR.values()), 61)
 
 
-class Tabla53Tests(unittest.TestCase):
+class CasoReferenciaILISTests(unittest.TestCase):
 
-    @unittest.skipUnless(TABLA_5_3, "Falta completar TABLA_5_3 con las citas (TC) de la tesis.")
+    @unittest.skipUnless(CASO_REFERENCIA_IL_IS, "Falta completar CASO_REFERENCIA_IL_IS con las citas (TC) del caso de referencia.")
     def test_reproduce_il_e_is_de_los_18_factores(self):
-        self.assertEqual({fila[0] for fila in TABLA_5_3}, set(NS_POR_FACTOR))
+        self.assertEqual({fila[0] for fila in CASO_REFERENCIA_IL_IS}, set(NS_POR_FACTOR))
 
-        entrada = {factor: (tc, NS_POR_FACTOR[factor]) for factor, tc, _, _ in TABLA_5_3}
+        entrada = {factor: (tc, NS_POR_FACTOR[factor]) for factor, tc, _, _ in CASO_REFERENCIA_IL_IS}
         cuartiles, resultados = calcular_il_factores(entrada)
 
-        for factor, tc, il_esperada, is_esperada in TABLA_5_3:
+        for factor, tc, il_esperada, is_esperada in CASO_REFERENCIA_IL_IS:
             with self.subTest(factor=factor):
                 self.assertEqual(resultados[factor].r, Fraction(tc, NS_POR_FACTOR[factor]))
                 self.assertEqual(resultados[factor].il, il_esperada)

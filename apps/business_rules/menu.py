@@ -50,7 +50,7 @@ CATALOGO = (
     Modulo('admin-actualizacion-bibliografica', 'Actualización bibliográfica', 'libro',
            (ADMINISTRADOR,)),
     Modulo('admin-indicadores-literatura', 'Indicadores de literatura', 'grafica',
-           (ADMINISTRADOR,)),
+           (ADMINISTRADOR,), en_menu=False),
     Modulo('admin-catalogo-metodologico', 'Catálogo metodológico', 'catalogo',
            (ADMINISTRADOR,)),
     # Decisor

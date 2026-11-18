@@ -137,7 +137,15 @@ apps/
 
 - Base, configuración, PostgreSQL con pgvector, estructura por capas y modelo de datos (19 tablas): listos.
 - Acceso, roles, menú por rol y permisos por ruta (HU01): listos y probados.
-- HU03 (IL e IS): lógica validada contra la Tabla 5.3 de la tesis y pantalla en
+- HU03 (IL e IS): lógica validada contra el caso de referencia de la metodología GUIOS y pantalla en
   `/administracion/indicadores-literatura/` con datos simulados.
-- HU06 (IR) y HU12 (PM, FODA): lógica lista y probada en `business_rules/`; HU12 validada con la Figura 6.5 de la tesis.
+- HU06 (IR) y HU12 (PM, FODA): lógica lista y probada en `business_rules/`; HU12 validada con el caso de referencia de LibreOffice.
 - Lectura real de citas (TC) desde PostgreSQL: pendiente de los datos de HU02.
+
+## Fundamento metodológico
+
+La metodología GUIOS define los indicadores (IL, IS, IR, PM y FODA). Los valores esperados de las
+pruebas de `apps/business_rules/tests/` provienen de la evaluación de referencia de esa metodología
+(caso LibreOffice) y quedan documentados en cada prueba.
+
+Fuente: tesis base de la metodología GUIOS.

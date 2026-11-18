@@ -1,12 +1,12 @@
 """
-Clasificación FODA de un factor (ecuación 5.3 de la tesis).
+Clasificación FODA de un factor (regla de la metodología GUIOS).
 
     Fortaleza     si PM >= 3 y el alcance es interno
     Oportunidad   si PM >= 3 y el alcance es externo
     Debilidad     si PM <  3 y el alcance es interno
     Amenaza       si PM <  3 y el alcance es externo
 
-El alcance de cada factor viene del catálogo (Tabla 5.4). Solo el factor Soporte
+El alcance de cada factor viene del catálogo (catálogo de referencia). Solo el factor Soporte
 puede ser interno o externo: el decisor elige uno y ese valor se recibe aquí.
 
 Python puro: no importa Django.

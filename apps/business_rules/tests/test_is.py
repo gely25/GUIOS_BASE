@@ -15,7 +15,7 @@ class FuncionDiscretaTests(unittest.TestCase):
 
     def test_matriz_completa_coincide_con_la_formula_del_prototipo(self):
         """
-        Las 16 celdas de la matriz 4x4 (Figura 5.10 de la tesis) equivalen a
+        Las 16 celdas de la matriz 4x4 (matriz de referencia de la metodología) equivalen a
         floor((posicion_a + posicion_b) / 2) con posiciones 0 a 3, que es la
         assigment_function de Guios-Floss/guiosad.py.
         """
@@ -50,7 +50,7 @@ class FuncionDiscretaTests(unittest.TestCase):
 
 class ImportanciaSugeridaTests(unittest.TestCase):
 
-    def test_ejemplos_de_la_tesis_con_ie_3(self):
+    def test_ejemplos_de_referencia_con_ie_3(self):
         """IE = 3 en los 18 factores: IL 4 -> IS 3 e IL 1 -> IS 2."""
         self.assertEqual(calcular_is(3, 4), 3)
         self.assertEqual(calcular_is(3, 1), 2)

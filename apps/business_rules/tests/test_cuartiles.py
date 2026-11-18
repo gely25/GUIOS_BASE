@@ -16,9 +16,9 @@ from apps.business_rules.il import (
     calcular_il_factores,
 )
 
-# Límites de la Tabla 5.3 de la tesis (valores publicados, con decimales
+# Límites de referencia (valores publicados, con decimales
 # truncados): rq1 = 1.864, rq2 = 3.65, rq3 = 4.781, rq4 = 12.
-LIMITES_TESIS = Cuartiles(
+LIMITES_REFERENCIA = Cuartiles(
     rq1=Fraction("1.864"),
     rq2=Fraction("3.65"),
     rq3=Fraction("4.781"),
@@ -81,45 +81,45 @@ class CalcularCuartilesTests(unittest.TestCase):
 
 class AsignarILTests(unittest.TestCase):
 
-    def test_casos_de_verificacion_de_la_tesis(self):
+    def test_casos_de_verificacion_de_referencia(self):
         """
         Mantenibilidad (r = 4) cae entre rq2 y rq3 -> IL 3.
         Apoyo de la alta dirección (r = 5) supera rq3 -> IL 4.
         """
-        self.assertEqual(asignar_il(4, LIMITES_TESIS), 3)
-        self.assertEqual(asignar_il(5, LIMITES_TESIS), 4)
+        self.assertEqual(asignar_il(4, LIMITES_REFERENCIA), 3)
+        self.assertEqual(asignar_il(5, LIMITES_REFERENCIA), 4)
 
     def test_cada_tramo(self):
-        self.assertEqual(asignar_il(0, LIMITES_TESIS), 1)
-        self.assertEqual(asignar_il(1, LIMITES_TESIS), 1)
-        self.assertEqual(asignar_il(2, LIMITES_TESIS), 2)
-        self.assertEqual(asignar_il(3, LIMITES_TESIS), 2)
-        self.assertEqual(asignar_il(4, LIMITES_TESIS), 3)
-        self.assertEqual(asignar_il(5, LIMITES_TESIS), 4)
-        self.assertEqual(asignar_il(12, LIMITES_TESIS), 4)
+        self.assertEqual(asignar_il(0, LIMITES_REFERENCIA), 1)
+        self.assertEqual(asignar_il(1, LIMITES_REFERENCIA), 1)
+        self.assertEqual(asignar_il(2, LIMITES_REFERENCIA), 2)
+        self.assertEqual(asignar_il(3, LIMITES_REFERENCIA), 2)
+        self.assertEqual(asignar_il(4, LIMITES_REFERENCIA), 3)
+        self.assertEqual(asignar_il(5, LIMITES_REFERENCIA), 4)
+        self.assertEqual(asignar_il(12, LIMITES_REFERENCIA), 4)
 
     def test_un_valor_igual_al_limite_queda_en_el_tramo_inferior(self):
         """Cortes inclusivos por arriba: r == rq cae en el grupo de abajo."""
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq1, LIMITES_TESIS), 1)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq2, LIMITES_TESIS), 2)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq3, LIMITES_TESIS), 3)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq4, LIMITES_TESIS), 4)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq1, LIMITES_REFERENCIA), 1)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq2, LIMITES_REFERENCIA), 2)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq3, LIMITES_REFERENCIA), 3)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq4, LIMITES_REFERENCIA), 4)
 
     def test_justo_encima_de_un_limite_sube_de_tramo(self):
         minimo = Fraction(1, 10**6)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq1 + minimo, LIMITES_TESIS), 2)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq2 + minimo, LIMITES_TESIS), 3)
-        self.assertEqual(asignar_il(LIMITES_TESIS.rq3 + minimo, LIMITES_TESIS), 4)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq1 + minimo, LIMITES_REFERENCIA), 2)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq2 + minimo, LIMITES_REFERENCIA), 3)
+        self.assertEqual(asignar_il(LIMITES_REFERENCIA.rq3 + minimo, LIMITES_REFERENCIA), 4)
 
     def test_r_mayor_que_rq4_se_rechaza(self):
         with self.assertRaises(ValueError):
-            asignar_il(Fraction("12.0001"), LIMITES_TESIS)
+            asignar_il(Fraction("12.0001"), LIMITES_REFERENCIA)
 
     def test_r_negativo_o_no_numerico_se_rechaza(self):
         with self.assertRaises(ValueError):
-            asignar_il(-1, LIMITES_TESIS)
+            asignar_il(-1, LIMITES_REFERENCIA)
         with self.assertRaises(TypeError):
-            asignar_il("3", LIMITES_TESIS)
+            asignar_il("3", LIMITES_REFERENCIA)
 
 
 class CalcularILFactoresTests(unittest.TestCase):

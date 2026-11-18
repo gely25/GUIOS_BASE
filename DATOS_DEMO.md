@@ -8,7 +8,7 @@ Usuarios de prueba para ver cada pantalla con su rol en **desarrollo local**. Si
 
 | Rol | Correo | Contraseña | Qué debe pasar |
 |---|---|---|---|
-| Administrador | `admin.demo@guios.local` | `Demo-Admin-123` | Entra a Administración y ve 4 opciones en el menú |
+| Administrador | `admin.demo@guios.local` | `Demo-Admin-123` | Entra a Administración y ve 3 opciones en el menú |
 | Decisor | `decisor.demo@guios.local` | `Demo-Decisor-123` | Entra al Espacio del Decisor y ve 3 opciones |
 | Decisor inactivo | `inactivo.demo@guios.local` | `Demo-Inactivo-123` | No entra: "Correo o contraseña incorrectos." |
 

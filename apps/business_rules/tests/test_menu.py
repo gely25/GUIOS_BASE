@@ -14,9 +14,13 @@ class MenuPorRolTests(unittest.TestCase):
         self.assertEqual(self.rutas(menu.ADMINISTRADOR), [
             'admin-usuarios-roles',
             'admin-actualizacion-bibliografica',
-            'admin-indicadores-literatura',
             'admin-catalogo-metodologico',
         ])
+
+    def test_indicadores_de_literatura_no_aparece_en_el_menu_pero_el_admin_puede_abrirla(self):
+        self.assertNotIn('admin-indicadores-literatura', self.rutas(menu.ADMINISTRADOR))
+        self.assertTrue(menu.puede_acceder(menu.ADMINISTRADOR, 'admin-indicadores-literatura'))
+        self.assertFalse(menu.puede_acceder(menu.DECISOR, 'admin-indicadores-literatura'))
 
     def test_decisor_ve_solo_modulos_del_decisor(self):
         self.assertEqual(self.rutas(menu.DECISOR), [

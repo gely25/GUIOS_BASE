@@ -27,7 +27,7 @@ class MenuLateralTests(TestCase):
         r = self.client.get(reverse('presentation:admin-inicio'))
         self.assertEqual(self.etiquetas(r), [
             'Usuarios y roles', 'Actualización bibliográfica',
-            'Indicadores de literatura', 'Catálogo metodológico'])
+            'Catálogo metodológico'])
         self.assertEqual(r.context['menu_seccion'], 'ADMINISTRACIÓN')
 
     def test_el_decisor_ve_su_menu(self):

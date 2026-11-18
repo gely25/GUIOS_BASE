@@ -20,7 +20,7 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 | `/administracion/` | `admin-inicio` | maqueta de Usuarios y roles | HU01, Angely |
 | `/administracion/usuarios-roles/` | `admin-usuarios-roles` | maqueta | HU01, Angely |
 | `/administracion/actualizacion-bibliografica/` | `admin-actualizacion-bibliografica` | módulo no disponible | HU02, Merly |
-| `/administracion/indicadores-literatura/` | `admin-indicadores-literatura` | **implementada** (datos simulados) | HU03/HU04, Angely |
+| `/administracion/indicadores-literatura/` | `admin-indicadores-literatura` | **implementada** (datos simulados; sin opción en el menú, se abre por URL) | HU03/HU04, Angely |
 | `/administracion/catalogo-metodologico/` | `admin-catalogo-metodologico` | módulo no disponible | por asignar |
 
 ## Espacio del Decisor (rol DECISOR)
