@@ -1,4 +1,4 @@
-﻿"""
+"""
 Ponderación Media del factor (PM).
 
 La PM es la media aritmética de las valoraciones confirmadas de los subfactores

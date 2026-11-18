@@ -1,4 +1,4 @@
-﻿# Capa de aplicación
+# Capa de aplicación
 
 Servicios que orquestan los casos de uso. Llaman a `business_rules` para calcular y a `data`
 para leer y guardar; no contienen cálculos propios.

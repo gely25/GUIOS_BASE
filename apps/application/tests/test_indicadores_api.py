@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas de la API pública de indicadores_literatura/ y de BibliographicService
 (HU-03).
 """

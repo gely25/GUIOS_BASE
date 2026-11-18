@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas de la Ponderación Media (PM).
 
 Usan unittest estándar: esta capa no depende de Django.

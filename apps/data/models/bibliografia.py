@@ -1,4 +1,4 @@
-﻿"""
+"""
 Información bibliográfica: búsquedas, publicaciones y su relación con los factores.
 """
 

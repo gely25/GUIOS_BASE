@@ -1,4 +1,4 @@
-﻿asgiref==3.13.0
+asgiref==3.13.0
 Django==5.2.19
 pgvector==0.5.1
 psycopg==3.3.9

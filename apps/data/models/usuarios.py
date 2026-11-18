@@ -1,4 +1,4 @@
-﻿"""
+"""
 Organización y Usuario (tablas `organizacion` y `usuario`).
 
 El usuario inicia sesión con su correo; su rol es una columna (ADMINISTRADOR o DECISOR).

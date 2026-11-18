@@ -1,4 +1,4 @@
-﻿"""
+"""
 Vistas de acceso (capa de presentación).
 
 Solo reciben la solicitud y devuelven la pantalla; la autenticación la hace Django

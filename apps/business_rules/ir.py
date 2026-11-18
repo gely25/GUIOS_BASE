@@ -1,4 +1,4 @@
-﻿"""
+"""
 Importancia Relativa (IR).
 
 IR combina la Importancia del Decisor (ID) con la Importancia

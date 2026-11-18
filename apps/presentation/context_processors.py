@@ -1,4 +1,4 @@
-﻿"""
+"""
 Contexto del menú lateral (capa de presentación).
 
 Pide al catálogo (business_rules.menu) las opciones del rol y las traduce a URLs.

@@ -1,4 +1,4 @@
-﻿# Datos de demostración
+# Datos de demostración
 
 Usuarios de prueba para ver cada pantalla con su rol en **desarrollo local**. Sirven para comprobar el menú, la redirección al iniciar sesión y, desde el paso de permisos, el bloqueo entre roles.
 

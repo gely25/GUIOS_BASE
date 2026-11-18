@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas del menú lateral por rol (HU01).
 """
 

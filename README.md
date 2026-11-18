@@ -98,6 +98,6 @@ apps/
 
 Ver también `RUTAS_NAVEGACION.md`.
 
-## Datos de demostraci?n
+## Datos de demostración
 
-Usuarios de prueba por rol y c?mo cargarlos: ver [`DATOS_DEMO.md`](DATOS_DEMO.md).
+Usuarios de prueba por rol y cómo cargarlos: ver [`DATOS_DEMO.md`](DATOS_DEMO.md).

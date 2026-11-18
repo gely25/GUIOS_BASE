@@ -1,4 +1,4 @@
-﻿"""
+"""
 Catálogo metodológico GUIOS: dimensión, factor, subfactor, versión e indicadores.
 """
 

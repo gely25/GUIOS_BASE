@@ -1,4 +1,4 @@
-﻿"""
+"""
 Catálogo de módulos y menú por rol (HU01) - reglas de negocio puras.
 
 Es la única fuente de verdad de qué pantalla existe, qué rol puede entrar y

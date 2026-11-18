@@ -1,4 +1,4 @@
-﻿# Capa de datos
+# Capa de datos
 
 PostgreSQL con pgvector.
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Comprueba la convención de la capa de aplicación: cada servicio del apartado 7.1
 expone una clase como punto de entrada.
 """

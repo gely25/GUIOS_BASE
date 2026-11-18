@@ -1,4 +1,4 @@
-﻿"""
+"""
 Rutas de vista previa del área de Administración - GUIOS PRO.
 
 Los módulos que todavía no existen muestran «Módulo no disponible».

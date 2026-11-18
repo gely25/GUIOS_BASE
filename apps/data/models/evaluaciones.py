@@ -1,4 +1,4 @@
-﻿"""
+"""
 Gestión de evaluaciones: software, evaluación, factores evaluados y valoraciones.
 """
 

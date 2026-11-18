@@ -1,4 +1,4 @@
-﻿"""
+"""
 Enrutamiento principal del proyecto GUIOS PRO.
 """
 

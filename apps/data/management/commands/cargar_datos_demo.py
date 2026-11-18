@@ -1,4 +1,4 @@
-﻿"""
+"""
 Carga usuarios de demostración para probar el acceso por rol en desarrollo.
 
 Es repetible: si el correo ya existe, actualiza sus datos y su contraseña.

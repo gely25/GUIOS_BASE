@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas del modelo de usuario (acceso por correo y rol) y de las restricciones del catálogo.
 
 Usan la base de datos de pruebas de Django.

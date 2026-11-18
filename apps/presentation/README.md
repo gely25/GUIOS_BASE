@@ -1,4 +1,4 @@
-﻿# Capa de presentación
+# Capa de presentación
 
 Vistas, plantillas, estáticos y rutas. Solo pide datos a los servicios de `application` y los muestra:
 no calcula ni accede a la base de datos.

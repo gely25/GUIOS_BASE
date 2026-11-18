@@ -1,4 +1,4 @@
-﻿# Rutas de navegación
+# Rutas de navegación
 
 Las rutas bajo `vista-previa/` solo existen con `DEBUG=True` (en producción dan 404).
 Los módulos que todavía no se implementan muestran «Módulo no disponible».

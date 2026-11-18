@@ -1,4 +1,4 @@
-﻿"""Pruebas del catálogo de módulos y el menú por rol."""
+"""Pruebas del catálogo de módulos y el menú por rol."""
 
 import unittest
 

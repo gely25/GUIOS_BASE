@@ -1,4 +1,4 @@
-﻿"""
+"""
 Paquete de vistas de la capa de presentación - GUIOS PRO.
 
 Reexporta las vistas y decoradores para que urls.py los importe de forma uniforme.

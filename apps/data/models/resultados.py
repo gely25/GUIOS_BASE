@@ -1,4 +1,4 @@
-﻿"""
+"""
 Resultado final de una evaluación (una por evaluación).
 """
 

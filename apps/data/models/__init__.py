@@ -1,4 +1,4 @@
-﻿"""
+"""
 Modelos de la capa de datos - GUIOS PRO.
 
 Un archivo por grupo del modelo entidad-relación (sección 6.1 del diseño):

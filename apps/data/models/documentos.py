@@ -1,4 +1,4 @@
-﻿"""
+"""
 Documentos y evidencias: archivos cargados, fragmentos con embedding (pgvector) y evidencia.
 """
 

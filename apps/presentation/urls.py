@@ -1,4 +1,4 @@
-﻿"""
+"""
 Rutas de la capa de presentación - GUIOS PRO.
 
 Acceso (login/logout) e inclusión de las rutas por área.

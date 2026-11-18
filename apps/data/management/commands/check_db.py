@@ -1,4 +1,4 @@
-﻿"""
+"""
 Comando de gestión: verifica la conexión a PostgreSQL y la extensión pgvector.
 
 Uso: python manage.py check_db

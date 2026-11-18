@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas de la Importancia Relativa (IR) y de la exclusión de factores con IR = 1.
 
 Usan unittest estándar: esta capa no depende de Django.

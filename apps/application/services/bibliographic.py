@@ -1,4 +1,4 @@
-﻿"""
+"""
 Servicio de Aplicación: BibliographicService.
 
 Capa: application. Coordina la información bibliográfica con los factores del

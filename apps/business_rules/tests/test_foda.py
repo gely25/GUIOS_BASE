@@ -1,4 +1,4 @@
-﻿"""
+"""
 Pruebas de la clasificación FODA, incluida la validación contra la Figura 6.5
 de la tesis (evaluación de LibreOffice con GUIOS PRO).
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Formulario de acceso (capa de presentación).
 
 El usuario entra con correo y contraseña. El rol no se elige: sale de usuario.rol.

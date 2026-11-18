@@ -1,4 +1,4 @@
-﻿"""
+"""
 Clasificación FODA de un factor (ecuación 5.3 de la tesis).
 
     Fortaleza     si PM >= 3 y el alcance es interno
