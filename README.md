@@ -1,4 +1,4 @@
-﻿# GUIOS PRO
+# GUIOS PRO
 
 Sistema de apoyo a la decisión para la adopción de software FLOSS, basado en la metodología GUIOS.
 Proyecto final del curso (UNEMI). Django 5.2 + PostgreSQL 17 con pgvector.
@@ -98,3 +98,6 @@ apps/
 
 Ver también `RUTAS_NAVEGACION.md`.
 
+## Datos de demostraci?n
+
+Usuarios de prueba por rol y c?mo cargarlos: ver [`DATOS_DEMO.md`](DATOS_DEMO.md).
