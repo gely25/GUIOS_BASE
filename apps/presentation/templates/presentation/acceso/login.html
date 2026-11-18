@@ -1,4 +1,4 @@
-﻿{% extends "presentation/layouts/base.html" %}
+{% extends "presentation/layouts/base.html" %}
 {% load static %}
 
 {% block title %}Iniciar sesión · GUIOS PRO{% endblock %}
@@ -41,11 +41,30 @@
         {{ form.username }}
 
         <label class="login__label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
-        {{ form.password }}
+        <div class="login__pw">
+          {{ form.password }}
+          <button type="button" class="login__toggle" aria-controls="{{ form.password.id_for_label }}" aria-pressed="false">Mostrar</button>
+        </div>
 
         <button type="submit" class="login__submit">Iniciar sesión</button>
       </form>
     </div>
   </section>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var boton = document.querySelector('.login__toggle');
+    if (!boton) return;
+    var campo = document.getElementById(boton.getAttribute('aria-controls'));
+    boton.addEventListener('click', function () {
+      var visible = campo.type === 'text';
+      campo.type = visible ? 'password' : 'text';
+      boton.textContent = visible ? 'Mostrar' : 'Ocultar';
+      boton.setAttribute('aria-pressed', visible ? 'false' : 'true');
+    });
+  })();
+</script>
 {% endblock %}
