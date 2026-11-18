@@ -1,0 +1,22 @@
+{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Acceso denegado · GUIOS PRO{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/estado.css' %}">
+{% endblock %}
+
+{% block body_class %}estado-page{% endblock %}
+
+{% block content %}
+<main class="estado">
+  <p class="estado__codigo">403</p>
+  <h1 class="estado__titulo">No tiene permiso para ver esta página</h1>
+  <p class="estado__texto">
+    Su rol ({{ request.user.get_rol_display }}) no incluye esta pantalla.
+    Si cree que es un error, comuníquese con el administrador.
+  </p>
+  <a class="estado__enlace" href="{{ menu_inicio_url }}">Volver a mi inicio</a>
+</main>
+{% endblock %}

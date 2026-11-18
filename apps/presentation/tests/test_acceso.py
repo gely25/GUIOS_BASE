@@ -2,14 +2,12 @@
 Pruebas del acceso (HU01): login por correo, redirección por rol y cierre de sesión.
 """
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from apps.data.models import Usuario
 
 
-# Las pantallas de vista previa solo existen con DEBUG=True hasta el paso 6.
-@override_settings(DEBUG=True)
 class AccesoTests(TestCase):
 
     @classmethod

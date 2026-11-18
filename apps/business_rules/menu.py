@@ -1,9 +1,11 @@
 """
-Catálogo de módulos y menú por rol (HU01) - reglas de negocio puras.
+Catálogo de módulos, menú por rol y decisión de acceso (HU01) - reglas de negocio puras.
 
 Es la única fuente de verdad de qué pantalla existe, qué rol puede entrar y
 cuáles aparecen en el menú lateral. No depende de Django: la capa de
 presentación solo traduce cada `ruta` a una URL.
+
+Regla de oro: lo que no está declarado aquí se niega.
 """
 
 from dataclasses import dataclass
@@ -20,6 +22,14 @@ INICIO_POR_ROL = {
     ADMINISTRADOR: 'admin-inicio',
     DECISOR: 'decisor-inicio',
 }
+
+# Rutas que no exigen sesión: el login y el cierre de sesión.
+RUTAS_PUBLICAS = ('home', 'logout')
+
+# Resultados de decidir_acceso.
+PERMITIR = 'permitir'
+PEDIR_LOGIN = 'pedir_login'
+DENEGAR = 'denegar'
 
 
 @dataclass(frozen=True)
@@ -82,3 +92,16 @@ def roles_permitidos(ruta):
 def puede_acceder(rol, ruta):
     """Una ruta fuera del catálogo se niega: lo no declarado no se abre."""
     return rol in roles_permitidos(ruta)
+
+
+def decidir_acceso(rol, ruta):
+    """
+    Decide qué hacer con una petición a `ruta`.
+
+    `rol` es None cuando no hay sesión. Devuelve PERMITIR, PEDIR_LOGIN o DENEGAR.
+    """
+    if ruta in RUTAS_PUBLICAS:
+        return PERMITIR
+    if rol is None:
+        return PEDIR_LOGIN
+    return PERMITIR if puede_acceder(rol, ruta) else DENEGAR

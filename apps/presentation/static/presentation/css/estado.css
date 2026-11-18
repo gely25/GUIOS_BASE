@@ -1,0 +1,30 @@
+/* Páginas de estado (403). Estilos propios, misma paleta que el acceso. */
+html, body.estado-page { margin: 0; padding: 0; background: #fff; }
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 100vh;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #262B2D;
+}
+.estado__codigo { margin: 0 0 8px; font-size: 14px; font-weight: 600; letter-spacing: .08em; color: #A06A30; }
+.estado__titulo { margin: 0 0 16px; font-size: 32px; line-height: 1.2; font-weight: 600; }
+.estado__texto { margin: 0 0 32px; font-size: 16px; line-height: 1.5; color: #626B70; }
+.estado__enlace {
+  display: inline-block;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #A06A30;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.estado__enlace:hover { background: #8A5A28; }
+.estado__enlace:focus-visible { outline: 2px solid #262B2D; outline-offset: 2px; }

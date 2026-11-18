@@ -1,5 +1,5 @@
 """
-Rutas de vista previa del Espacio del Decisor - GUIOS PRO.
+Rutas del Espacio del Decisor - GUIOS PRO.
 """
 
 from django.urls import path

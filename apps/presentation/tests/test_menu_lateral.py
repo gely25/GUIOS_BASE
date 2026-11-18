@@ -2,14 +2,12 @@
 Pruebas del menú lateral por rol (HU01).
 """
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
 from apps.data.models import Usuario
 
 
-# Las pantallas de vista previa solo existen con DEBUG=True hasta el paso de permisos.
-@override_settings(DEBUG=True)
 class MenuLateralTests(TestCase):
 
     @classmethod

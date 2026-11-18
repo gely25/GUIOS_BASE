@@ -9,22 +9,11 @@ from django.urls import reverse
 from apps.business_rules import menu
 
 
-def _rol_de(request, ruta_actual):
-    usuario = getattr(request, 'user', None)
-    if usuario is not None and usuario.is_authenticated:
-        return usuario.rol
-    # Vista previa sin sesión (se elimina en el paso de permisos): el rol sale del área.
-    if (ruta_actual or '').startswith('admin-'):
-        return menu.ADMINISTRADOR
-    if (ruta_actual or '').startswith('decisor-'):
-        return menu.DECISOR
-    return None
-
-
 def menu_lateral(request):
     coincidencia = getattr(request, 'resolver_match', None)
     ruta_actual = coincidencia.url_name if coincidencia else None
-    rol = _rol_de(request, ruta_actual)
+    usuario = getattr(request, 'user', None)
+    rol = usuario.rol if usuario is not None and usuario.is_authenticated else None
     inicio = menu.inicio_de(rol)
     return {
         'menu_items': [

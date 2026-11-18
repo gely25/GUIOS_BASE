@@ -1,5 +1,5 @@
 """
-Rutas de vista previa del área de Administración - GUIOS PRO.
+Rutas del área de Administración - GUIOS PRO.
 
 Los módulos que todavía no existen muestran «Módulo no disponible».
 Cuando una historia de usuario tenga su vista, reemplaza modulo_pendiente_view

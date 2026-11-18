@@ -1,56 +1,53 @@
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 
-RUTAS = [
-    'presentation:admin-inicio',
-    'presentation:admin-usuarios-roles',
-    'presentation:admin-actualizacion-bibliografica',
-    'presentation:admin-indicadores-literatura',
-    'presentation:admin-catalogo-metodologico',
-    'presentation:decisor-inicio',
-    'presentation:decisor-ficha-inicial',
-    'presentation:decisor-importancia-factores',
-    'presentation:decisor-carga-documental',
-    'presentation:decisor-revision-valoraciones',
-    'presentation:decisor-resultados',
-    'presentation:decisor-informe',
-    'presentation:decisor-historial-evaluaciones',
-]
+from apps.business_rules import menu
+from apps.data.models import Usuario
 
 PENDIENTES = [
-    'presentation:admin-actualizacion-bibliografica',
-    'presentation:admin-catalogo-metodologico',
-    'presentation:decisor-ficha-inicial',
-    'presentation:decisor-importancia-factores',
-    'presentation:decisor-carga-documental',
-    'presentation:decisor-revision-valoraciones',
-    'presentation:decisor-resultados',
-    'presentation:decisor-informe',
-    'presentation:decisor-historial-evaluaciones',
+    'admin-actualizacion-bibliografica',
+    'admin-catalogo-metodologico',
+    'decisor-ficha-inicial',
+    'decisor-importancia-factores',
+    'decisor-carga-documental',
+    'decisor-revision-valoraciones',
+    'decisor-resultados',
+    'decisor-informe',
+    'decisor-historial-evaluaciones',
 ]
 
 
-class RutasVistaPreviaTests(SimpleTestCase):
+class RutasPorAreaTests(TestCase):
+    """Cada ruta responde con la sesión del rol que corresponde."""
 
-    @override_settings(DEBUG=True)
-    def test_todas_las_rutas_responden_en_desarrollo(self):
-        for nombre in RUTAS:
-            with self.subTest(ruta=nombre):
-                self.assertEqual(self.client.get(reverse(nombre)).status_code, 200)
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Usuario.objects.create_user(
+            correo='admin@guios.test', password='Clave-Segura-123',
+            nombre='Ana Admin', rol=Usuario.ADMINISTRADOR)
+        cls.decisor = Usuario.objects.create_user(
+            correo='decisor@guios.test', password='Clave-Segura-123',
+            nombre='Dario Decisor', rol=Usuario.DECISOR)
 
-    @override_settings(DEBUG=False)
-    def test_en_produccion_ninguna_ruta_de_vista_previa_existe(self):
-        for nombre in RUTAS:
-            with self.subTest(ruta=nombre):
-                self.assertEqual(self.client.get(reverse(nombre)).status_code, 404)
+    def abrir(self, ruta):
+        modulo = next(m for m in menu.CATALOGO if m.ruta == ruta)
+        usuario = self.admin if menu.ADMINISTRADOR in modulo.roles else self.decisor
+        self.client.force_login(usuario)
+        return self.client.get(reverse('presentation:' + ruta))
 
-    @override_settings(DEBUG=True)
+    def test_todas_las_rutas_responden_200_con_su_rol(self):
+        for modulo in menu.CATALOGO:
+            with self.subTest(ruta=modulo.ruta):
+                self.assertEqual(self.abrir(modulo.ruta).status_code, 200)
+
     def test_los_modulos_pendientes_muestran_modulo_no_disponible(self):
-        for nombre in PENDIENTES:
-            with self.subTest(ruta=nombre):
-                self.assertContains(self.client.get(reverse(nombre)), 'Módulo no disponible')
+        for ruta in PENDIENTES:
+            with self.subTest(ruta=ruta):
+                self.assertContains(self.abrir(ruta), 'Módulo no disponible')
 
-    @override_settings(DEBUG=True)
     def test_la_vista_de_indicadores_no_es_un_modulo_pendiente(self):
-        respuesta = self.client.get(reverse('presentation:admin-indicadores-literatura'))
-        self.assertNotContains(respuesta, 'Módulo no disponible')
+        self.assertNotContains(self.abrir('admin-indicadores-literatura'), 'Módulo no disponible')
+
+    def test_las_rutas_ya_no_llevan_el_prefijo_vista_previa(self):
+        for modulo in menu.CATALOGO:
+            self.assertNotIn('vista-previa', reverse('presentation:' + modulo.ruta))
