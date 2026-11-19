@@ -142,3 +142,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Usuario propio: tabla `usuario` del esquema del grupo, con login por correo.
 AUTH_USER_MODEL = 'data.Usuario'
 LOGIN_URL = 'presentation:home'
+
+# HU09: proveedor local opcional; vacío conserva el modo manual.
+HU09_OLLAMA_MODEL = os.getenv('HU09_OLLAMA_MODEL', '').strip()
+
+# HU09: comparación semántica opcional; vacío mantiene el filtro textual.
+HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()

@@ -10,6 +10,7 @@ from .bibliografia import BusquedaBibliografica, BusquedaPublicacion, Publicacio
 from .catalogo import CatalogoVersion, Dimension, Factor, IndicadorFactor, Subfactor
 from .documentos import Documento, Evidencia, FragmentoDocumento
 from .evaluaciones import Evaluacion, EvaluacionFactor, Software, ValoracionSubfactor
+from .preguntas import PreguntaComplementaria
 from .resultados import ResultadoEvaluacion
 from .usuarios import Organizacion, Usuario
 
@@ -18,6 +19,15 @@ __all__ = [
     'CatalogoVersion', 'Dimension', 'Factor', 'IndicadorFactor', 'Subfactor',
     'Documento', 'Evidencia', 'FragmentoDocumento',
     'Evaluacion', 'EvaluacionFactor', 'Software', 'ValoracionSubfactor',
-    'ResultadoEvaluacion',
+    'ResultadoEvaluacion', 'PreguntaComplementaria',
     'Organizacion', 'Usuario',
 ]
+
+from .suficiencia import AnalisisSuficiencia
+__all__.append('AnalisisSuficiencia')
+
+from .lotes_hu09 import LoteHU09
+__all__.append('LoteHU09')
+
+from .suficiencia import HistorialSuficiencia
+__all__.append('HistorialSuficiencia')

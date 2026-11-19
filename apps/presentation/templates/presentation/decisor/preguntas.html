@@ -1,0 +1,122 @@
+{% extends 'presentation/layouts/base.html' %}
+{% load static %}
+{% block title %}Información complementaria | GUIOS PRO{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}"><script src="{% static 'presentation/js/preguntas.js' %}" defer></script>{% endblock %}
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include 'presentation/includes/app_sidebar.html' with current_area='decisor' %}
+    <div class="workspace-body-container">
+        {% include 'presentation/includes/app_topbar.html' with current_area='decisor' %}
+        <main class="workspace-inner-content hu09">
+            <div class="page-title-row"><div>
+                <h1 class="page-main-heading">Información complementaria</h1>
+                <p class="page-main-subheading">Complete los datos necesarios para revisar la evidencia de los subfactores relevantes.</p>
+            </div></div>
+            <section class="dashboard-block hu09-panel">
+                <h2 class="block-title">Seleccionar evaluación</h2>
+                {% if evaluaciones %}
+                <form method="get" class="hu09-pick">
+                    <label for="evaluacion">Evaluación</label>
+                    <select name="evaluacion" id="evaluacion" required>
+                        <option value="">Seleccione una evaluación</option>
+                        {% for ev in evaluaciones %}<option value="{{ ev.pk }}" {% if ev.pk == evaluacion.pk %}selected{% endif %}>{{ ev.software.nombre }} · #{{ ev.pk }} · {{ ev.estado }}</option>{% endfor %}
+                    </select>
+                    <button class="btn-top-action" type="submit">Consultar</button>
+                </form>
+                {% else %}<p>No hay evaluaciones registradas para esta cuenta.</p>{% endif %}
+            </section>
+            {% for message in messages %}<p class="hu09-notice" role="status">{{ message }}</p>{% endfor %}
+            {% if error %}<p class="hu09-error" role="alert">{{ error }}</p>{% endif %}
+            {% if evaluacion %}
+            <section class="dashboard-block hu09-panel">
+                <div class="hu09-heading"><h2 class="block-title">Progreso de respuestas</h2>
+                    {% if editable %}<form method="post">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><button type="submit" name="accion" value="detectar" class="btn-top-action">Detectar ausencia de evidencia</button></form>{% else %}<span>Solo lectura</span>{% endif %}
+                </div>
+                <div class="hu09-counts"><div>Total <strong id="hu09-total">{{ total }}</strong></div><div>Respondidas <strong id="hu09-respondidas">{{ respondidas }}</strong></div><div>Pendientes <strong id="hu09-pendientes">{{ pendientes }}</strong></div></div>
+                {% if total %}<progress id="hu09-progreso" value="{{ respondidas }}" max="{{ total }}" aria-label="Progreso de respuestas"></progress>{% endif %}
+                <p class="hu09-muted">Respuestas con información desconocida: <span id="hu09-desconocidas">{{ desconocidas }}</span>. Respuestas sin aporte: <span id="hu09-no-informativas">{{ no_informativas }}</span>. Preguntas descartadas: {{ descartadas }} (fuera del progreso). Responder todas las preguntas no certifica la suficiencia de la evidencia. El análisis semántico propone preguntas; la valoración por IA es una etapa posterior.</p>
+            </section>
+            <p class="hu09-muted">{% if modelo_ia %}Proveedor local configurado: {{ modelo_ia }}. Analice un subfactor a la vez. La IA propone hasta tres preguntas pendientes por subfactor; las anteriores se conservan hasta que responda o descarte. Las propuestas deben revisarse.{% else %}Análisis IA local no configurado. Puede continuar con la detección básica y responder manualmente.{% endif %}</p>
+            {% if modelo_ia or lote %}
+            <section class="dashboard-block hu09-panel" id="hu09-lote" data-url="?evaluacion={{ evaluacion.pk }}&amp;estado_lote=1">
+                <div class="hu09-heading"><h2 class="block-title">Análisis masivo de suficiencia</h2>
+                {% if editable and modelo_ia %}<form method="post">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><button type="submit" name="accion" value="lote" class="btn-top-action" id="hu09-iniciar-lote" {% if lote.estado == 'EN_COLA' or lote.estado == 'EN_PROCESO' %}disabled{% endif %}>Analizar subfactores disponibles</button></form>{% endif %}</div>
+                <p class="hu09-muted">Se omiten los subfactores con preguntas pendientes o análisis vigente. El trabajador independiente debe estar iniciado. Puede seguir respondiendo sin recargar la página.</p>
+                <p id="hu09-lote-estado" role="status" aria-live="polite">{% if lote %}Lote #{{ lote.id }} · {{ lote.estado }} · {{ lote.procesados }}/{{ lote.total }}{% else %}Sin análisis masivo registrado.{% endif %}</p>
+                <progress id="hu09-lote-progreso" value="{{ lote.procesados|default:0 }}" max="{{ lote.total|default:1 }}" aria-label="Progreso del análisis masivo"></progress>
+                <p id="hu09-lote-resumen" class="hu09-muted">{% if lote %}Preguntas nuevas: {{ lote.preguntas_nuevas }} · Omitidos: {{ lote.omitidos }} · Errores: {{ lote.errores }}{% endif %}</p>
+                <p class="hu09-muted">Al finalizar, guarde cualquier respuesta que esté editando y actualice la página para consultar los resultados.</p>
+            </section>
+            {% endif %}
+            {% if modelo_ia %}<p class="hu09-muted">Comparación de preguntas: {% if modelo_embeddings %}semántica local ({{ modelo_embeddings }}) y textual{% else %}textual; configure embeddings para activar la comparación semántica{% endif %}.</p>{% endif %}
+            <div class="hu09-workbench">
+            <nav class="hu09-nav dashboard-block hu09-panel" aria-label="Navegación de subfactores">
+                <h2 class="block-title">Subfactores</h2>
+                <label for="hu09-buscar">Buscar factor o subfactor</label>
+                <input id="hu09-buscar" type="search" placeholder="Buscar…">
+                <label for="hu09-filtro">Estado de preguntas</label>
+                <select id="hu09-filtro"><option value="TODAS">Todos</option><option value="PENDIENTE">Pendientes</option><option value="APORTADA">Respondidas con datos</option><option value="DESCONOCE">Desconocidas</option><option value="NO_INFORMATIVA">Sin aporte</option></select>
+                <p id="hu09-sin-resultados" hidden role="status">No hay coincidencias.</p>
+                {% regroup filas by dimension as indice %}
+                {% for dim in indice %}<h3>{{ dim.grouper }}</h3>{% regroup dim.list by factor as grupos %}{% for grupo in grupos %}<p class="hu09-nav-factor">{{ grupo.grouper }}</p>{% for item in grupo.list %}<a href="#subfactor-{{ item.valoracion_id }}" data-destino="subfactor-{{ item.valoracion_id }}">{{ item.subfactor }}</a>{% endfor %}{% endfor %}{% endfor %}
+            </nav>
+            <div class="hu09-content">
+            {% regroup filas by dimension as dimensiones %}
+            {% for dimension in dimensiones %}
+            <section class="dashboard-block hu09-panel hu09-dimension"><h2 class="block-title">{{ dimension.grouper }}</h2>
+                {% regroup dimension.list by factor as factores %}
+                {% for factor in factores %}<div class="hu09-factor-group"><h3 class="hu09-factor">{{ factor.grouper }}</h3>
+                    {% for fila in factor.list %}<article class="hu09-subfactor" id="subfactor-{{ fila.valoracion_id }}" data-indice="{{ fila.dimension }} {{ fila.factor }} {{ fila.subfactor }}">
+                        <div class="hu09-heading"><h4>{{ fila.subfactor }}</h4><span class="hu09-tag">IR {{ fila.ir }}</span></div>
+                        <p class="hu09-muted hu09-info">{% if fila.estado_informacion == 'SIN_EVIDENCIA' %}Sin evidencia vinculada ni respuestas{% elif fila.estado_informacion == 'DESCONOCE' %}Información desconocida · sin evidencia suficiente{% elif fila.estado_informacion == 'SIN_APORTE' %}Respuestas sin aporte · sin evidencia suficiente{% else %}Información disponible · pendiente de análisis{% endif %}</p>
+                        {% if fila.evidencias %}<details><summary>Evidencia documental ({{ fila.evidencias|length }})</summary>
+                            {% for evidencia in fila.evidencias %}<div class="hu09-evidence" id="fuente-E{{ evidencia.evidencia_id }}"><strong>{{ evidencia.documento }} · E:{{ evidencia.evidencia_id }}{% if evidencia.pagina %} · pág. {{ evidencia.pagina }}{% endif %}</strong><p>{{ evidencia.contenido }}</p>{% if evidencia.referencia %}<p>{{ evidencia.referencia }}</p>{% endif %}</div>{% endfor %}
+                        </details>{% endif %}
+                        {% if editable and fila.editable and modelo_ia and not fila.suficiencia %}{% if fila.cupo_ia %}<form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="analizar">Analizar vacíos con IA</button><span class="hu09-wait" role="status" hidden>Analizando información con el modelo local…</span></form>{% else %}<p class="hu09-muted">Cupo de preguntas pendientes alcanzado. Responda o descarte preguntas antes de analizar nuevamente.</p>{% endif %}{% endif %}
+                        <div class="hu09-suficiencia">
+                            <h5>Evaluación de suficiencia</h5>
+                            {% if fila.suficiencia %}
+                                {% if not fila.suficiencia_vigente %}<p class="hu09-muted">Análisis desactualizado. La información cambió.</p>{% else %}
+                                    <p class="hu09-conclusion" data-estado="{{ fila.suficiencia.estado }}"><strong>{% if fila.suficiencia.estado == 'SUFICIENCIA_PROPUESTA' %}Suficiencia propuesta por IA{% elif fila.suficiencia.estado == 'FALTAN_DATOS' %}Faltan datos{% else %}Revisión manual necesaria{% endif %}</strong></p>
+                                    <details open class="hu09-justificacion"><summary>Justificación del modelo</summary><p>{{ fila.suficiencia.justificacion }}</p></details>
+                                    {% if fila.suficiencia.referencias %}<p class="hu09-fuentes">Fuentes citadas: {% for referencia in fila.suficiencia.referencias %}<a href="#fuente-{{ referencia|cut:':' }}" data-fuente="{{ referencia }}">{{ referencia }}</a> {% endfor %}</p>{% endif %}
+                                {% endif %}
+                                <small>Rondas de suficiencia: {{ fila.suficiencia.rondas }}/3 · {{ fila.suficiencia.fecha|date:'d/m/Y H:i' }}</small>
+                            {% else %}<p class="hu09-muted">Aún no se ha evaluado la suficiencia.</p>{% endif %}
+                            {% if editable and fila.editable and modelo_ia and fila.sin_pendientes and not fila.suficiencia_vigente %}
+                            <form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="suficiencia">Evaluar suficiencia y adaptar preguntas</button><span class="hu09-wait" role="status" hidden>Evaluando suficiencia con el modelo local…</span></form>
+                            {% elif not fila.sin_pendientes %}<p class="hu09-muted">Responda o descarte las preguntas pendientes antes de reevaluar.</p>{% endif %}
+                            <p class="hu09-entrega"><strong>Preparación para HU10:</strong> <span>{% if fila.estado_hu10 == 'PROPUESTA_HABILITADA' %}Contexto disponible para propuesta preliminar{% elif fila.estado_hu10 == 'REVISION_MANUAL' %}Revisión manual necesaria{% elif fila.estado_hu10 == 'PREGUNTAS_PENDIENTES' %}Preguntas pendientes{% elif fila.estado_hu10 == 'ANALISIS_EN_CURSO' %}Análisis en curso{% elif fila.estado_hu10 == 'SOLO_LECTURA' %}Solo lectura{% else %}Análisis pendiente o desactualizado{% endif %}</span></p>
+                            {% if fila.historial %}<details class="hu09-history"><summary>Historial de suficiencia ({{ fila.historial|length }})</summary>
+                            {% for registro in fila.historial %}<div class="hu09-evidence"><strong>{{ registro.fecha|date:'d/m/Y H:i' }} · {{ registro.estado }} · ronda {{ registro.rondas }}</strong><p>{{ registro.justificacion }}</p><small>Modelo: {{ registro.modelo }}{% if registro.legado %} · Importado del resultado anterior{% elif registro.actor_id %} · Usuario #{{ registro.actor_id }}{% endif %}{% if registro.referencias %} · Referencias históricas: {{ registro.referencias|join:', ' }}{% endif %}</small></div>{% endfor %}
+                            <small>Las referencias históricas identifican las fuentes de entonces; su contenido actual puede haber cambiado.</small></details>{% endif %}
+                            <small>Conclusión orientativa; no asigna puntuación ni reemplaza la validación humana.</small>
+                        </div>
+                        {% for pregunta in fila.preguntas %}<div class="hu09-question" id="fuente-R{{ pregunta.pregunta_id }}" data-estado="{{ pregunta.estado_respuesta }}">
+                            <div class="hu09-heading"><label for="respuesta-{{ pregunta.pregunta_id }}">{{ pregunta.texto }}</label><span class="hu09-tag hu09-respuesta-estado {% if pregunta.estado_respuesta == 'APORTADA' %}hu09-done{% elif pregunta.estado_respuesta == 'DESCONOCE' or pregunta.estado_respuesta == 'NO_INFORMATIVA' %}hu09-unknown{% endif %}">{% if pregunta.estado_respuesta == 'DESCONOCE' %}Desconocida{% elif pregunta.estado_respuesta == 'NO_INFORMATIVA' %}Sin aporte{% elif pregunta.respuesta %}Respondida{% else %}Pendiente{% endif %}</span></div>
+                            {% if editable and fila.editable %}<form method="post" class="hu09-respuesta">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="pregunta" value="{{ pregunta.pregunta_id }}"><input type="hidden" name="version" value="{{ pregunta.version }}"><textarea id="respuesta-{{ pregunta.pregunta_id }}" name="respuesta" maxlength="10000" required rows="3" placeholder="Escriba información verificable...">{{ pregunta.borrador }}</textarea><button class="btn-top-action" name="accion" value="responder" type="submit">Guardar respuesta</button> <button class="hu09-secondary" name="accion" value="desconozco" type="submit" formnovalidate>No lo sé</button><small class="hu09-save-status" role="status"></small></form>{% else %}<p>{{ pregunta.respuesta|default:'Sin respuesta · solo lectura' }}</p>{% endif %}
+                            {% if editable and fila.editable %}<form method="post" class="hu09-discard hu09-discard-active">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="pregunta" value="{{ pregunta.pregunta_id }}"><input type="hidden" name="version" value="{{ pregunta.version }}"><input type="hidden" name="confirmar" value="0"><button class="hu09-secondary" name="accion" value="descartar" type="submit">Descartar pregunta</button></form>{% endif %}
+                            <small class="hu09-fecha">{% if pregunta.fecha_respuesta %}R:{{ pregunta.pregunta_id }} · Último guardado: {{ pregunta.fecha_respuesta|date:'d/m/Y H:i' }}{% endif %}</small>
+                        </div>{% empty %}<p class="hu09-muted">No hay preguntas registradas para este subfactor.</p>{% endfor %}
+                        {% if fila.preguntas_descartadas %}<details class="hu09-discarded"><summary>Historial de preguntas descartadas ({{ fila.preguntas_descartadas|length }})</summary>{% for pregunta in fila.preguntas_descartadas %}<p>{{ pregunta.texto }}<br><small>Descartada: {{ pregunta.fecha_descarte|date:'d/m/Y H:i' }} · Usuario #{{ pregunta.descartada_por }}</small>{% if pregunta.respuesta %}<br><strong>Respuesta conservada:</strong> {{ pregunta.respuesta }}<br><small>Usuario #{{ pregunta.respondido_por }} · {{ pregunta.fecha_respuesta|date:'d/m/Y H:i' }}</small>{% endif %}</p>{% if editable and fila.editable %}<form method="post" class="hu09-discard">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="pregunta" value="{{ pregunta.pregunta_id }}"><button class="hu09-secondary" type="submit" name="accion" value="restaurar" {% if not fila.cupo_ia and not pregunta.respuesta %}disabled title="Cupo de preguntas pendientes alcanzado"{% endif %}>Restaurar pregunta</button></form>{% endif %}{% endfor %}</details>{% endif %}
+                    </article>{% endfor %}</div>
+                {% endfor %}
+            </section>
+            {% empty %}<section class="dashboard-block hu09-panel"><p>No hay subfactores relevantes con IR definida y valoración registrada.</p></section>{% endfor %}
+            </div></div>
+            {% endif %}
+            {% if editable %}
+            <dialog id="hu09-confirmar-descarte" class="hu09-dialog" aria-labelledby="hu09-dialog-titulo" aria-describedby="hu09-dialog-descripcion">
+                <h2 id="hu09-dialog-titulo">Descartar pregunta respondida</h2>
+                <p id="hu09-dialog-descripcion">La respuesta se conservará en el historial, pero quedará fuera del análisis activo. Podrá restaurarla posteriormente.</p>
+                <p id="hu09-dialog-pregunta" class="hu09-dialog-pregunta"></p>
+                <div class="hu09-dialog-actions">
+                    <button type="button" class="hu09-secondary" id="hu09-cancelar-descarte" autofocus>Cancelar</button>
+                    <button type="button" class="btn-top-action" id="hu09-aceptar-descarte">Confirmar descarte</button>
+                </div>
+            </dialog>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}
