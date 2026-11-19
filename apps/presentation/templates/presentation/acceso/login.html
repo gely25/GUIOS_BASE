@@ -26,7 +26,9 @@
       <h2 class="login__title">Iniciar sesión</h2>
       <p class="login__subtitle">Acceda a su espacio de evaluación y gestión.</p>
 
-      {% if form.errors %}
+      {% if acceso_limitado %}
+      <div class="login__error" role="alert">Demasiados intentos de acceso. Inténtelo de nuevo más tarde.</div>
+      {% elif form.errors %}
       <div class="login__error" role="alert">
         {% for error in form.non_field_errors %}{{ error }}{% endfor %}
         {% if not form.non_field_errors %}Revise el correo y la contraseña.{% endif %}

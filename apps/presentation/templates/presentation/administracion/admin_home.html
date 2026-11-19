@@ -1,5 +1,8 @@
 {% extends "presentation/layouts/base.html" %}
 
+{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/usuarios.css' %}">{% endblock %}
+
 {% block title %}Usuarios y roles | GUIOS PRO{% endblock %}
 
 {% block content %}
@@ -22,7 +25,7 @@
                     </p>
                 </div>
                 <div>
-                    <button type="button" class="btn-top-action btn-top-action-disabled" disabled aria-disabled="true">
+                    <a class="btn-top-action" href="{% url 'presentation:admin-usuarios-roles' %}?accion=nuevo#formulario-usuario">
                         <svg class="btn-action-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                             <circle cx="8.5" cy="7" r="4"></circle>
@@ -30,24 +33,53 @@
                             <line x1="23" y1="11" x2="17" y2="11"></line>
                         </svg>
                         <span>Nuevo usuario</span>
-                    </button>
+                    </a>
                 </div>
             </div>
+
+            {% for mensaje in messages %}<p class="usuarios-aviso" role="status">{{ mensaje }}</p>{% endfor %}
+            {% if formulario_usuario %}
+            <dialog open class="dashboard-block admin-panel-card usuarios-dialog" id="formulario-usuario" aria-labelledby="titulo-formulario-usuario">
+                <h2 class="admin-panel-title" id="titulo-formulario-usuario">{% if accion_usuario == 'nuevo' %}Nuevo usuario{% elif accion_usuario == 'editar' %}Editar usuario{% elif usuario_seleccionado.activo %}Desactivar usuario{% else %}Activar usuario{% endif %}</h2>
+                {% if accion_usuario == 'estado' %}
+                <p>{{ usuario_seleccionado.nombre }} · {{ usuario_seleccionado.correo }}</p>
+                <p class="usuarios-nota">Las evaluaciones y los registros asociados a esta cuenta se conservarán.</p>
+                {% endif %}
+                <form method="post" action="{% url 'presentation:admin-usuarios-roles' %}#formulario-usuario" class="usuarios-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="{{ accion_usuario }}">
+                    {% if usuario_seleccionado %}<input type="hidden" name="usuario" value="{{ usuario_seleccionado.pk }}">{% endif %}
+                    {{ formulario_usuario.non_field_errors }}
+                    {% for campo in formulario_usuario %}
+                        {% if campo.is_hidden %}{{ campo }}{{ campo.errors }}{% else %}
+                        <div class="filter-group">
+                            <label class="filter-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                            {% if campo.name == 'password' or campo.name == 'confirmacion' %}
+                            <div class="usuarios-clave">{{ campo }}<button type="button" class="usuarios-enlace usuarios-toggle" aria-controls="{{ campo.id_for_label }}" aria-pressed="false" hidden>Mostrar</button></div>
+                            {% else %}{{ campo }}{% endif %}
+                            {{ campo.errors }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div class="usuarios-acciones"><button class="btn-top-action" type="submit">{% if accion_usuario == 'estado' %}Confirmar cambio{% else %}Guardar usuario{% endif %}</button><a class="usuarios-enlace" href="{% url 'presentation:admin-usuarios-roles' %}">Cancelar</a></div>
+                </form>
+            </dialog>
+            {% endif %}
 
             <!-- Métricas / KPI Cards del diseño -->
             <section class="dashboard-block kpi-cards-section">
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <span class="kpi-label">Usuarios registrados</span>
-                        <div class="kpi-value">&mdash;</div>
+                        <div class="kpi-value">{{ conteos.total }}</div>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-label">Decisores</span>
-                        <div class="kpi-value">&mdash;</div>
+                        <div class="kpi-value">{{ conteos.decisores }}</div>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-label">Administradores</span>
-                        <div class="kpi-value">&mdash;</div>
+                        <div class="kpi-value">{{ conteos.administradores }}</div>
                     </div>
                 </div>
             </section>
@@ -58,24 +90,33 @@
                     <h2 class="admin-panel-title">Usuarios institucionales</h2>
 
                     <!-- Barra de filtros -->
-                    <div class="admin-filters-bar">
+                    <form method="get" class="admin-filters-bar">
                         <div class="filter-group filter-group-search">
                             <label for="filter-buscar-usuario" class="filter-label">Buscar usuario</label>
-                            <input type="text" id="filter-buscar-usuario" class="filter-input" placeholder="Buscar por nombre o correo" disabled>
+                            <input type="text" id="filter-buscar-usuario" class="filter-input" name="buscar" value="{{ filtros.buscar }}" maxlength="150" placeholder="Buscar por nombre o correo">
                         </div>
                         <div class="filter-group filter-group-select">
                             <label for="filter-rol" class="filter-label">Rol</label>
-                            <select id="filter-rol" class="filter-select" disabled>
+                            <select id="filter-rol" name="rol" class="filter-select">
                                 <option value="">Todos los roles</option>
+                                {% for valor, etiqueta in roles %}
+                                    <option value="{{ valor }}" {% if filtros.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <div class="filter-group filter-group-select">
                             <label for="filter-estado" class="filter-label">Estado</label>
-                            <select id="filter-estado" class="filter-select" disabled>
+                            <select id="filter-estado" name="estado" class="filter-select">
                                 <option value="">Todos</option>
+                                <option value="activo" {% if filtros.estado == 'activo' %}selected{% endif %}>Activo</option>
+                                <option value="inactivo" {% if filtros.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
                             </select>
                         </div>
-                    </div>
+                        <div class="filter-group">
+                            <button type="submit" class="btn-top-action">Filtrar</button>
+                            <a class="usuarios-enlace" href="{% url 'presentation:admin-usuarios-roles' %}">Limpiar filtros</a>
+                        </div>
+                    </form>
 
                     <!-- Tabla de usuarios institucionales -->
                     <div class="admin-table-container">
@@ -91,13 +132,23 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr class="table-empty-row">
-                                    <td colspan="6" class="table-empty-cell">
-                                        <div class="table-pending-notice">
-                                            <span class="table-pending-text">Módulo no disponible</span>
-                                        </div>
+                                {% for usuario in usuarios %}
+                                <tr>
+                                    <td>{{ usuario.nombre }}</td>
+                                    <td>{{ usuario.correo }}</td>
+                                    <td>{{ usuario.get_rol_display }}</td>
+                                    <td>{{ usuario.last_login|date:"d/m/Y H:i"|default:"Sin acceso" }}</td>
+                                    <td><span class="usuarios-estado {% if usuario.activo %}usuarios-activo{% else %}usuarios-inactivo{% endif %}">{% if usuario.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+                                    <td class="usuarios-acciones">
+                                        <a class="usuarios-enlace usuarios-boton-secundario" href="{% url 'presentation:admin-usuarios-roles' %}?accion=editar&amp;usuario={{ usuario.pk }}#formulario-usuario">Editar</a>
+                                        {% if usuario.pk != request.user.pk %}<a class="usuarios-enlace usuarios-boton-secundario {% if usuario.activo %}usuarios-boton-baja{% endif %}" href="{% url 'presentation:admin-usuarios-roles' %}?accion=estado&amp;usuario={{ usuario.pk }}#formulario-usuario">{% if usuario.activo %}Desactivar{% else %}Activar{% endif %}</a>{% endif %}
                                     </td>
                                 </tr>
+                                {% empty %}
+                                <tr class="table-empty-row">
+                                    <td colspan="6" class="table-empty-cell">No se encontraron usuarios.</td>
+                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -106,4 +157,8 @@
         </main>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'presentation/js/usuarios.js' %}" defer></script>
 {% endblock %}
