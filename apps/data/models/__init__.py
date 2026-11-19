@@ -31,3 +31,12 @@ __all__.append('LoteHU09')
 
 from .suficiencia import HistorialSuficiencia
 __all__.append('HistorialSuficiencia')
+
+from .revision_humana import RevisionHumana
+__all__.append('RevisionHumana')
+
+from .revision_humana import BorradorRevisionHumana
+__all__.append('BorradorRevisionHumana')
+
+from .revision_humana import ReaperturaRevisionHumana
+__all__.append('ReaperturaRevisionHumana')

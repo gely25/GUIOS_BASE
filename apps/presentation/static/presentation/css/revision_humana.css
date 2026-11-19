@@ -1,0 +1,28 @@
+.hu11 .hu09-nav a[aria-current="page"] {background:#f1ede7;border-color:#a8753d;font-weight:600}
+.hu11 .hu09-nav a small {display:block;font-size:11px;color:#526779;margin-top:4px}
+.hu11-comparacion {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.hu11-comparacion>div {background:#f5f7f9;border:1px solid #dce4ed;border-radius:9px;padding:16px;overflow-wrap:anywhere}
+.hu11-comparacion strong {display:block;font-size:24px;margin:6px 0}
+.hu11-texto {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+.hu11-fuente {border:1px solid #dce4ed;border-radius:8px;padding:12px;margin:10px 0;overflow-wrap:anywhere}
+.hu11-form fieldset {border:1px solid #dce4ed;border-radius:8px;padding:12px;margin:14px 0;display:grid;gap:12px;min-width:0}
+.hu11-form legend {font-weight:600;padding:0 5px}
+.hu11-form label {display:block;line-height:1.5}
+.hu11-form input[type=radio] {accent-color:#9d6c36;margin-right:8px}
+.hu11 a.hu09-secondary {text-decoration:none;display:inline-block}
+@media(max-width:650px){.hu11-comparacion {grid-template-columns:1fr}}
+.hu11 [hidden] {display:none!important}
+.hu11 .hu09-nav input,.hu11 .hu09-nav select {width:100%;box-sizing:border-box;padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:var(--surface-color,#fff);color:inherit;margin:5px 0 12px}
+.hu11 .hu09-nav label {font-size:13px;font-weight:600}
+.hu11-acciones {display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.hu11-lote {margin-top:16px}
+.hu11-lote label {display:block;line-height:1.5;cursor:pointer}
+.hu11-lote-confirmar {margin:16px 0}
+.hu11-lote input[type=checkbox] {accent-color:#9d6c36}
+#hu11-guardado,#hu11-lote-estado {font-size:13px;color:#526779}
+
+.hu11-tabla-scroll { overflow-x: auto; }
+.hu11-tabla { width: 100%; border-collapse: collapse; text-align: left; }
+.hu11-tabla th, .hu11-tabla td { padding: .65rem; border-bottom: 1px solid #d4dce6; }
+.hu11-reapertura { display: grid; gap: .75rem; margin-top: .75rem; }
+.hu11-reapertura textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .65rem; border: 1px solid #c7d1df; border-radius: .4rem; background: transparent; color: inherit; }
