@@ -1,173 +1,92 @@
-"""Pruebas del cliente de OpenAlex. No usan internet: la red se reemplaza por una simulada."""
+"""Pruebas del cliente OpenAlex sin red: se inyecta una función que simula urlopen."""
 
+import io
 import json
 import unittest
 import urllib.error
 import urllib.parse
+from unittest import mock
 
-from apps.external_services.openalex import (
-    OpenAlexClient,
-    OpenAlexError,
-    normalizar_doi,
-)
-
-CLAVE_FALSA = "clave-de-prueba-123"
+from apps.external_services.bibliografia.base import ErrorFuenteCientifica
+from apps.external_services.bibliografia.openalex import OpenAlexFuente, reconstruir_resumen
 
 
-class _Respuesta:
-    def __init__(self, datos):
-        self._cuerpo = json.dumps(datos).encode("utf-8")
-
-    def read(self):
-        return self._cuerpo
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
+def obra(n, doi=True):
+    return {
+        'id': f'https://openalex.org/W{n}',
+        'doi': f'https://doi.org/10.1/{n}' if doi else None,
+        'title': f'Open source adoption {n}',
+        'publication_year': 2022,
+        'abstract_inverted_index': {'Open': [0], 'source': [1], 'adoption': [2]},
+        'primary_location': {'landing_page_url': f'https://ejemplo.org/{n}'},
+    }
 
 
-def _cliente(datos=None, error=None, capturar=None):
-    """Cliente con red simulada: devuelve `datos`, lanza `error` y guarda la petición en `capturar`."""
-    def abrir(peticion, timeout=None):
-        if capturar is not None:
-            capturar.append(peticion)
-        if error is not None:
-            raise error
-        return _Respuesta(datos)
-    return OpenAlexClient(api_key=CLAVE_FALSA, base_url="https://api.openalex.org", abrir=abrir)
+class AbridorFalso:
+    def __init__(self, paginas=None, errores=()):
+        self.paginas = list(paginas or [])
+        self.errores = list(errores)
+        self.urls = []
+
+    def __call__(self, peticion, timeout):
+        self.urls.append(peticion.full_url)
+        if self.errores:
+            raise self.errores.pop(0)
+        return io.BytesIO(json.dumps({'results': self.paginas.pop(0)}).encode())
 
 
-OBRA = {
-    "id": "https://openalex.org/W111",
-    "doi": "https://doi.org/10.1000/ABC.1",
-    "display_name": "Adopción de software libre en organizaciones",
-    "publication_year": 2022,
-}
+class OpenAlexTests(unittest.TestCase):
 
+    def test_reconstruye_el_resumen(self):
+        self.assertEqual(reconstruir_resumen({'b': [1], 'a': [0], 'c': [2, 3]}), 'a b c c')
+        self.assertIsNone(reconstruir_resumen(None))
 
-class NormalizarDoiTests(unittest.TestCase):
-    def test_quita_prefijo_y_pasa_a_minusculas(self):
-        self.assertEqual(normalizar_doi("https://doi.org/10.1000/ABC.1"), "10.1000/abc.1")
+    def test_filtra_periodo_y_convierte_resultados(self):
+        abridor = AbridorFalso([[obra(1), obra(2, doi=False), {'title': None}]])
+        fuente = OpenAlexFuente(abrir=abridor, reintentos=0)
+        resultados = fuente.buscar('"open source"', 2020, 2025, 50)
 
-    def test_vacio_o_none_devuelve_none(self):
-        self.assertIsNone(normalizar_doi(None))
-        self.assertIsNone(normalizar_doi("   "))
+        self.assertEqual(len(resultados), 2)
+        self.assertEqual(resultados[0].doi, 'https://doi.org/10.1/1')
+        self.assertEqual(resultados[0].resumen, 'Open source adoption')
+        self.assertEqual(resultados[0].url, 'https://ejemplo.org/1')
+        self.assertIsNone(resultados[1].doi)
+        consulta = urllib.parse.parse_qs(urllib.parse.urlparse(abridor.urls[0]).query)
+        self.assertEqual(consulta['filter'], ['from_publication_date:2020-01-01,to_publication_date:2025-12-31'])
+        self.assertNotIn('api_key', consulta)
 
+    def test_pagina_hasta_el_maximo(self):
+        abridor = AbridorFalso([[obra(1), obra(2)], [obra(3), obra(4)], [obra(5)]])
+        with mock.patch('apps.external_services.bibliografia.openalex._POR_PAGINA_MAX', 2):
+            resultados = OpenAlexFuente(abrir=abridor, reintentos=0).buscar('x', 2020, 2025, 3)
+        self.assertEqual(len(resultados), 3)
+        self.assertEqual(len(abridor.urls), 2)
 
-class BuscarTests(unittest.TestCase):
-    def test_arma_la_consulta_con_el_rango_de_anios(self):
-        enviadas = []
-        _cliente({"results": []}, capturar=enviadas).buscar("software libre", 2020, 2025, 10)
-        url = urllib.parse.unquote(enviadas[0].full_url)
-        self.assertIn("from_publication_date:2020-01-01", url)
-        self.assertIn("to_publication_date:2025-12-31", url)
-        self.assertIn("per_page=10", url)
+    def test_se_detiene_cuando_la_pagina_viene_incompleta(self):
+        abridor = AbridorFalso([[obra(1)]])
+        resultados = OpenAlexFuente(abrir=abridor, reintentos=0).buscar('x', 2020, 2025, 50)
+        self.assertEqual((len(resultados), len(abridor.urls)), (1, 1))
 
-    def test_busca_solo_en_titulo_y_resumen(self):
-        enviadas = []
-        _cliente({"results": []}, capturar=enviadas).buscar('("a" OR "b") AND c')
-        url = urllib.parse.unquote_plus(enviadas[0].full_url)
-        self.assertIn('search.title_and_abstract=("a" OR "b") AND c', url)
+    def test_envia_la_api_key_si_esta_configurada(self):
+        abridor = AbridorFalso([[]])
+        OpenAlexFuente(api_key='clave', abrir=abridor, reintentos=0).buscar('x', 2020, 2025, 5)
+        self.assertIn('api_key=clave', abridor.urls[0])
 
-    def test_normaliza_la_publicacion(self):
-        resultado = _cliente({"results": [OBRA]}).buscar("software libre")
-        self.assertEqual(len(resultado), 1)
-        publicacion = resultado[0]
-        self.assertEqual(publicacion.doi, "10.1000/abc.1")
-        self.assertEqual(publicacion.url, "https://doi.org/10.1000/abc.1")
-        self.assertEqual(publicacion.anio, 2022)
-        self.assertEqual(publicacion.fuente, "OpenAlex")
+    def test_un_error_de_red_se_convierte_en_error_de_fuente(self):
+        abridor = AbridorFalso(errores=[urllib.error.URLError('sin red')])
+        with self.assertRaises(ErrorFuenteCientifica):
+            OpenAlexFuente(abrir=abridor, reintentos=0).buscar('x', 2020, 2025, 5)
 
-    def test_sin_doi_usa_el_identificador_de_openalex(self):
-        obra = dict(OBRA, doi=None)
-        publicacion = _cliente({"results": [obra]}).buscar("software libre")[0]
-        self.assertIsNone(publicacion.doi)
-        self.assertEqual(publicacion.url, "https://openalex.org/W111")
+    def test_reintenta_ante_un_429(self):
+        error = urllib.error.HTTPError('u', 429, 'Too Many Requests', {}, None)
+        abridor = AbridorFalso([[obra(1)]], errores=[error])
+        with mock.patch('apps.external_services.bibliografia.openalex.time.sleep'):
+            resultados = OpenAlexFuente(abrir=abridor, reintentos=1).buscar('x', 2020, 2025, 5)
+        self.assertEqual(len(resultados), 1)
+        self.assertEqual(len(abridor.urls), 2)
 
-    def test_sin_resultados_devuelve_lista_vacia(self):
-        self.assertEqual(_cliente({"results": []}).buscar("tema inexistente"), [])
-
-    def test_ignora_obras_sin_titulo(self):
-        sin_titulo = dict(OBRA, display_name=None)
-        self.assertEqual(_cliente({"results": [sin_titulo]}).buscar("software libre"), [])
-
-    def test_limita_los_resultados_por_pagina_a_100(self):
-        enviadas = []
-        _cliente({"results": []}, capturar=enviadas).buscar("software libre", max_resultados=500)
-        self.assertIn("per_page=100", enviadas[0].full_url)
-
-
-class ContarTests(unittest.TestCase):
-    def test_devuelve_el_total_de_meta_count(self):
-        self.assertEqual(_cliente({"meta": {"count": 1234}, "results": []}).contar("software libre"), 1234)
-
-    def test_pide_una_sola_obra_y_el_rango_de_anios(self):
-        enviadas = []
-        _cliente({"meta": {"count": 7}, "results": []}, capturar=enviadas).contar("software libre", 2021, 2024)
-        url = urllib.parse.unquote(enviadas[0].full_url)
-        self.assertIn("per_page=1", url)
-        self.assertIn("from_publication_date:2021-01-01", url)
-        self.assertIn("to_publication_date:2024-12-31", url)
-
-    def test_cero_resultados_es_valido(self):
-        self.assertEqual(_cliente({"meta": {"count": 0}, "results": []}).contar("nada"), 0)
-
-    def test_sin_meta_falla_con_mensaje_claro(self):
-        with self.assertRaises(OpenAlexError) as contexto:
-            _cliente({"results": []}).contar("software libre")
-        self.assertIn("total", str(contexto.exception))
-
-    def test_valida_igual_que_buscar(self):
-        with self.assertRaises(ValueError):
-            _cliente({"meta": {"count": 1}}).contar("  ")
-        with self.assertRaises(ValueError):
-            _cliente({"meta": {"count": 1}}).contar("software libre", 2025, 2020)
-        with self.assertRaises(OpenAlexError):
-            OpenAlexClient(api_key="", abrir=lambda *a, **k: None).contar("software libre")
-
-
-class ValidacionTests(unittest.TestCase):
-    def test_consulta_vacia_falla(self):
-        with self.assertRaises(ValueError):
-            _cliente({"results": []}).buscar("   ")
-
-    def test_rango_invertido_falla(self):
-        with self.assertRaises(ValueError):
-            _cliente({"results": []}).buscar("software libre", 2025, 2020)
-
-    def test_sin_clave_falla_con_mensaje_claro(self):
-        cliente = OpenAlexClient(api_key="", abrir=lambda *a, **k: None)
-        with self.assertRaises(OpenAlexError) as contexto:
-            cliente.buscar("software libre")
-        self.assertIn("BIBLIOGRAPHIC_API_KEY", str(contexto.exception))
-
-
-class ErroresTests(unittest.TestCase):
-    def _http(self, codigo):
-        return urllib.error.HTTPError("https://api.openalex.org/works?api_key=" + CLAVE_FALSA,
-                                      codigo, "error", {}, None)
-
-    def test_clave_rechazada(self):
-        with self.assertRaises(OpenAlexError) as contexto:
-            _cliente(error=self._http(403)).buscar("software libre")
-        self.assertIn("clave", str(contexto.exception))
-
-    def test_limite_de_consultas(self):
-        with self.assertRaises(OpenAlexError) as contexto:
-            _cliente(error=self._http(429)).buscar("software libre")
-        self.assertIn("limit", str(contexto.exception))
-
-    def test_error_de_red(self):
-        with self.assertRaises(OpenAlexError):
-            _cliente(error=urllib.error.URLError("sin internet")).buscar("software libre")
-
-    def test_los_mensajes_no_exponen_la_clave(self):
-        for error in (self._http(403), self._http(500), urllib.error.URLError("fallo")):
-            with self.assertRaises(OpenAlexError) as contexto:
-                _cliente(error=error).buscar("software libre")
-            self.assertNotIn(CLAVE_FALSA, str(contexto.exception))
-            with self.assertRaises(OpenAlexError) as contexto:
-                _cliente(error=error).contar("software libre")
-            self.assertNotIn(CLAVE_FALSA, str(contexto.exception))
+    def test_no_reintenta_un_400(self):
+        abridor = AbridorFalso(errores=[urllib.error.HTTPError('u', 400, 'Bad', {}, None)])
+        with self.assertRaises(ErrorFuenteCientifica):
+            OpenAlexFuente(abrir=abridor, reintentos=3).buscar('x', 2020, 2025, 5)
+        self.assertEqual(len(abridor.urls), 1)

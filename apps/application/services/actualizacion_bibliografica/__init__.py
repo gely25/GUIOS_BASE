@@ -1,13 +1,7 @@
-from .servicio import (
-    ActualizacionBibliografica,
-    ResultadoActualizacion,
-    ResultadoFactor,
-    total_citas_por_factor,
-)
+"""
+Actualización bibliográfica (HU02): búsqueda, revisión, recálculo y versionado.
 
-__all__ = [
-    "ActualizacionBibliografica",
-    "ResultadoActualizacion",
-    "ResultadoFactor",
-    "total_citas_por_factor",
-]
+Capa: application. Detalles internos de BibliographicService; se usan a través de él.
+Sin IA: las sugerencias de factores salen de una regla de palabras clave y el
+administrador aprueba o rechaza cada vínculo.
+"""
