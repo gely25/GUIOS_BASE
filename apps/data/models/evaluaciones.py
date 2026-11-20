@@ -4,6 +4,7 @@ Gestión de evaluaciones: software, evaluación, factores evaluados y valoracion
 
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 from .catalogo import CatalogoVersion, Factor, Subfactor
 from .usuarios import Organizacion, Usuario
@@ -24,6 +25,10 @@ class Software(models.Model):
 
 
 class Evaluacion(models.Model):
+    EN_PROCESO = 'EN_PROCESO'
+    CERRADA = 'CERRADA'
+    ESTADOS = [(EN_PROCESO, 'En curso'), (CERRADA, 'Cerrada')]
+
     evaluacion_id = models.BigAutoField(primary_key=True)
     organizacion = models.ForeignKey(
         Organizacion, on_delete=models.PROTECT, db_column='organizacion_id', related_name='evaluaciones')
@@ -35,7 +40,8 @@ class Evaluacion(models.Model):
         CatalogoVersion, on_delete=models.PROTECT, db_column='catalogo_id', related_name='evaluaciones')
     fecha_inicio = models.DateTimeField(auto_now_add=True)
     fecha_fin = models.DateTimeField(null=True, blank=True)
-    estado = models.CharField(max_length=30, default='EN_PROCESO')
+    estado = models.CharField(max_length=30, choices=ESTADOS, default=EN_PROCESO)
+    fecha_actualizacion = models.DateTimeField(default=timezone.now)
 
     class Meta:
         db_table = 'evaluacion'
