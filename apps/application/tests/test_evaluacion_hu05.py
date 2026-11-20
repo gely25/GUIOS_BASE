@@ -63,8 +63,7 @@ class RegistroEvaluacionHU05Tests(TestCase):
             EvaluationService.crear_evaluacion(self.decisor, datos)
 
     def test_cp05_falla_si_no_hay_catalogo_vigente(self):
-        self.catalogo.estado = 'INACTIVO'
-        self.catalogo.save()
+        CatalogoVersion.objects.update(estado='INACTIVO')
         with self.assertRaises(ValidationError):
             EvaluationService.crear_evaluacion(self.decisor, self.datos_validos())
 

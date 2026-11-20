@@ -33,7 +33,7 @@ class Command(BaseCommand):
         organizacion, _ = Organizacion.objects.get_or_create(
             nombre='Organización Demo',
             defaults={'sector': 'Educación', 'tamano': 'Mediana'})
-        CatalogoVersion.objects.get_or_create(
+        CatalogoVersion.objects.update_or_create(
             version='GUIOS-DEMO-V1',
             defaults={'fecha_creacion': date.today(), 'estado': 'ACTIVO'},
         )

@@ -28,7 +28,7 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 | Ruta | Nombre | Estado | Historia / responsable |
 |------|--------|--------|------------------------|
 | `/decisor/` | `decisor-inicio` | maqueta de inicio | Angely (base) |
-| `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | módulo no disponible | HU05, Joseph |
+| `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | implementada | HU05, Joseph |
 | `/decisor/importancia-factores/` | `decisor-importancia-factores` | módulo no disponible | HU06, Angely |
 | `/decisor/carga-documental/` | `decisor-carga-documental` | módulo no disponible | HU07, Jorge |
 | `/decisor/revision-valoraciones/` | `decisor-revision-valoraciones` | módulo no disponible | HU11, Angely |
