@@ -7,7 +7,6 @@ from apps.data.models import Usuario
 PENDIENTES = [
     'admin-actualizacion-bibliografica',
     'admin-catalogo-metodologico',
-    'decisor-ficha-inicial',
     'decisor-importancia-factores',
     'decisor-carga-documental',
     'decisor-resultados',

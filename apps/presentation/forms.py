@@ -9,6 +9,33 @@ from django.contrib.auth.forms import AuthenticationForm
 from apps.data.models import Usuario
 
 
+class EvaluacionInicialForm(forms.Form):
+    nombre_organizacion = forms.CharField(
+        label='Nombre de la organización', max_length=200,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    sector = forms.CharField(
+        label='Sector', max_length=100, required=False,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    tamano = forms.CharField(
+        label='Tamaño', max_length=50, required=False,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    objetivo_adopcion = forms.CharField(
+        label='Objetivo de adopción', required=False,
+        widget=forms.Textarea(attrs={'class': 'filter-input', 'rows': 3}))
+    nombre_software = forms.CharField(
+        label='Nombre del software', max_length=150,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    version_software = forms.CharField(
+        label='Versión del software', max_length=50, required=False,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    proveedor = forms.CharField(
+        label='Proveedor', max_length=150, required=False,
+        widget=forms.TextInput(attrs={'class': 'filter-input'}))
+    descripcion_software = forms.CharField(
+        label='Descripción del software', required=False,
+        widget=forms.Textarea(attrs={'class': 'filter-input', 'rows': 3}))
+
+
 class AccesoForm(AuthenticationForm):
     username = forms.EmailField(
         label='Correo electrónico',

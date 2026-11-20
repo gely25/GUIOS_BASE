@@ -4,6 +4,7 @@ Rutas del Espacio del Decisor - GUIOS PRO.
 
 from django.urls import path
 from .views import decisor_home_view, modulo_pendiente_view
+from .views.evaluacion import evaluacion_inicial_view
 from .views.preguntas import preguntas_view
 
 urlpatterns = [
@@ -14,12 +15,7 @@ urlpatterns = [
     ),
     path(
         'ficha-inicial/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Ficha inicial de evaluación',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:3102',
-        },
+        evaluacion_inicial_view,
         name='decisor-ficha-inicial'
     ),
     path(

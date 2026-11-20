@@ -1,0 +1,58 @@
+{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Nueva evaluación | GUIOS PRO{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/style.css' %}">{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include "presentation/includes/app_sidebar.html" with current_area="decisor" active_item="nueva-evaluacion" %}
+    <div class="workspace-body-container">
+        {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
+        <main class="workspace-inner-content">
+            {% include "presentation/includes/evaluation_stepper.html" with current_step=1 %}
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Ficha inicial de evaluación</h1>
+                    <p class="page-main-subheading">Registre los datos de la organización y del software libre a evaluar.</p>
+                </div>
+            </div>
+
+            {% for message in messages %}
+                <p class="hu09-notice" role="status">{{ message }}</p>
+            {% endfor %}
+
+            <section class="dashboard-block">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+
+                    <h2 class="block-title">Organización</h2>
+                    {% for field in form %}
+                        {% if forloop.counter0 < 4 %}
+                        <div class="filter-field">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <h2 class="block-title">Software evaluado</h2>
+                    {% for field in form %}
+                        {% if forloop.counter0 >= 4 %}
+                        <div class="filter-field">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {{ field.errors }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <button type="submit" class="btn-top-action">Registrar evaluación</button>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}
