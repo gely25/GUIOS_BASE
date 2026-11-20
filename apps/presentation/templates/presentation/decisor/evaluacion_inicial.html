@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Nueva evaluación | GUIOS PRO{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/style.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/evaluacion.css' %}">{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
@@ -22,34 +22,73 @@
                 <p class="hu09-notice" role="status">{{ message }}</p>
             {% endfor %}
 
-            <section class="dashboard-block">
+            <section class="evaluacion-form-wrapper">
                 <form method="post" novalidate>
                     {% csrf_token %}
                     {{ form.non_field_errors }}
 
-                    <h2 class="block-title">Organización</h2>
-                    {% for field in form %}
-                        {% if forloop.counter0 < 4 %}
-                        <div class="filter-field">
-                            {{ field.label_tag }}
-                            {{ field }}
-                            {{ field.errors }}
+                    <div class="evaluacion-section">
+                        <div class="evaluacion-section-heading">
+                            <h2>Organización</h2>
+                            <p>Información del contexto institucional.</p>
                         </div>
-                        {% endif %}
-                    {% endfor %}
-
-                    <h2 class="block-title">Software evaluado</h2>
-                    {% for field in form %}
-                        {% if forloop.counter0 >= 4 %}
-                        <div class="filter-field">
-                            {{ field.label_tag }}
-                            {{ field }}
-                            {{ field.errors }}
+                        <div class="evaluacion-grid">
+                            <div class="evaluacion-field evaluacion-field-wide">
+                                {{ form.nombre_organizacion.label_tag }}
+                                {{ form.nombre_organizacion }}
+                                {{ form.nombre_organizacion.errors }}
+                            </div>
+                            <div class="evaluacion-field">
+                                {{ form.sector.label_tag }}
+                                {{ form.sector }}
+                                {{ form.sector.errors }}
+                            </div>
+                            <div class="evaluacion-field">
+                                {{ form.tamano.label_tag }}
+                                {{ form.tamano }}
+                                {{ form.tamano.errors }}
+                            </div>
+                            <div class="evaluacion-field evaluacion-field-full">
+                                {{ form.objetivo_adopcion.label_tag }}
+                                {{ form.objetivo_adopcion }}
+                                {{ form.objetivo_adopcion.errors }}
+                            </div>
                         </div>
-                        {% endif %}
-                    {% endfor %}
+                    </div>
 
-                    <button type="submit" class="btn-top-action">Registrar evaluación</button>
+                    <div class="evaluacion-section">
+                        <div class="evaluacion-section-heading">
+                            <h2>Software evaluado</h2>
+                            <p>Datos identificativos de la tecnología a considerar.</p>
+                        </div>
+                        <div class="evaluacion-grid">
+                            <div class="evaluacion-field evaluacion-field-wide">
+                                {{ form.nombre_software.label_tag }}
+                                {{ form.nombre_software }}
+                                {{ form.nombre_software.errors }}
+                            </div>
+                            <div class="evaluacion-field">
+                                {{ form.version_software.label_tag }}
+                                {{ form.version_software }}
+                                {{ form.version_software.errors }}
+                            </div>
+                            <div class="evaluacion-field evaluacion-field-full">
+                                {{ form.proveedor.label_tag }}
+                                {{ form.proveedor }}
+                                {{ form.proveedor.errors }}
+                            </div>
+                            <div class="evaluacion-field evaluacion-field-full">
+                                {{ form.descripcion_software.label_tag }}
+                                {{ form.descripcion_software }}
+                                {{ form.descripcion_software.errors }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evaluacion-form-actions">
+                        <a href="{% url 'presentation:decisor-inicio' %}" class="evaluacion-cancel-link">Cancelar</a>
+                        <button type="submit" class="evaluacion-submit">Registrar evaluación</button>
+                    </div>
                 </form>
             </section>
         </main>
