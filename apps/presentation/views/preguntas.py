@@ -33,6 +33,9 @@ def _id(valor):
 def preguntas_view(request):
     if not request.user.is_authenticated or request.user.rol != 'DECISOR' or not request.user.activo:
         raise PermissionDenied
+    if (request.POST if request.method == 'POST' else request.GET).get('etapa') == 'validacion':
+        from .revision_humana import revision_humana_view
+        return revision_humana_view(request)
     evaluaciones = Evaluacion.objects.filter(usuario=request.user).select_related('software').order_by('-fecha_inicio', '-pk')
     url = reverse('presentation:decisor-revision-valoraciones')
     raw = request.POST.get('evaluacion') if request.method == 'POST' else request.GET.get('evaluacion')
