@@ -19,7 +19,7 @@ from pypdf import PdfReader
 import docx
 
 from apps.data.models import Documento, Evaluacion, FragmentoDocumento, Usuario
-
+from apps.application.services.retrieval import RetrievalService
 
 class DocumentService:
     """Carga de documentos PDF, DOCX y XLSX, extracción de texto y fragmentos (HU07)."""
@@ -230,6 +230,7 @@ class DocumentService:
             if not fragmentos_a_crear:
                 raise ValidationError('No se pudieron generar fragmentos válidos a partir del documento.')
 
+            RetrievalService().indexar_fragmentos(fragmentos_a_crear, guardar=False)
             FragmentoDocumento.objects.bulk_create(fragmentos_a_crear)
             return documento
         except Exception:

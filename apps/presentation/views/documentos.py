@@ -1,5 +1,5 @@
 """
-Vistas de Carga Documental (HU07) - Espacio del Decisor.
+Vistas de Carga Documental (HU07) y Recuperación Semántica con pgvector (HU08) - Espacio del Decisor.
 """
 
 from django.contrib import messages
@@ -10,7 +10,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from apps.application.services.document import DocumentService
-from apps.data.models import Documento, Evaluacion, FragmentoDocumento
+from apps.application.services.retrieval import RetrievalService
+from apps.data.models import Documento, Evaluacion, FragmentoDocumento, Subfactor
 
 
 def _obtener_evaluacion_activa(request):
@@ -54,11 +55,12 @@ def _parsear_fragmento_tabular(contenido: str):
 
 def carga_documental_view(request):
     """
-    Pantalla «Decisor · Carga documental» (HU07).
-    Permite subir archivos PDF/DOCX/XLSX, ver sus metadatos y hash SHA-256,
-    inspeccionar fragmentos extraídos con su ubicación y descargar la fuente.
+    Pantalla «Decisor · Carga documental» (HU07 + HU08).
+    Permite subir archivos PDF/DOCX/XLSX, generar sus embeddings de 1536 dimensiones
+    en pgvector, inspeccionar fragmentos y probar recuperación semántica por subfactor o consulta.
     """
     servicio = DocumentService()
+    retrieval_service = RetrievalService()
     evaluacion, evaluaciones = _obtener_evaluacion_activa(request)
 
     descargar_id = request.GET.get('descargar_id')
@@ -76,6 +78,17 @@ def carga_documental_view(request):
 
         accion = request.POST.get('accion', 'subir')
         url_destino = f"{reverse('presentation:decisor-carga-documental')}?evaluacion_id={evaluacion.evaluacion_id}"
+
+        if accion == 'sincronizar_embeddings':
+            res = retrieval_service.sincronizar_evaluacion(
+                evaluacion_id=evaluacion.evaluacion_id,
+                forzar=True,
+            )
+            messages.success(
+                request,
+                f'Indexación vectorial actualizada en pgvector: {res["indexados"]} fragmento(s) de 1536D.'
+            )
+            return redirect(url_destino)
 
         if accion == 'eliminar':
             doc_id = request.POST.get('documento_id')
@@ -97,7 +110,7 @@ def carga_documental_view(request):
             total_frag = doc.fragmentos.count()
             messages.success(
                 request,
-                f'Documento «{doc.nombre}» ({doc.tipo}) procesado correctamente: {total_frag} fragmentos generados.'
+                f'Documento «{doc.nombre}» ({doc.tipo}) procesado e indexado en pgvector: {total_frag} fragmentos.'
             )
             return redirect(f'{url_destino}&doc_id={doc.documento_id}')
         except ValidationError as err:
@@ -108,8 +121,41 @@ def carga_documental_view(request):
     documentos = []
     documento_inspeccionado = None
     fragmentos_inspeccionados = []
+    estado_embeddings = {'total_fragmentos': 0, 'indexados': 0, 'pendientes': 0, 'porcentaje': 0}
+    consulta_semantica = (request.GET.get('q') or '').strip()
+    resultados_semanticos = []
+
+    subfactores_catalogo = (
+        Subfactor.objects.select_related('factor', 'factor__dimension')
+        .filter(activo=True)
+        .order_by('factor__dimension__dimension_id', 'factor__factor_id', 'subfactor_id')
+    )
+    subfactor_seleccionado_id = (request.GET.get('subfactor_id') or '').strip()
 
     if evaluacion:
+        estado_embeddings = retrieval_service.estado_indexacion(evaluacion.evaluacion_id)
+
+        if subfactor_seleccionado_id.isdigit():
+            try:
+                resultados_semanticos = retrieval_service.buscar_por_subfactor(
+                    evaluacion_id=evaluacion.evaluacion_id,
+                    subfactor_id=int(subfactor_seleccionado_id),
+                    top_k=5,
+                )
+            except ValidationError as err:
+                mensaje = err.messages[0] if hasattr(err, 'messages') else str(err)
+                messages.error(request, mensaje)
+        elif consulta_semantica:
+            try:
+                resultados_semanticos = retrieval_service.buscar_evidencia(
+                    evaluacion_id=evaluacion.evaluacion_id,
+                    consulta=consulta_semantica,
+                    top_k=5,
+                )
+            except ValidationError as err:
+                mensaje = err.messages[0] if hasattr(err, 'messages') else str(err)
+                messages.error(request, mensaje)
+
         documentos = (
             Documento.objects.filter(evaluacion=evaluacion)
             .annotate(total_fragmentos=Count('fragmentos'))
@@ -137,5 +183,10 @@ def carga_documental_view(request):
         'documentos': documentos,
         'documento_inspeccionado': documento_inspeccionado,
         'fragmentos_inspeccionados': fragmentos_inspeccionados,
+        'estado_embeddings': estado_embeddings,
+        'consulta_semantica': consulta_semantica,
+        'resultados_semanticos': resultados_semanticos,
+        'subfactores_catalogo': subfactores_catalogo,
+        'subfactor_seleccionado_id': int(subfactor_seleccionado_id) if subfactor_seleccionado_id.isdigit() else None,
     }
     return render(request, 'presentation/decisor/carga_documental.html', context)

@@ -21,11 +21,14 @@
                 <div>
                     <h1 class="page-main-heading">Carga y fragmentación documental</h1>
                     <p class="page-main-subheading">
-                        Suba archivos PDF, DOCX o XLSX de respaldo. El sistema calcula su hash SHA-256 y extrae fragmentos con ubicación trazable.
+                        Suba archivos PDF, DOCX o XLSX de respaldo. El sistema calcula su hash SHA-256, extrae fragmentos e indexa sus embeddings en pgvector.
                     </p>
                 </div>
                 {% if evaluacion %}
-                <div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <span class="badge-neutral">
+                        pgvector 1536D · {{ estado_embeddings.indexados }}/{{ estado_embeddings.total_fragmentos }} indexados
+                    </span>
                     <span class="badge-neutral">
                         Evaluación #{{ evaluacion.evaluacion_id }} · {{ evaluacion.software.nombre }}
                     </span>
@@ -126,8 +129,8 @@
                             </div>
 
                             <div class="side-helper-box">
-                                <strong>Trazabilidad automática:</strong><br>
-                                Al cargar el archivo se genera su huella <code>SHA-256</code> para evitar duplicados y se divide en fragmentos listos para análisis semántico.
+                                <strong>Trazabilidad e indexación:</strong><br>
+                                Al cargar el archivo se genera su huella <code>SHA-256</code>, se divide en fragmentos y se almacena su vector de 1536 dimensiones en <code>pgvector</code>.
                             </div>
 
                             <button id="submitUploadBtn" type="submit" class="btn-top-action btn-submit-doc" disabled>
@@ -136,6 +139,94 @@
                         </div>
                     </div>
                 </form>
+            </section>
+
+            <!-- Buscador semántico de evidencia con pgvector (HU08) -->
+            <section class="dashboard-block section-spaced">
+                <div class="block-header">
+                    <h2 class="block-title">Recuperación semántica de evidencia (pgvector)</h2>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="badge-neutral">HU08 · Similitud coseno</span>
+                        {% if estado_embeddings.total_fragmentos > 0 %}
+                        <form method="post" style="margin: 0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="accion" value="sincronizar_embeddings">
+                            <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
+                            <button type="submit" class="btn-empty-state btn-doc-action">
+                                Reindexar ({{ estado_embeddings.indexados }}/{{ estado_embeddings.total_fragmentos }})
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <form method="get" class="eval-selector-form" style="margin-bottom: 12px; flex-wrap: wrap;">
+                    <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
+                    {% if documento_inspeccionado %}
+                    <input type="hidden" name="doc_id" value="{{ documento_inspeccionado.documento_id }}">
+                    {% endif %}
+
+                    {% if subfactores_catalogo %}
+                    <select
+                        name="subfactor_id"
+                        class="side-text-input"
+                        style="max-width: 340px;"
+                        onchange="if(this.value && this.form.q) this.form.q.value='';"
+                    >
+                        <option value="">-- Buscar por subfactor del catálogo --</option>
+                        {% for sf in subfactores_catalogo %}
+                        <option value="{{ sf.subfactor_id }}" {% if subfactor_seleccionado_id == sf.subfactor_id %}selected{% endif %}>
+                            {{ sf.factor.nombre }} · {{ sf.descripcion|truncatechars:55 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ consulta_semantica }}"
+                        placeholder="O escribe una consulta libre (ej. costos de licencia, compatibilidad)..."
+                        class="side-text-input"
+                        style="flex: 1; min-width: 240px;"
+                        oninput="if(this.value && this.form.subfactor_id) this.form.subfactor_id.value='';"
+                    >
+                    <button type="submit" class="btn-top-action">
+                        Buscar evidencia
+                    </button>
+                    {% if consulta_semantica or subfactor_seleccionado_id %}
+                    <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}{% if documento_inspeccionado %}&doc_id={{ documento_inspeccionado.documento_id }}{% endif %}" class="btn-empty-state btn-doc-action">
+                        Limpiar
+                    </a>
+                    {% endif %}
+                </form>
+
+                {% if consulta_semantica or subfactor_seleccionado_id %}
+                    {% if resultados_semanticos %}
+                    <div class="fragments-grid">
+                        {% for item in resultados_semanticos %}
+                        <article class="fragment-card">
+                            <div class="fragment-card-header">
+                                <span>
+                                    <strong>#{{ forloop.counter }} · {{ item.documento_nombre }}</strong>
+                                    ({{ item.ubicacion_referencia }})
+                                </span>
+                                <span class="fragment-location-pill">
+                                    Similitud: {{ item.relevancia_porcentaje }}%
+                                </span>
+                            </div>
+                            <p class="fragment-body-text">{{ item.contenido }}</p>
+                        </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state-box">
+                        <p class="empty-state-description">
+                            No se encontraron fragmentos indexados para la búsqueda solicitada en esta evaluación.
+                        </p>
+                    </div>
+                    {% endif %}
+                {% endif %}
             </section>
 
             <!-- Tabla de documentos cargados -->
