@@ -7,6 +7,8 @@ from apps.data.models import Usuario
 PENDIENTES = [
     'admin-catalogo-metodologico',
     'decisor-importancia-factores',
+    'decisor-resultados',
+    'decisor-informe',
     'decisor-historial-evaluaciones',
 ]
 
@@ -41,11 +43,6 @@ class RutasPorAreaTests(TestCase):
 
     def test_la_vista_de_indicadores_no_es_un_modulo_pendiente(self):
         self.assertNotContains(self.abrir('admin-indicadores-literatura'), 'Módulo no disponible')
-
-    def test_actualizacion_bibliografica_resultados_e_informe_ya_tienen_vista(self):
-        for ruta in ('admin-actualizacion-bibliografica', 'decisor-resultados', 'decisor-informe'):
-            with self.subTest(ruta=ruta):
-                self.assertNotContains(self.abrir(ruta), 'Módulo no disponible')
 
     def test_las_rutas_ya_no_llevan_el_prefijo_vista_previa(self):
         for modulo in menu.CATALOGO:
