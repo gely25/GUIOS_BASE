@@ -13,6 +13,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Documento, Evaluacion,
 class PreguntasTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         org = Organizacion.objects.create(nombre='Organización prueba')
         cls.actor = Usuario.objects.create_user('decisor@test.local', 'Clave-test-123', nombre='Decisor', organizacion=org)
         cls.otro = Usuario.objects.create_user('otro@test.local', 'Clave-test-123', nombre='Otro', organizacion=org)

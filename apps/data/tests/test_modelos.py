@@ -64,11 +64,25 @@ class UsuarioTests(TestCase):
 class RestriccionesCatalogoTests(TestCase):
 
     def setUp(self):
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         self.dimension = Dimension.objects.create(nombre='Tecnológica')
 
     def test_la_base_rechaza_un_alcance_invalido(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Factor.objects.create(dimension=self.dimension, nombre='Compatibilidad', alcance='otro')
+
+    def test_la_base_no_permite_dos_catalogos_activos(self):
+        CatalogoVersion.objects.create(
+            version='catalogo-activo-1',
+            fecha_creacion=date.today(),
+            estado='ACTIVO',
+        )
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            CatalogoVersion.objects.create(
+                version='catalogo-activo-2',
+                fecha_creacion=date.today(),
+                estado='ACTIVO',
+            )
 
     def test_la_base_rechaza_una_importancia_fuera_de_1_a_4(self):
         factor = Factor.objects.create(
