@@ -9,7 +9,6 @@ PENDIENTES = [
     'admin-catalogo-metodologico',
     'decisor-ficha-inicial',
     'decisor-importancia-factores',
-    'decisor-carga-documental',
     'decisor-resultados',
     'decisor-informe',
     'decisor-historial-evaluaciones',

@@ -1,11 +1,11 @@
 """
 Rutas del Espacio del Decisor - GUIOS PRO.
 """
-
+from .views.documentos import carga_documental_view
 from django.urls import path
 from .views import decisor_home_view, modulo_pendiente_view
 from .views.preguntas import preguntas_view
-
+from .views.documentos import carga_documental_view
 urlpatterns = [
     path(
         '',
@@ -35,12 +35,7 @@ urlpatterns = [
     ),
     path(
         'carga-documental/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Carga documental',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:3507',
-        },
+        carga_documental_view,
         name='decisor-carga-documental'
     ),
     path(

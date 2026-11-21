@@ -1,0 +1,265 @@
+{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Carga documental | GUIOS PRO{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/carga_documental.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include "presentation/includes/app_sidebar.html" with current_area="decisor" active_item="carga-documental" %}
+
+    <div class="workspace-body-container">
+        {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
+
+        <main class="workspace-inner-content">
+            {% include "presentation/includes/evaluation_stepper.html" with current_step=3 %}
+
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Carga y fragmentación documental</h1>
+                    <p class="page-main-subheading">
+                        Suba archivos PDF, DOCX o XLSX de respaldo. El sistema calcula su hash SHA-256 y extrae fragmentos con ubicación trazable.
+                    </p>
+                </div>
+                {% if evaluacion %}
+                <div>
+                    <span class="badge-neutral">
+                        Evaluación #{{ evaluacion.evaluacion_id }} · {{ evaluacion.software.nombre }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if messages %}
+            <div class="flash-messages-wrap">
+                {% for message in messages %}
+                <div class="dashboard-block flash-message-card {% if message.tags == 'error' %}is-error{% endif %}">
+                    <strong>{% if message.tags == 'error' %}Error:{% else %}Listo:{% endif %}</strong> {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if not evaluacion %}
+            <section class="dashboard-block">
+                <div class="empty-state-box">
+                    <h3 class="empty-state-title">No hay evaluaciones registradas</h3>
+                    <p class="empty-state-description">
+                        Primero registra una evaluación en la ficha inicial para asociar los documentos de respaldo.
+                    </p>
+                    <div class="empty-state-action-wrap">
+                        <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-empty-state">
+                            Ir a Ficha inicial
+                        </a>
+                    </div>
+                </div>
+            </section>
+            {% else %}
+
+            {% if evaluaciones|length > 1 %}
+            <section class="dashboard-block section-spaced">
+                <form method="get" class="eval-selector-form">
+                    <label for="evaluacion_id"><strong>Evaluación activa:</strong></label>
+                    <select id="evaluacion_id" name="evaluacion_id" onchange="this.form.submit()" class="side-text-input eval-selector-input">
+                        {% for ev in evaluaciones %}
+                        <option value="{{ ev.evaluacion_id }}" {% if ev.evaluacion_id == evaluacion.evaluacion_id %}selected{% endif %}>
+                            #{{ ev.evaluacion_id }} - {{ ev.software.nombre }} ({{ ev.estado }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </section>
+            {% endif %}
+
+            <!-- Tarjeta principal de Drag & Drop (HU07) -->
+            <section class="dashboard-block section-spaced">
+                <div class="block-header">
+                    <h2 class="block-title">Subir nuevo documento de evidencia</h2>
+                    <span class="badge-neutral">Paso 3 · Evidencia documental</span>
+                </div>
+
+                <form id="uploadForm" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="subir">
+                    <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
+                    <input id="archivoInput" type="file" name="archivo" accept=".pdf,.docx,.xlsx" required hidden>
+
+                    <div class="upload-grid-layout">
+                        <div id="dropZone" class="dropzone-area" role="button" tabindex="0" aria-label="Zona para arrastrar o seleccionar archivo">
+                            <div id="dropzoneDefault">
+                                <div class="dropzone-icon-wrap">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                </div>
+                                <p class="dropzone-title">Arrastra y suelta tu documento aquí</p>
+                                <p class="dropzone-subtitle">o haz clic en esta área para buscarlo en tu equipo</p>
+                                <div class="format-pills-row">
+                                    <span class="format-pill">PDF (por página)</span>
+                                    <span class="format-pill">DOCX (por sección)</span>
+                                    <span class="format-pill">XLSX (por hoja)</span>
+                                    <span class="format-pill">Máx. 20 MB</span>
+                                </div>
+                            </div>
+
+                            <div id="dropzoneSelected" class="selected-file-card" style="display: none;">
+                                <span id="selectedFileExt" class="selected-file-badge">PDF</span>
+                                <div class="selected-file-meta">
+                                    <p id="selectedFileName" class="selected-file-name">archivo.pdf</p>
+                                    <p id="selectedFileSize" class="selected-file-size">0 KB · Listo para procesar</p>
+                                </div>
+                                <button type="button" id="clearFileBtn" class="btn-clear-file">Quitar</button>
+                            </div>
+
+                            <p id="dropzoneClientError" class="dropzone-client-error"></p>
+                        </div>
+
+                        <div class="upload-side-panel">
+                            <div>
+                                <label for="version" class="side-field-label">Versión del documento (opcional)</label>
+                                <input id="version" type="text" name="version" placeholder="Ej. v1.0, 2026, Borrador" class="side-text-input">
+                            </div>
+
+                            <div class="side-helper-box">
+                                <strong>Trazabilidad automática:</strong><br>
+                                Al cargar el archivo se genera su huella <code>SHA-256</code> para evitar duplicados y se divide en fragmentos listos para análisis semántico.
+                            </div>
+
+                            <button id="submitUploadBtn" type="submit" class="btn-top-action btn-submit-doc" disabled>
+                                Cargar y fragmentar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Tabla de documentos cargados -->
+            <section class="dashboard-block section-spaced">
+                <div class="block-header">
+                    <h2 class="block-title">Documentos cargados en esta evaluación ({{ documentos|length }})</h2>
+                </div>
+
+                {% if documentos %}
+                <div class="table-scroll-box">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>Documento</th>
+                                <th>Formato</th>
+                                <th>Versión</th>
+                                <th>Hash SHA-256</th>
+                                <th>Fragmentos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in documentos %}
+                            <tr class="{% if documento_inspeccionado and doc.documento_id == documento_inspeccionado.documento_id %}doc-row-active{% endif %}">
+                                <td><strong>{{ doc.nombre }}</strong></td>
+                                <td><span class="badge-neutral">{{ doc.tipo }}</span></td>
+                                <td>{{ doc.version|default:"—" }}</td>
+                                <td class="hash-cell" title="{{ doc.hash_sha256 }}">
+                                    {{ doc.hash_sha256|slice:":16" }}...
+                                </td>
+                                <td><strong>{{ doc.total_fragmentos }}</strong></td>
+                                <td>
+                                    <div class="doc-actions-row">
+                                        <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&doc_id={{ doc.documento_id }}"
+                                           class="btn-empty-state btn-doc-action">
+                                            Ver fragmentos
+                                        </a>
+                                        <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&descargar_id={{ doc.documento_id }}"
+                                           class="btn-empty-state btn-doc-action">
+                                            Descargar
+                                        </a>
+                                        <form method="post" class="js-confirm-delete">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
+                                            <input type="hidden" name="documento_id" value="{{ doc.documento_id }}">
+                                            <button type="submit" class="btn-doc-delete">
+                                                Eliminar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state-box">
+                    <p class="empty-state-description">
+                        Aún no has cargado documentos en esta evaluación. Arrastra un PDF, DOCX o XLSX en el recuadro superior para comenzar.
+                    </p>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Visor de fragmentos extraídos (por columnas si es tabular, o párrafo si es texto) -->
+            {% if documento_inspeccionado %}
+            <section class="dashboard-block">
+                <div class="block-header">
+                    <h2 class="block-title">
+                        Fragmentos extraídos de: {{ documento_inspeccionado.nombre }} ({{ fragmentos_inspeccionados|length }})
+                    </h2>
+                    <span class="badge-neutral">{{ documento_inspeccionado.tipo }}</span>
+                </div>
+
+                <div class="fragments-grid">
+                    {% for frag in fragmentos_inspeccionados %}
+                    <article class="fragment-card">
+                        <div class="fragment-card-header">
+                            <span><strong>Fragmento #{{ forloop.counter }}</strong> · ID {{ frag.fragmento_id }}</span>
+                            <span class="fragment-location-pill">
+                                {% if frag.pagina %}Página {{ frag.pagina }}{% endif %}
+                                {% if frag.seccion %}Sección: {{ frag.seccion }}{% endif %}
+                                {% if frag.hoja %}Hoja: {{ frag.hoja }}{% endif %}
+                            </span>
+                        </div>
+
+                        {% if frag.tabla %}
+                        <div class="fragment-table-wrap">
+                            <table class="fragment-data-table">
+                                <thead>
+                                    <tr>
+                                        {% for col in frag.tabla.encabezados %}
+                                        <th>{{ col }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for fila in frag.tabla.filas %}
+                                    <tr>
+                                        {% for celda in fila %}
+                                        <td>{{ celda }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="fragment-body-text">{{ frag.contenido }}</p>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'presentation/js/carga_documental.js' %}"></script>
+{% endblock %}
