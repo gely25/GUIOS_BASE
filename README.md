@@ -18,11 +18,9 @@ Copy-Item .env.example .env          # luego edita .env con tus datos
 psql -U postgres -c "CREATE DATABASE guios_pro_db_dev;"
 python manage.py check_db            # comprueba PostgreSQL y pgvector
 python manage.py migrate
-python manage.py cargar_catalogo_guios  # catálogo GUIOS 2021 (versión v1-2021)
 python manage.py cargar_datos_demo   # usuarios de prueba (solo bases terminadas en _dev)
 python manage.py test                # toda la suite debe pasar
 python manage.py runserver
-python manage.py procesar_busquedas  # en otra terminal: ejecuta las búsquedas bibliográficas (HU02)
 ~~~
 
 Abre `http://127.0.0.1:8000/` e inicia sesión con un usuario de [`DATOS_DEMO.md`](DATOS_DEMO.md).
@@ -45,28 +43,6 @@ Si falta una variable obligatoria, `settings.py` indica cuál es.
 
 Pendiente de HU01: pantalla de gestión de usuarios y roles (hoy es una maqueta) y límite de intentos
 fallidos de login.
-
-## Actualización bibliográfica (HU02)
-
-Flujo del administrador en `/administracion/actualizacion-bibliografica/`:
-
-1. **Buscar literatura 2020–2025**: deja en cola una búsqueda por factor activo (`busqueda_bibliografica`).
-   La consulta combina contexto FLOSS + «adoption» + términos en inglés del factor
-   (`business_rules/glosario_bibliografico.py`). Fuente: OpenAlex (`external_services/bibliografia/`).
-2. **`python manage.py procesar_busquedas`** ejecuta la cola en segundo plano (la interfaz muestra el
-   progreso). Guarda publicaciones sin duplicar (DOI o título+año) y sugiere factores por palabras clave
-   (`business_rules/coincidencia.py`). Sin IA.
-3. **Revisar**: el administrador aprueba o rechaza cada sugerencia o vincula a mano. Solo lo aprobado cuenta.
-4. **Recalcular**: crea un borrador de catálogo con `TC = TC GUIOS 2021 + publicaciones aprobadas de
-   2020–2025`, y r_i, IL e IS recalculados (`business_rules/rules_engine.py`).
-5. **Publicar**: el borrador pasa a ACTIVO y la versión anterior a HISTORICO. Las evaluaciones guardan
-   su versión, así que no cambian.
-
-Variables opcionales en `.env`: `BIBLIOGRAPHIC_API_KEY` (key gratuita de OpenAlex con cupo propio),
-`BIBLIOGRAPHIC_BASE_URL`, `BIBLIOGRAPHIC_TIMEOUT`, `BIBLIOGRAPHIC_MAX_RESULTADOS`.
-
-Nota: el TC de 2021 pudo incluir artículos de 2020–2021 que la búsqueda vuelva a encontrar; como no
-existe la lista de referencias original, el administrador debe tenerlo en cuenta al aprobar.
 
 ## Arquitectura por capas
 
@@ -92,15 +68,12 @@ apps/
   business_rules/               cálculos puros, menu.py (catálogo y permisos) + tests/
   application/
     services/
-      bibliographic.py          BibliographicService (HU02 y HU03)
-      actualizacion_bibliografica/  búsquedas, revisión y versiones del catálogo (HU02)
-      indicadores_literatura/   modelos, fuente_catalogo, servicio (HU03)
+      bibliographic.py          BibliographicService
+      indicadores_literatura/   modelos, fuente_simulada, servicio (HU03)
       ai.py catalog.py document.py evaluation.py report.py retrieval.py
     tests/
   data/
     models/                     usuarios, catalogo, evaluaciones, bibliografia, documentos, resultados
-    repositorios/               consultas ORM que usan los servicios (catalogo, bibliografia)
-    semillas/guios_2021/        catálogo GUIOS 2021 (TSV) para cargar_catalogo_guios
     management/commands/        check_db, cargar_datos_demo
     migrations/  tests/
   presentation/
@@ -133,7 +106,7 @@ apps/
 - **Reglas de negocio**: funciones puras, sin importar Django ni acceder a la base de datos.
   Reciben datos y devuelven resultados, así se prueban sin infraestructura.
 - **Un único punto de acceso a datos por servicio**: por ejemplo `cargar_datos_catalogo()` en
-  `indicadores_literatura/`, que lee la versión activa del catálogo en PostgreSQL.
+  `indicadores_literatura/`. Hoy usa datos simulados y es lo único que se cambia al leer de PostgreSQL.
 - **Plantillas por área**: `layouts/`, `includes/` (fragmentos reutilizables), `acceso/`,
   `administracion/`, `decisor/`, `comun/`. Las páginas van bajo `presentation/...`.
 - **Pruebas**: carpeta `tests/` dentro de cada capa. Antes de subir cambios, `python manage.py test` debe pasar.
@@ -150,7 +123,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 | Historia | Dónde se implementa | Estado |
 |----------|---------------------|--------|
 | HU01 Acceso y roles (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, roles, menú y permisos: hecho. Gestión de usuarios: pendiente |
-| HU03 / HU04 Indicadores IL e IS | `business_rules/il.py`, `is_.py`, `application/services/indicadores_literatura/` | Hecho (lee la versión activa del catálogo) |
+| HU03 / HU04 Indicadores IL e IS | `business_rules/il.py`, `is_.py`, `application/services/indicadores_literatura/` | Hecho (datos simulados) |
 | HU06 Importancia relativa (IR) | `business_rules/ir.py` | Lógica lista; falta servicio y pantalla |
 | HU09 Preguntas por información faltante (antes José) | `application/services/ai.py` | Pendiente |
 | HU11 Revisión humana de valoraciones (antes José) | `application/services/evaluation.py` | Pendiente |
@@ -176,7 +149,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 
 | Historia | Dónde se implementa | Estado |
 |----------|---------------------|--------|
-| HU02 Actualización bibliográfica | `application/services/actualizacion_bibliografica/`, `business_rules/rules_engine.py`, `external_services/bibliografia/` | Hecho sin IA (OpenAlex + sugerencias por palabras clave + revisión manual) |
+| HU02 Actualización bibliográfica | `application/services/bibliographic.py` y `data/` | Pendiente |
 | HU14 Informe | `application/services/report.py` | Pendiente |
 
 ## Estado
@@ -184,10 +157,9 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 - Base, configuración, PostgreSQL con pgvector, estructura por capas y modelo de datos (19 tablas): listos.
 - Acceso, roles, menú por rol y permisos por ruta (HU01): listos y probados.
 - HU03 (IL e IS): lógica validada contra el caso de referencia de la metodología GUIOS y pantalla en
-  `/administracion/indicadores-literatura/` con la versión activa del catálogo.
+  `/administracion/indicadores-literatura/` con datos simulados.
 - HU06 (IR) y HU12 (PM, FODA): lógica lista y probada en `business_rules/`; HU12 validada con el caso de referencia de LibreOffice.
-- HU02: búsqueda en OpenAlex (2020–2025), revisión de vínculos y nueva versión del catálogo con
-  TC = TC GUIOS 2021 + publicaciones aprobadas. Ver «Actualización bibliográfica (HU02)».
+- Lectura real de citas (TC) desde PostgreSQL: pendiente de los datos de HU02.
 
 ## Fundamento metodológico
 

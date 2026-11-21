@@ -11,7 +11,7 @@ from apps.data.models import CatalogoVersion, Usuario
 class RegistroEvaluacionInterfazHU05Tests(TestCase):
 
     def setUp(self):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         self.decisor = Usuario.objects.create_user(
             correo='decisor.hu05.ui@guios.test',
             password='Clave-Segura-123',

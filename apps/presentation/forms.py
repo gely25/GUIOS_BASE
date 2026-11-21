@@ -116,27 +116,3 @@ class UsuarioEstadoForm(forms.Form):
                                     coerce=lambda valor: valor == '1', widget=forms.HiddenInput)
     motivo = forms.CharField(label='Motivo del cambio', max_length=500,
                              widget=forms.Textarea(attrs={'class': 'usuarios-motivo', 'rows': 3}))
-
-
-# --- Actualización bibliográfica (HU02) ---------------------------------------
-
-class RevisionVinculoForm(forms.Form):
-    """Aprobar o rechazar un vínculo publicación-factor sugerido."""
-
-    vinculo = forms.IntegerField(min_value=1, max_value=9223372036854775807, widget=forms.HiddenInput)
-    decision = forms.ChoiceField(choices=(('aprobar', 'Aprobar'), ('rechazar', 'Rechazar')))
-
-
-class VinculoManualForm(forms.Form):
-    """Vincular a mano una publicación con un factor (queda aprobado)."""
-
-    publicacion = forms.IntegerField(min_value=1, max_value=9223372036854775807, widget=forms.HiddenInput)
-    factor = forms.TypedChoiceField(label='Factor', coerce=int,
-                                    widget=forms.Select(attrs={'class': 'filter-select'}))
-    justificacion = forms.CharField(label='Justificación', max_length=2000, required=False,
-                                    widget=forms.TextInput(attrs={'class': 'filter-input',
-                                                                  'placeholder': 'Por qué es pertinente (opcional)'}))
-
-    def __init__(self, *args, factores=(), **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['factor'].choices = [(f.pk, f.nombre) for f in factores]

@@ -40,7 +40,7 @@ class DatosDemoTests(TestCase):
         demo = CatalogoVersion.objects.get(version='GUIOS-DEMO-V1')
 
         self.assertEqual(vigente.estado, 'ACTIVO')
-        self.assertEqual(demo.estado, 'HISTORICO')
+        self.assertEqual(demo.estado, 'DEMO')
         self.assertEqual(
             CatalogoVersion.objects.filter(estado='ACTIVO').count(),
             1,

@@ -17,7 +17,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
 class LotesHU09Tests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         org = Organizacion.objects.create(nombre='Organización')
         cls.actor = Usuario.objects.create_user('propietario@hu09.test', 'Clave-test-123', nombre='Propietario', organizacion=org)
         cls.otro = Usuario.objects.create_user('otro@hu09.test', 'Clave-test-123', nombre='Otro', organizacion=org)

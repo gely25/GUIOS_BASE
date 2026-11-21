@@ -1,4 +1,0 @@
-{% comment %}Mensajes de las pantallas de actualización bibliográfica (HU02).{% endcomment %}
-{% for mensaje in messages %}
-<p class="bib-aviso{% if mensaje.level_tag == 'error' %} bib-aviso-error{% endif %}" role="{% if mensaje.level_tag == 'error' %}alert{% else %}status{% endif %}">{{ mensaje }}</p>
-{% endfor %}

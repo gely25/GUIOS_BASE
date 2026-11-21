@@ -14,7 +14,7 @@ from apps.data.models import (BorradorRevisionHumana, CatalogoVersion, Dimension
 class RevisionHumanaInterfazTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         org = Organizacion.objects.create(nombre='Org revisión')
         cls.actor = Usuario.objects.create_user('decisor@revision.test', 'Clave-test-123', nombre='Decisor', organizacion=org)
         cls.otro = Usuario.objects.create_user('otro@revision.test', 'Clave-test-123', nombre='Otro', organizacion=org)

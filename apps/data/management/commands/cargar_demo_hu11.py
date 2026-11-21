@@ -22,7 +22,7 @@ class Command(BaseCommand):
         actor = Usuario.objects.filter(correo='decisor.demo@guios.local', activo=True, rol=Usuario.DECISOR).first()
         if not actor or not actor.organizacion_id:
             raise CommandError('Se necesita el decisor demo activo con organización.')
-        catalogo, _ = CatalogoVersion.objects.get_or_create(version='DEMO-HU11', defaults={'fecha_creacion': date.today(), 'estado': 'HISTORICO'})
+        catalogo, _ = CatalogoVersion.objects.get_or_create(version='DEMO-HU11', defaults={'fecha_creacion': date.today(), 'estado': 'DEMO'})
         nombre = 'DEMO HU11 (datos ficticios)' if options['variante'] == 'base' else 'DEMO HU11 · Borradores (datos ficticios)'
         software, _ = Software.objects.get_or_create(nombre=nombre)
         evaluacion, creada = Evaluacion.objects.get_or_create(usuario=actor, organizacion=actor.organizacion, software=software, catalogo=catalogo)

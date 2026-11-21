@@ -4,7 +4,7 @@ Vistas, plantillas, estáticos, rutas y control de acceso. Solo pide datos a los
 y los muestra: no calcula ni accede a la base de datos.
 
 - `views/`: una vista por pantalla. `access.py` (login), `administration.py`, `decisor.py`,
-  `literatura.py` (HU03), `bibliografia.py` (HU02) y `pendiente.py` (módulo «no disponible» para lo que aún no existe).
+  `literatura.py` (HU03) y `pendiente.py` (módulo «no disponible» para lo que aún no existe).
 - `urls.py`: acceso (`/`, `/salir/`) e inclusión de las áreas. `urls_admin.py` (`/administracion/...`) y
   `urls_decisor.py` (`/decisor/...`): rutas de cada área.
 - `middleware.py`: `PermisosPorRolMiddleware`. Aplica los permisos a todas las rutas (GET y POST) usando el

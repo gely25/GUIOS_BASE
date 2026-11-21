@@ -7,12 +7,12 @@ la Importancia Sugerida (IS = f(IE, IL)). No contiene datos fijos: trabaja con
 los factores que le entregue la fuente.
 """
 
-from typing import Callable, Dict, Optional, Sequence, Tuple
+from typing import Callable, Dict, Sequence, Tuple
 
 from apps.business_rules.il import calcular_il_factores
 from apps.business_rules.is_ import calcular_is
 
-from .fuente_catalogo import cargar_datos_catalogo
+from .fuente_simulada import cargar_datos_catalogo
 from .modelos import FactorCatalogo, FilaIndicadores, IndicadoresLiteratura
 
 
@@ -42,21 +42,16 @@ def calcular_indicadores_literatura(factores: Sequence[FactorCatalogo]) -> Indic
         )
         for f in factores
     ]
-    return IndicadoresLiteratura(filas=filas, cuartiles=cuartiles, version=None)
+    return IndicadoresLiteratura(filas=filas, cuartiles=cuartiles, simulado=False)
 
 
 def obtener_indicadores_literatura(
-    fuente: Optional[Callable[[], Sequence[FactorCatalogo]]] = None,
-) -> Optional[IndicadoresLiteratura]:
+    fuente: Callable[[], Sequence[FactorCatalogo]] = cargar_datos_catalogo,
+) -> IndicadoresLiteratura:
     """
-    Caso de uso completo: obtiene los factores y calcula los indicadores.
-
-    Sin `fuente` usa la versión activa del catálogo en PostgreSQL y devuelve None si
-    todavía no hay catálogo cargado. Las pruebas pueden inyectar otra fuente.
+    Caso de uso completo: obtiene los datos de la `fuente` y calcula los
+    indicadores. Por defecto usa la fuente simulada y marca el resultado como
+    simulado; las pruebas pueden inyectar otra fuente.
     """
-    if fuente is not None:
-        return calcular_indicadores_literatura(fuente())
-    version, factores = cargar_datos_catalogo()
-    if not factores:
-        return None
-    return calcular_indicadores_literatura(factores)._replace(version=version)
+    resultado = calcular_indicadores_literatura(fuente())
+    return resultado._replace(simulado=fuente is cargar_datos_catalogo)

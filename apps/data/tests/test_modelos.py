@@ -64,7 +64,7 @@ class UsuarioTests(TestCase):
 class RestriccionesCatalogoTests(TestCase):
 
     def setUp(self):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
         self.dimension = Dimension.objects.create(nombre='Tecnológica')
 
     def test_la_base_rechaza_un_alcance_invalido(self):

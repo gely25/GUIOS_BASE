@@ -16,9 +16,5 @@ Reglas para cambiar el esquema:
 - Cada cambio lleva su migración nueva (`python manage.py makemigrations`); no se edita `0001_initial.py`.
 - Si dos ramas crean migraciones a la vez, hay que unirlas antes de hacer merge.
 
-- `management/commands/cargar_catalogo_guios.py`: carga el catálogo GUIOS 2021 (`semillas/guios_2021/`)
-  como versión `v1-2021`. Repetible.
-- `management/commands/procesar_busquedas.py`: ejecuta las búsquedas bibliográficas en cola (HU02).
-- `migrations/0012_actualizacion_bibliografica.py`: estados y progreso de búsquedas, revisión de vínculos
-  (`origen`, `estado`), `total_citas_base` y versionado del catálogo (un solo ACTIVO y un solo BORRADOR).
-- `repositorios/`: consultas ORM que usan los servicios (`catalogo.py`, `bibliografia.py`).
+Cuando existan los datos reales de HU02, `cargar_datos_catalogo()` (en
+`application/services/indicadores_literatura/`) se reemplaza por una lectura de estas tablas.

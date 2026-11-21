@@ -5,6 +5,7 @@ from apps.business_rules import menu
 from apps.data.models import Usuario
 
 PENDIENTES = [
+    'admin-actualizacion-bibliografica',
     'admin-catalogo-metodologico',
     'decisor-importancia-factores',
     'decisor-resultados',

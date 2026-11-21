@@ -8,9 +8,6 @@ catálogo fijo.
 import unittest
 from fractions import Fraction
 
-from django.core.management import call_command
-from django.test import TestCase
-
 from apps.application.services.indicadores_literatura import (
     FactorCatalogo,
     calcular_indicadores_literatura,
@@ -73,24 +70,20 @@ class CalcularIndicadoresTests(unittest.TestCase):
             ])
 
 
-class ObtenerIndicadoresTests(TestCase):
-    """La fuente por defecto es la versión activa del catálogo en PostgreSQL."""
+class ObtenerIndicadoresTests(unittest.TestCase):
 
-    def test_una_fuente_propia_no_lleva_version(self):
-        self.assertIsNone(obtener_indicadores_literatura(_fuente_pequena).version)
+    def test_una_fuente_propia_no_se_marca_como_simulada(self):
+        self.assertFalse(obtener_indicadores_literatura(_fuente_pequena).simulado)
 
-    def test_sin_catalogo_cargado_devuelve_none(self):
-        self.assertIsNone(obtener_indicadores_literatura())
+    def test_la_fuente_por_defecto_se_marca_como_simulada(self):
+        self.assertTrue(obtener_indicadores_literatura().simulado)
 
-    def test_con_el_catalogo_2021_usa_la_version_activa(self):
-        call_command('cargar_catalogo_guios', verbosity=0)
-        resultado = obtener_indicadores_literatura()
-        self.assertEqual(resultado.version, 'v1-2021')
-        compatibilidad = next(f for f in resultado.filas if f.nombre == "Compatibilidad")
-        self.assertEqual((compatibilidad.tc, compatibilidad.ns, compatibilidad.r), (33, 8, 4.125))
+    def test_compatibilidad_simulada_con_3_citas_da_0_375(self):
+        filas = obtener_indicadores_literatura().filas
+        compatibilidad = next(f for f in filas if f.nombre == "Compatibilidad")
+        self.assertEqual((compatibilidad.tc, compatibilidad.ns, compatibilidad.r), (3, 8, 0.375))
 
     def test_todas_las_il_e_is_estan_en_la_escala_1_a_4(self):
-        call_command('cargar_catalogo_guios', verbosity=0)
         for fila in obtener_indicadores_literatura().filas:
             with self.subTest(factor=fila.nombre):
                 self.assertIn(fila.il, (1, 2, 3, 4))

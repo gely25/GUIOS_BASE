@@ -25,8 +25,8 @@ class ModelosTests(unittest.TestCase):
             ("nombre", "dimension", "tc", "ns", "r", "il", "ie", "is_"),
         )
 
-    def test_indicadores_literatura_agrupa_filas_cuartiles_y_version(self):
-        self.assertEqual(IndicadoresLiteratura._fields, ("filas", "cuartiles", "version"))
+    def test_indicadores_literatura_agrupa_filas_cuartiles_y_origen(self):
+        self.assertEqual(IndicadoresLiteratura._fields, ("filas", "cuartiles", "simulado"))
 
     def test_son_inmutables(self):
         factor = FactorCatalogo("A", "Dim", ns=1, tc=1, ie=3)

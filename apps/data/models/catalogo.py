@@ -57,34 +57,19 @@ class Subfactor(models.Model):
 
 
 class CatalogoVersion(models.Model):
-    """
-    Versión del catálogo. Solo una puede estar ACTIVA; las evaluaciones guardan la
-    versión con la que se calcularon y por eso las anteriores pasan a HISTORICO, no se borran.
-    """
-
-    BORRADOR = 'BORRADOR'
-    ACTIVO = 'ACTIVO'
-    HISTORICO = 'HISTORICO'
-    ESTADOS = [(BORRADOR, 'Borrador'), (ACTIVO, 'Activo'), (HISTORICO, 'Histórico')]
-
     catalogo_id = models.BigAutoField(primary_key=True)
     version = models.CharField(max_length=30, unique=True)
     fecha_creacion = models.DateField()
-    estado = models.CharField(max_length=20, choices=ESTADOS, default=ACTIVO)
-    fecha_publicacion = models.DateTimeField(null=True, blank=True)
-    publicado_por = models.ForeignKey(
-        'data.Usuario', on_delete=models.PROTECT, null=True, blank=True,
-        db_column='publicado_por', related_name='+')
+    estado = models.CharField(max_length=20, default='ACTIVO')
 
     class Meta:
         db_table = 'catalogo_version'
         constraints = [
-            models.CheckConstraint(
-                condition=Q(estado__in=['BORRADOR', 'ACTIVO', 'HISTORICO']), name='catalogo_estado_valido'),
             models.UniqueConstraint(
-                fields=['estado'], condition=Q(estado='ACTIVO'), name='catalogo_unico_activo'),
-            models.UniqueConstraint(
-                fields=['estado'], condition=Q(estado='BORRADOR'), name='catalogo_un_solo_borrador'),
+                fields=['estado'],
+                condition=Q(estado='ACTIVO'),
+                name='catalogo_unico_activo',
+            ),
         ]
 
     def __str__(self):
@@ -92,11 +77,7 @@ class CatalogoVersion(models.Model):
 
 
 class IndicadorFactor(models.Model):
-    """
-    Indicadores de un factor en una versión del catálogo (NS, TC, r_i, IE, IL, IS).
-
-    total_citas = total_citas_base (TC de GUIOS 2021) + publicaciones aprobadas 2020-2025.
-    """
+    """Indicadores de un factor en una versión del catálogo (NS, TC, r_i, IE, IL, IS)."""
 
     indicador_id = models.BigAutoField(primary_key=True)
     catalogo = models.ForeignKey(
@@ -104,7 +85,6 @@ class IndicadorFactor(models.Model):
     factor = models.ForeignKey(
         Factor, on_delete=models.PROTECT, db_column='factor_id', related_name='indicadores')
     numero_subfactores = models.IntegerField()
-    total_citas_base = models.IntegerField(default=0)
     total_citas = models.IntegerField(default=0, null=True)
     relacion_ri = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
     importancia_experto = models.IntegerField(null=True, blank=True)
@@ -115,10 +95,6 @@ class IndicadorFactor(models.Model):
         db_table = 'indicador_factor'
         constraints = [
             models.UniqueConstraint(fields=['catalogo', 'factor'], name='indicador_catalogo_factor_unico'),
-            models.CheckConstraint(condition=Q(numero_subfactores__gte=0), name='indicador_ns_no_negativo'),
-            models.CheckConstraint(condition=Q(total_citas_base__gte=0), name='indicador_tc_base_no_negativo'),
-            models.CheckConstraint(
-                condition=Q(total_citas__isnull=True) | Q(total_citas__gte=0), name='indicador_tc_no_negativo'),
             models.CheckConstraint(
                 condition=Q(importancia_experto__isnull=True) | Q(importancia_experto__range=(1, 4)),
                 name='indicador_ie_1_a_4'),
