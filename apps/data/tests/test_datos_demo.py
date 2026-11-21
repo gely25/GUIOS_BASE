@@ -1,10 +1,10 @@
 from io import StringIO
-
+from datetime import date
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
-from apps.data.models import Usuario
+from apps.data.models import CatalogoVersion, Usuario
 
 
 class DatosDemoTests(TestCase):
@@ -26,6 +26,25 @@ class DatosDemoTests(TestCase):
         self.cargar()
         self.cargar()
         self.assertEqual(Usuario.objects.filter(correo__endswith='.demo@guios.local').count(), 3)
+
+    def test_catalogo_demo_no_desplaza_al_catalogo_vigente(self):
+        vigente = CatalogoVersion.objects.create(
+            version='GUIOS-V1',
+            fecha_creacion=date.today(),
+            estado='ACTIVO',
+        )
+
+        self.cargar()
+
+        vigente.refresh_from_db()
+        demo = CatalogoVersion.objects.get(version='GUIOS-DEMO-V1')
+
+        self.assertEqual(vigente.estado, 'ACTIVO')
+        self.assertEqual(demo.estado, 'HISTORICO')
+        self.assertEqual(
+            CatalogoVersion.objects.filter(estado='ACTIVO').count(),
+            1,
+        )
 
     def test_las_contrasenas_demo_permiten_entrar(self):
         self.cargar()

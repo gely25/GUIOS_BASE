@@ -33,6 +33,8 @@ Usuarios de demostración:
 ~~~
 
 - El comando es **repetible**: si el correo ya existe, actualiza sus datos y restablece su contraseña. Sirve para volver al estado de demo.
+- Las migraciones crean `GUIOS-V1` como versión vigente del catálogo; no es necesario cargar datos demo para registrar una evaluación.
+- El comando puede crear `GUIOS-DEMO-V1` en estado `DEMO`, pero nunca lo activa ni desplaza el catálogo vigente.
 - **Solo corre en una base cuyo nombre termine en `_dev`** (por ejemplo `guios_pro_db_dev`). En cualquier otra se niega.
 
 ## Cómo probar cada rol

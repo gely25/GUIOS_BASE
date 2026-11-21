@@ -4,8 +4,11 @@ Rutas del Espacio del Decisor - GUIOS PRO.
 from .views.documentos import carga_documental_view
 from django.urls import path
 from .views import decisor_home_view, modulo_pendiente_view
+from .views.evaluacion import evaluacion_inicial_view
 from .views.preguntas import preguntas_view
 from .views.documentos import carga_documental_view
+from .views.informe import informe_view, resultados_view
+
 urlpatterns = [
     path(
         '',
@@ -14,12 +17,7 @@ urlpatterns = [
     ),
     path(
         'ficha-inicial/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Ficha inicial de evaluación',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:3102',
-        },
+        evaluacion_inicial_view,
         name='decisor-ficha-inicial'
     ),
     path(
@@ -45,22 +43,12 @@ urlpatterns = [
     ),
     path(
         'resultados/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Resultados',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:4266',
-        },
+        resultados_view,
         name='decisor-resultados'
     ),
     path(
         'informe/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Informe',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:4464',
-        },
+        informe_view,
         name='decisor-informe'
     ),
     path(

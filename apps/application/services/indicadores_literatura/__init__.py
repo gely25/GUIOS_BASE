@@ -1,7 +1,7 @@
 """
 Indicadores de literatura (HU-03): API pública del paquete.
 
-Capa: application. Los demás módulos (modelos, fuente_simulada, servicio) son
+Capa: application. Los demás módulos (modelos, fuente_catalogo, servicio) son
 detalles internos; quien use el servicio debe importar desde aquí.
 """
 

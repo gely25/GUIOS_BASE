@@ -5,7 +5,7 @@ Capa: application. Solo define las estructuras que viajan entre la fuente de
 datos, el servicio y la presentación; no contiene lógica.
 """
 
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
 from apps.business_rules.il import Cuartiles
 
@@ -16,7 +16,7 @@ class FactorCatalogo(NamedTuple):
     nombre: str
     dimension: str
     ns: int  # número de subfactores del catálogo
-    tc: int  # total de citas/referencias (HU02)
+    tc: int  # total de citas: TC GUIOS 2021 + publicaciones aprobadas (HU02)
     ie: int  # Importancia del Experto (valor fijo del modelo original)
 
 
@@ -34,8 +34,8 @@ class FilaIndicadores(NamedTuple):
 
 
 class IndicadoresLiteratura(NamedTuple):
-    """Resultado completo: filas por factor, cuartiles usados y origen de datos."""
+    """Resultado completo: filas por factor, cuartiles usados y versión del catálogo (None si la fuente es otra)."""
 
     filas: List[FilaIndicadores]
     cuartiles: Cuartiles
-    simulado: bool
+    version: Optional[str]

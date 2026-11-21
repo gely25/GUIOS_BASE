@@ -57,9 +57,9 @@ class PermisosTests(unittest.TestCase):
 
 class CatalogoTests(unittest.TestCase):
 
-    def test_las_13_rutas_de_presentacion_estan_en_el_catalogo(self):
-        self.assertEqual(len(menu.CATALOGO), 13)
-        self.assertEqual(len({m.ruta for m in menu.CATALOGO}), 13)
+    def test_las_16_rutas_de_presentacion_estan_en_el_catalogo(self):
+        self.assertEqual(len(menu.CATALOGO), 16)
+        self.assertEqual(len({m.ruta for m in menu.CATALOGO}), 16)
 
     def test_cada_ruta_tiene_exactamente_un_rol(self):
         for modulo in menu.CATALOGO:

@@ -5,10 +5,12 @@ Es repetible: si el correo ya existe, actualiza sus datos y su contraseña.
 Solo corre sobre una base cuyo nombre termine en `_dev`.
 """
 
+from datetime import date
+
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 
-from apps.data.models import Organizacion, Usuario
+from apps.data.models import CatalogoVersion, Organizacion, Usuario
 
 USUARIOS_DEMO = [
     # correo, contraseña, nombre, rol, activo
@@ -31,6 +33,10 @@ class Command(BaseCommand):
         organizacion, _ = Organizacion.objects.get_or_create(
             nombre='Organización Demo',
             defaults={'sector': 'Educación', 'tamano': 'Mediana'})
+        CatalogoVersion.objects.update_or_create(
+            version='GUIOS-DEMO-V1',
+            defaults={'fecha_creacion': date.today(), 'estado': 'HISTORICO'},
+        )
 
         self.stdout.write('Usuarios de demostración:')
         for correo, clave, nombre, rol, activo in USUARIOS_DEMO:
