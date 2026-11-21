@@ -32,7 +32,7 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 |------|--------|--------|------------------------|
 | `/decisor/` | `decisor-inicio` | maqueta de inicio | Angely (base) |
 | `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | implementada | HU05, Joseph |
-| `/decisor/importancia-factores/` | `decisor-importancia-factores` | módulo no disponible | HU06, Angely |
+| `/decisor/importancia-factores/` | `decisor-importancia-factores` | **implementada**: ID por factor, IR y exclusión de factores con IR = 1 | HU06, Angely |
 | `/decisor/carga-documental/` | `decisor-carga-documental` | módulo no disponible | HU07, Jorge |
 | `/decisor/revision-valoraciones/` | `decisor-revision-valoraciones` | módulo no disponible | HU11, Angely |
 | `/decisor/resultados/` | `decisor-resultados` | módulo no disponible | HU14, Merly |
@@ -43,8 +43,9 @@ La ruta `/admin/` es el panel de Django. No forma parte del flujo de la aplicaci
 usuario ADMINISTRADOR activo.
 
 Al registrar correctamente la ficha inicial (HU05), la aplicación continúa hacia
-`/decisor/importancia-factores/` y envía `evaluacion_id` como parámetro de consulta. HU06 debe validar
-que la evaluación pertenece al decisor autenticado antes de utilizar ese identificador.
+`/decisor/importancia-factores/` y envía `evaluacion_id` como parámetro de consulta. HU06 valida
+que la evaluación pertenece al decisor autenticado y esté EN_PROCESO antes de utilizar ese identificador;
+al guardar continúa a `/decisor/carga-documental/?evaluacion_id=...`.
 
 ## Cómo implementar un módulo pendiente
 

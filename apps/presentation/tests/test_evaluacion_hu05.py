@@ -61,7 +61,7 @@ class RegistroEvaluacionInterfazHU05Tests(TestCase):
 
         siguiente = self.client.get(respuesta.url)
         self.assertEqual(siguiente.status_code, 200)
-        self.assertContains(siguiente, 'Importancia de factores')
+        self.assertContains(siguiente, 'Valoración de factores')
         self.assertContains(siguiente, f'Evaluación #{evaluacion.pk} registrada')
 
     def test_cp05_formulario_falla_sin_campos_obligatorios(self):
