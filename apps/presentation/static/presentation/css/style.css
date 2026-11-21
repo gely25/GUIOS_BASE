@@ -20,7 +20,8 @@ html, body {
     background-color: #ffffff;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    /* clip (no hidden): hidden vuelve a body un contenedor de scroll y rompe el menu fijo */
+    overflow-x: clip;
 }
 
 /* Contenedor principal de pantalla completa (proporción 1440px desktop) */
@@ -1035,7 +1036,7 @@ html, body {
     cursor: not-allowed;
 }
 
-/* 4.9 Stepper Horizontal de Evaluación (Fiel a Figma Imagen 1) */
+/* 4.9 Stepper horizontal de evaluacion (circulos numerados) */
 .stepper-wrapper {
     margin-bottom: 24px;
 }
@@ -1044,74 +1045,76 @@ html, body {
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    padding: 16px 24px;
+    padding: 20px;
+    margin-bottom: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .stepper-list {
     list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
     margin: 0;
     padding: 0;
-    flex-wrap: wrap;
 }
 
 .stepper-step {
     margin: 0;
+    min-width: 0;
 }
 
+/* Cada paso: circulo numerado + nombre */
 .stepper-link {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 14px;
-    border-radius: 9999px;
-    font-size: 13px;
-    text-decoration: none;
-    transition: all 0.15s ease;
-}
-
-/* Paso Completado (Píldora oscura) */
-.stepper-step.completed .stepper-link {
-    background-color: #1f2426;
-    color: #ffffff;
+    max-width: 100%;
+    font-size: 12px;
     font-weight: 500;
+    color: #64748b;
+    text-decoration: none;
 }
 
-.stepper-step.completed .step-indicator {
-    font-weight: 700;
-}
-
-/* Paso Activo (Píldora ocre) */
-.stepper-step.active .stepper-link {
-    background-color: #c79a66;
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.stepper-step.active .step-indicator {
+.step-indicator {
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.25);
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #f1ebe0;
+    color: #3f3a33;
 }
 
-/* Paso Pendiente */
-.stepper-step:not(.completed):not(.active) .stepper-link {
-    background-color: #ffffff;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-    font-weight: 500;
+.step-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.stepper-step:not(.completed):not(.active) .step-indicator {
-    color: #94a3b8;
+/* Paso activo: circulo ocre y nombre en negrita */
+.stepper-step.active .stepper-link {
+    color: #1f2426;
+    font-weight: 700;
+}
+
+.stepper-step.active .step-indicator,
+.stepper-step.completed .step-indicator {
+    background-color: #a8692c;
+    color: #ffffff;
+}
+
+/* Paso completado: se puede volver a el */
+.stepper-step.completed .stepper-link {
+    color: #1f2426;
+}
+
+.stepper-step.completed a.stepper-link:hover .step-label {
+    text-decoration: underline;
 }
 
 /* 4.10 Pantalla de Módulo Pendiente (Limpia y Sin Emojis) */
@@ -1289,10 +1292,15 @@ html, body {
     }
 
     .stepper-list {
-        gap: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: 12px;
     }
 }
 
 
 .topbar-logout-form { margin: 0; }
 button.topbar-logout-link { background: none; border: 0; font: inherit; cursor: pointer; }
+
+
+/* Aire bajo el indicador de pasos de la evaluacion */
+.evaluation-stepper-container { margin-bottom: 24px; }

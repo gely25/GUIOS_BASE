@@ -151,7 +151,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 |----------|---------------------|--------|
 | HU01 Acceso y roles (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, roles, menú y permisos: hecho. Gestión de usuarios: pendiente |
 | HU03 / HU04 Indicadores IL e IS | `business_rules/il.py`, `is_.py`, `application/services/indicadores_literatura/` | Hecho (lee la versión activa del catálogo) |
-| HU06 Importancia relativa (IR) | `business_rules/ir.py` | Lógica lista; falta servicio y pantalla |
+| HU06 Importancia relativa (IR) | `business_rules/ir.py`, `application/services/importancia.py` | Hecho: pantalla de valoración de factores (ID, IR, exclusión de IR = 1) |
 | HU09 Preguntas por información faltante (antes José) | `application/services/ai.py` | Pendiente |
 | HU11 Revisión humana de valoraciones (antes José) | `application/services/evaluation.py` | Pendiente |
 | HU12 PM y FODA | `business_rules/pm.py`, `foda.py` | Lógica lista y validada; falta servicio y pantalla |
