@@ -14,7 +14,7 @@ from apps.data.models import CatalogoVersion, Evaluacion, Organizacion, Usuario
 class RegistroEvaluacionHU05Tests(TestCase):
 
     def setUp(self):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
         self.decisor = Usuario.objects.create_user(
             correo='decisor.hu05@guios.test',
             password='Clave-Segura-123',
@@ -149,7 +149,7 @@ class RegistroEvaluacionHU05Tests(TestCase):
         CatalogoVersion.objects.create(
             version='GUIOS-DEMO-TEST',
             fecha_creacion=date.today(),
-            estado='DEMO',
+            estado='HISTORICO',
         )
         self.assertEqual(
             CatalogService.obtener_version_vigente().pk,

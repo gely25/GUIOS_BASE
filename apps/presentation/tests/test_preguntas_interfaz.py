@@ -13,7 +13,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
 class PreguntasInterfazTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='INACTIVO')
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
         org = Organizacion.objects.create(nombre='Organización')
         cls.actor = Usuario.objects.create_user('propietario@hu09.test', 'Clave-test-123', nombre='Propietario', organizacion=org)
         cls.otro = Usuario.objects.create_user('otro@hu09.test', 'Clave-test-123', nombre='Otro', organizacion=org)

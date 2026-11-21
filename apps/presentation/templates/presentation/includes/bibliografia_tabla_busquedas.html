@@ -1,0 +1,41 @@
+{% comment %}
+Tabla de búsquedas bibliográficas (HU02).
+Contexto: busquedas (con n_resultados y n_sugeridas).
+{% endcomment %}
+<div class="admin-table-container">
+    <table class="admin-table" aria-label="Búsquedas bibliográficas">
+        <thead>
+            <tr>
+                <th scope="col">Factor</th>
+                <th scope="col">Fuente</th>
+                <th scope="col">Periodo</th>
+                <th scope="col">Estado</th>
+                <th scope="col" class="bib-num">Publicaciones</th>
+                <th scope="col" class="bib-num">Por revisar</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in busquedas %}
+            <tr>
+                <td class="bib-factor">{{ b.factor.nombre|default:"—" }}</td>
+                <td>{{ b.fuente }}</td>
+                <td>{{ b.anio_inicio }}–{{ b.anio_fin }}</td>
+                <td>
+                    <span class="bib-estado bib-estado-{{ b.estado|lower }}">{{ b.get_estado_display }}</span>
+                    {% if b.mensaje_error %}<span class="bib-error-detalle" title="{{ b.mensaje_error }}">{{ b.mensaje_error|truncatechars:60 }}</span>{% endif %}
+                </td>
+                <td class="bib-num">{{ b.n_resultados }}</td>
+                <td class="bib-num">{{ b.n_sugeridas }}</td>
+                <td>{{ b.fecha_ejecucion|date:"d/m/Y H:i" }}</td>
+                <td><a class="bib-enlace" href="{% url 'presentation:admin-bibliografia-busquedas' %}?id={{ b.pk }}">Revisar</a></td>
+            </tr>
+            {% empty %}
+            <tr class="table-empty-row">
+                <td colspan="8" class="table-empty-cell">Todavía no se ha lanzado ninguna búsqueda.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
