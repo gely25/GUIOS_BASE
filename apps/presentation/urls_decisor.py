@@ -7,6 +7,8 @@ from .views import decisor_home_view, modulo_pendiente_view
 from .views.evaluacion import evaluacion_inicial_view
 from .views.preguntas import preguntas_view
 from .views.documentos import carga_documental_view
+from .views.informe import informe_view, resultados_view
+
 urlpatterns = [
     path(
         '',
@@ -41,22 +43,12 @@ urlpatterns = [
     ),
     path(
         'resultados/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Resultados',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:4266',
-        },
+        resultados_view,
         name='decisor-resultados'
     ),
     path(
         'informe/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Informe',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:4464',
-        },
+        informe_view,
         name='decisor-informe'
     ),
     path(
