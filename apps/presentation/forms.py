@@ -9,6 +9,59 @@ from django.contrib.auth.forms import AuthenticationForm
 from apps.data.models import Usuario
 
 
+class EvaluacionInicialForm(forms.Form):
+    nombre_organizacion = forms.CharField(
+        label='Nombre de la organización', max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. Universidad Nacional',
+        }))
+    sector = forms.CharField(
+        label='Sector', max_length=100, required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. Educación',
+        }))
+    tamano = forms.CharField(
+        label='Tamaño', max_length=50, required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. Mediana',
+        }))
+    objetivo_adopcion = forms.CharField(
+        label='Objetivo de adopción', required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'evaluacion-input evaluacion-textarea',
+            'rows': 3,
+            'placeholder': 'Describa brevemente el propósito de la adopción',
+        }))
+    nombre_software = forms.CharField(
+        label='Nombre del software', max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. LibreOffice',
+        }))
+    version_software = forms.CharField(
+        label='Versión del software', max_length=50, required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. 24.2',
+        }))
+    proveedor = forms.CharField(
+        label='Proveedor', max_length=150, required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Ej. The Document Foundation',
+        }))
+    descripcion_software = forms.CharField(
+        label='Descripción del software', required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'evaluacion-input evaluacion-textarea',
+            'rows': 3,
+            'placeholder': 'Indique su propósito o principales características',
+        }))
+
+
 class AccesoForm(AuthenticationForm):
     username = forms.EmailField(
         label='Correo electrónico',

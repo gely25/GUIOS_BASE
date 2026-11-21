@@ -150,3 +150,9 @@ BIBLIOGRAPHIC_API_KEY = os.getenv('BIBLIOGRAPHIC_API_KEY') or None
 BIBLIOGRAPHIC_TIMEOUT = int(os.getenv('BIBLIOGRAPHIC_TIMEOUT') or 20)
 # Máximo de publicaciones que se guardan por consulta (una consulta por factor).
 BIBLIOGRAPHIC_MAX_RESULTADOS = int(os.getenv('BIBLIOGRAPHIC_MAX_RESULTADOS') or 50)
+
+# HU09: proveedor local opcional; vacío conserva el modo manual.
+HU09_OLLAMA_MODEL = os.getenv('HU09_OLLAMA_MODEL', '').strip()
+
+# HU09: comparación semántica opcional; vacío mantiene el filtro textual.
+HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()

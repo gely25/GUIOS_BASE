@@ -82,7 +82,7 @@ class CatalogoVersion(models.Model):
             models.CheckConstraint(
                 condition=Q(estado__in=['BORRADOR', 'ACTIVO', 'HISTORICO']), name='catalogo_estado_valido'),
             models.UniqueConstraint(
-                fields=['estado'], condition=Q(estado='ACTIVO'), name='catalogo_un_solo_activo'),
+                fields=['estado'], condition=Q(estado='ACTIVO'), name='catalogo_unico_activo'),
             models.UniqueConstraint(
                 fields=['estado'], condition=Q(estado='BORRADOR'), name='catalogo_un_solo_borrador'),
         ]

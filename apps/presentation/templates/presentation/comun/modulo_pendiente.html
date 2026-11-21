@@ -29,6 +29,14 @@
 
                     <h1 class="pending-title">{{ modulo.nombre_modulo }}</h1>
 
+                    {% if messages %}
+                        <div class="pending-notice-box" role="status" aria-live="polite">
+                            {% for message in messages %}
+                                <p>{{ message }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
                     <div class="pending-notice-box">
                         <span class="pending-notice-text">{{ modulo.mensaje }}</span>
                     </div>

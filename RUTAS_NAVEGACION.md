@@ -31,7 +31,7 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 | Ruta | Nombre | Estado | Historia / responsable |
 |------|--------|--------|------------------------|
 | `/decisor/` | `decisor-inicio` | maqueta de inicio | Angely (base) |
-| `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | módulo no disponible | HU05, Joseph |
+| `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | implementada | HU05, Joseph |
 | `/decisor/importancia-factores/` | `decisor-importancia-factores` | módulo no disponible | HU06, Angely |
 | `/decisor/carga-documental/` | `decisor-carga-documental` | módulo no disponible | HU07, Jorge |
 | `/decisor/revision-valoraciones/` | `decisor-revision-valoraciones` | módulo no disponible | HU11, Angely |
@@ -41,6 +41,10 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 
 La ruta `/admin/` es el panel de Django. No forma parte del flujo de la aplicación y solo lo abre un
 usuario ADMINISTRADOR activo.
+
+Al registrar correctamente la ficha inicial (HU05), la aplicación continúa hacia
+`/decisor/importancia-factores/` y envía `evaluacion_id` como parámetro de consulta. HU06 debe validar
+que la evaluación pertenece al decisor autenticado antes de utilizar ese identificador.
 
 ## Cómo implementar un módulo pendiente
 

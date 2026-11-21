@@ -5,13 +5,20 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+
+def normalizar_estados_catalogo(apps, schema_editor):
+    """Estados antiguos (INACTIVO, DEMO) pasan a HISTORICO antes de la restriccion de estados validos."""
+    CatalogoVersion = apps.get_model('data', 'CatalogoVersion')
+    CatalogoVersion.objects.filter(estado__in=['INACTIVO', 'DEMO']).update(estado='HISTORICO')
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('data', '0001_initial'),
+        ('data', '0011_integridad_hu05'),
     ]
 
     operations = [
+        migrations.RunPython(normalizar_estados_catalogo, migrations.RunPython.noop),
         migrations.AddField(
             model_name='busquedabibliografica',
             name='factor',
@@ -117,10 +124,6 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name='catalogoversion',
             constraint=models.CheckConstraint(condition=models.Q(('estado__in', ['BORRADOR', 'ACTIVO', 'HISTORICO'])), name='catalogo_estado_valido'),
-        ),
-        migrations.AddConstraint(
-            model_name='catalogoversion',
-            constraint=models.UniqueConstraint(condition=models.Q(('estado', 'ACTIVO')), fields=('estado',), name='catalogo_un_solo_activo'),
         ),
         migrations.AddConstraint(
             model_name='catalogoversion',
