@@ -5,6 +5,9 @@ Pruebas de la API pública de indicadores_literatura/ y de BibliographicService
 
 import unittest
 
+from django.core.management import call_command
+from django.test import TestCase
+
 import apps.application.services.indicadores_literatura as paquete
 from apps.application.services.bibliographic import BibliographicService
 from apps.application.services.indicadores_literatura import FactorCatalogo, IndicadoresLiteratura
@@ -24,13 +27,14 @@ class ApiPublicaTests(unittest.TestCase):
         self.assertEqual(set(paquete.__all__), API_PUBLICA)
 
 
-class BibliographicServiceTests(unittest.TestCase):
+class BibliographicServiceTests(TestCase):
 
     def test_indicadores_con_el_catalogo_por_defecto(self):
+        call_command('cargar_catalogo_guios', verbosity=0)
         resultado = BibliographicService().indicadores_literatura()
         self.assertIsInstance(resultado, IndicadoresLiteratura)
         self.assertEqual(len(resultado.filas), 18)
-        self.assertTrue(resultado.simulado)
+        self.assertEqual(resultado.version, 'v1-2021')
 
     def test_indicadores_con_una_fuente_propia(self):
         def fuente():
@@ -41,4 +45,4 @@ class BibliographicServiceTests(unittest.TestCase):
 
         resultado = BibliographicService().indicadores_literatura(fuente)
         self.assertEqual([fila.nombre for fila in resultado.filas], ["A", "B"])
-        self.assertFalse(resultado.simulado)
+        self.assertIsNone(resultado.version)

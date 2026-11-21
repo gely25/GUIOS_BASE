@@ -1,0 +1,30 @@
+{% extends "presentation/layouts/base.html" %}
+
+{% load static %}
+{% block title %}Búsquedas bibliográficas | GUIOS PRO{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/bibliografia.css' %}">{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include "presentation/includes/app_sidebar.html" with current_area="administracion" active_item="actualizacion-bibliografica" %}
+
+    <div class="workspace-body-container">
+        {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
+
+        <main class="workspace-inner-content">
+            <div class="page-title-row">
+                <div>
+                    <a class="bib-enlace" href="{% url 'presentation:admin-actualizacion-bibliografica' %}">← Actualización bibliográfica</a>
+                    <h1 class="page-main-heading">Historial de búsquedas</h1>
+                    <p class="page-main-subheading">Cada búsqueda queda registrada con su consulta, fuente, periodo, fecha y estado.</p>
+                </div>
+            </div>
+            <section class="dashboard-block">
+                <div class="admin-panel-card">
+                    {% include "presentation/includes/bibliografia_tabla_busquedas.html" %}
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+{% endblock %}

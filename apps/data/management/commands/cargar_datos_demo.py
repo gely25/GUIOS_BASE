@@ -35,7 +35,7 @@ class Command(BaseCommand):
             defaults={'sector': 'Educación', 'tamano': 'Mediana'})
         CatalogoVersion.objects.update_or_create(
             version='GUIOS-DEMO-V1',
-            defaults={'fecha_creacion': date.today(), 'estado': 'DEMO'},
+            defaults={'fecha_creacion': date.today(), 'estado': 'HISTORICO'},
         )
 
         self.stdout.write('Usuarios de demostración:')

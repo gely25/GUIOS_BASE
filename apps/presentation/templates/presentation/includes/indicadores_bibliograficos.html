@@ -1,6 +1,6 @@
 {% comment %}
 Sección "Indicadores bibliográficos por factor" (HU-03).
-Contexto: indicadores (IndicadoresLiteratura) con filas, cuartiles y simulado.
+Contexto: indicadores (IndicadoresLiteratura con filas, cuartiles y versión) o None si no hay catálogo.
 Las filas salen del servicio; aquí no hay factores ni valores escritos a mano.
 Los estilos propios van en este mismo fragmento para que se vea igual en cualquier página que lo incluya.
 {% endcomment %}
@@ -13,6 +13,7 @@ Los estilos propios van en este mismo fragmento para que se vea igual en cualqui
 .il-table td { padding: 12px 16px; }
 .il-table td.factor { font-weight: 600; color: #1f2426; }
 .il-table td.ratio { font-weight: 600; }
+.indicadores-bibliograficos .btn-top-action { text-decoration: none; }
 .aviso-datos-simulados { margin: 12px 0 0; font-size: 12px; color: #64748b; }
 .como-leer-indicadores { margin-top: 20px; padding: 14px 16px; line-height: 1.5; }
 .como-leer-indicadores strong { color: #1f2426; }
@@ -22,13 +23,16 @@ Los estilos propios van en este mismo fragmento para que se vea igual en cualqui
         <div class="block-header">
             <div>
                 <h2 class="admin-panel-title">Indicadores bibliográficos por factor</h2>
-                <p class="page-main-subheading">Una publicación puede asociarse a más de un factor.</p>
+                <p class="page-main-subheading">
+                    {% if indicadores.version %}Catálogo {{ indicadores.version }}. {% endif %}Una publicación puede asociarse a más de un factor.
+                </p>
             </div>
             <div>
-                <button type="button" class="btn-top-action">Recalcular IL e IS</button>
+                <a class="btn-top-action" href="{% url 'presentation:admin-bibliografia-version' %}">Recalcular IL e IS</a>
             </div>
         </div>
 
+        {% if indicadores %}
         <div class="admin-table-container">
             <table class="admin-table il-table" aria-label="Indicadores bibliográficos por factor">
                 <thead>
@@ -58,8 +62,8 @@ Los estilos propios van en este mismo fragmento para que se vea igual en cualqui
             </table>
         </div>
 
-        {% if indicadores.simulado %}
-            {% include "presentation/includes/aviso_datos_simulados.html" with texto="Datos simulados: las citas (TC) se reemplazarán por las de la actualización bibliográfica (HU02)." %}
+        {% else %}
+            {% include "presentation/includes/aviso_datos_simulados.html" with texto="No hay catálogo cargado. Ejecuta: python manage.py cargar_catalogo_guios" %}
         {% endif %}
 
         {% include "presentation/includes/como_leer_indicadores.html" %}
