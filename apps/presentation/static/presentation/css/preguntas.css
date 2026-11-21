@@ -64,3 +64,19 @@
 .hu09-dialog p { line-height:1.5; }
 .hu09-dialog-pregunta { background:#f5f7f9; padding:12px; border-radius:8px; overflow-wrap:anywhere; }
 .hu09-dialog-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:18px; }
+
+.hu10-step-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #f1ede7; color: #74501f; margin-bottom: 6px; }
+.hu10-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.hu10-box { margin: 14px 0; padding: 14px; border: 1px solid #d7e1eb; border-radius: 8px; background: #ffffff; }
+.hu10-box-propuesta { border-color: #9d6c36; background: #f5f7f9; }
+.hu10-score-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.hu10-score { font-size: 1.2rem; font-weight: 700; color: #20282c; }
+.hu10-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.hu10-link-doc { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; color: #795020; text-decoration: underline; }.hu10-step-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: #f1ede7; color: #74501f; margin-bottom: 6px; }
+.hu10-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.hu10-box { margin: 14px 0; padding: 14px; border: 1px solid #d7e1eb; border-radius: 8px; background: #ffffff; }
+.hu10-box-propuesta { border-color: #9d6c36; background: #f5f7f9; }
+.hu10-score-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.hu10-score { font-size: 1.2rem; font-weight: 700; color: #20282c; }
+.hu10-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.hu10-link-doc { display: inline-block; margin-top: 6px; font-size: 13px; font-weight: 600; color: #795020; text-decoration: underline; }

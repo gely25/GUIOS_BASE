@@ -1,17 +1,20 @@
 """
-Vistas de Carga Documental (HU07) y Recuperación Semántica con pgvector (HU08) - Espacio del Decisor.
+Vistas de Carga Documental (HU07), Recuperación Semántica con pgvector (HU08)
+y trazabilidad de evidencia para HU10 - Espacio del Decisor.
 """
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, ProtectedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from apps.application.services.document import DocumentService
+from apps.application.services.preguntas import PreguntasService
 from apps.application.services.retrieval import RetrievalService
-from apps.data.models import Documento, Evaluacion, FragmentoDocumento, Subfactor
+from apps.data.models import Documento, Evaluacion, Evidencia, FragmentoDocumento, Subfactor
 
 
 def _obtener_evaluacion_activa(request):
@@ -57,7 +60,7 @@ def carga_documental_view(request):
     """
     Pantalla «Decisor · Carga documental» (HU07 + HU08).
     Permite subir archivos PDF/DOCX/XLSX, generar sus embeddings de 1536 dimensiones
-    en pgvector, inspeccionar fragmentos y probar recuperación semántica por subfactor o consulta.
+    en pgvector, inspeccionar fragmentos, comprobar su ubicación y vincularlos a subfactores.
     """
     servicio = DocumentService()
     retrieval_service = RetrievalService()
@@ -90,12 +93,59 @@ def carga_documental_view(request):
             )
             return redirect(url_destino)
 
+        if accion == 'vincular_evidencia':
+            frag_id = (request.POST.get('fragmento_id') or '').strip()
+            val_id = (request.POST.get('valoracion_id') or '').strip()
+            relevancia_raw = (request.POST.get('relevancia') or '').strip().replace(',', '.')
+            if not frag_id.isdigit() or not val_id.isdigit():
+                messages.error(request, 'Seleccione un fragmento y un subfactor válidos para vincular.')
+                return redirect(url_destino)
+
+            fragmento = get_object_or_404(
+                FragmentoDocumento,
+                fragmento_id=int(frag_id),
+                documento__evaluacion=evaluacion,
+            )
+            valoracion = PreguntasService._valoraciones(evaluacion).filter(pk=int(val_id)).first()
+            if not valoracion:
+                messages.error(request, 'El subfactor seleccionado no pertenece a esta evaluación.')
+                return redirect(url_destino)
+
+            ubicacion = retrieval_service._formatear_ubicacion(fragmento)
+            try:
+                relevancia = Decimal(relevancia_raw) if relevancia_raw else None
+            except InvalidOperation:
+                relevancia = None
+
+            evidencia, creada = Evidencia.objects.get_or_create(
+                valoracion=valoracion,
+                fragmento=fragmento,
+                defaults={'referencia': ubicacion, 'relevancia': relevancia},
+            )
+            if not creada and not evidencia.referencia:
+                evidencia.referencia = ubicacion
+                evidencia.save(update_fields=['referencia'])
+
+            messages.success(
+                request,
+                f'Evidencia E:{evidencia.pk} ({fragmento.documento.nombre} · {ubicacion}) vinculada al subfactor «{valoracion.subfactor.descripcion}».'
+            )
+            return redirect(
+                f'{url_destino}&doc_id={fragmento.documento_id}&fragmento_id={fragmento.fragmento_id}#fragmento-{fragmento.fragmento_id}'
+            )
+
         if accion == 'eliminar':
             doc_id = request.POST.get('documento_id')
             doc = get_object_or_404(Documento, documento_id=doc_id, evaluacion=evaluacion)
             nombre_doc = doc.nombre
-            servicio.eliminar_documento(doc)
-            messages.success(request, f'Documento «{nombre_doc}» y sus fragmentos eliminados.')
+            try:
+                servicio.eliminar_documento(doc)
+                messages.success(request, f'Documento «{nombre_doc}» y sus fragmentos eliminados.')
+            except ProtectedError:
+                messages.error(
+                    request,
+                    f'No se puede eliminar «{nombre_doc}» porque tiene fragmentos vinculados como evidencia en uno o más subfactores.'
+                )
             return redirect(url_destino)
 
         archivo = request.FILES.get('archivo')
@@ -121,6 +171,7 @@ def carga_documental_view(request):
     documentos = []
     documento_inspeccionado = None
     fragmentos_inspeccionados = []
+    valoraciones_evaluacion = []
     estado_embeddings = {'total_fragmentos': 0, 'indexados': 0, 'pendientes': 0, 'porcentaje': 0}
     consulta_semantica = (request.GET.get('q') or '').strip()
     resultados_semanticos = []
@@ -131,9 +182,12 @@ def carga_documental_view(request):
         .order_by('factor__dimension__dimension_id', 'factor__factor_id', 'subfactor_id')
     )
     subfactor_seleccionado_id = (request.GET.get('subfactor_id') or '').strip()
+    fragmento_destacado_raw = (request.GET.get('fragmento_id') or '').strip()
+    fragmento_destacado_id = int(fragmento_destacado_raw) if fragmento_destacado_raw.isdigit() else None
 
     if evaluacion:
         estado_embeddings = retrieval_service.estado_indexacion(evaluacion.evaluacion_id)
+        valoraciones_evaluacion = list(PreguntasService._valoraciones(evaluacion))
 
         if subfactor_seleccionado_id.isdigit():
             try:
@@ -162,6 +216,14 @@ def carga_documental_view(request):
             .order_by('-fecha_carga')
         )
         doc_id = request.GET.get('doc_id')
+        if not doc_id and fragmento_destacado_id:
+            frag_obj = FragmentoDocumento.objects.filter(
+                fragmento_id=fragmento_destacado_id,
+                documento__evaluacion=evaluacion,
+            ).first()
+            if frag_obj:
+                doc_id = str(frag_obj.documento_id)
+
         if doc_id:
             documento_inspeccionado = documentos.filter(documento_id=doc_id).first()
         elif documentos:
@@ -183,6 +245,8 @@ def carga_documental_view(request):
         'documentos': documentos,
         'documento_inspeccionado': documento_inspeccionado,
         'fragmentos_inspeccionados': fragmentos_inspeccionados,
+        'fragmento_destacado_id': fragmento_destacado_id,
+        'valoraciones_evaluacion': valoraciones_evaluacion,
         'estado_embeddings': estado_embeddings,
         'consulta_semantica': consulta_semantica,
         'resultados_semanticos': resultados_semanticos,

@@ -211,11 +211,38 @@
                                     <strong>#{{ forloop.counter }} · {{ item.documento_nombre }}</strong>
                                     ({{ item.ubicacion_referencia }})
                                 </span>
-                                <span class="fragment-location-pill">
-                                    Similitud: {{ item.relevancia_porcentaje }}%
-                                </span>
+                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                    <span class="fragment-location-pill">
+                                        Similitud: {{ item.relevancia_porcentaje }}%
+                                    </span>
+                                    <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&doc_id={{ item.documento_id }}&fragmento_id={{ item.fragmento_id }}#fragmento-{{ item.fragmento_id }}"
+                                       class="btn-empty-state btn-doc-action">
+                                        Abrir ubicación
+                                    </a>
+                                </div>
                             </div>
                             <p class="fragment-body-text">{{ item.contenido }}</p>
+
+                            {% if valoraciones_evaluacion %}
+                            <form method="post" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                                {% csrf_token %}
+                                <input type="hidden" name="accion" value="vincular_evidencia">
+                                <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
+                                <input type="hidden" name="fragmento_id" value="{{ item.fragmento_id }}">
+                                <input type="hidden" name="relevancia" value="{{ item.similitud }}">
+                                <select name="valoracion_id" class="side-text-input" style="max-width: 380px;" required>
+                                    <option value="">-- Vincular como evidencia a subfactor --</option>
+                                    {% for v in valoraciones_evaluacion %}
+                                    <option value="{{ v.pk }}" {% if subfactor_seleccionado_id == v.subfactor_id %}selected{% endif %}>
+                                        {{ v.evaluacion_factor.factor.nombre }} · {{ v.subfactor.descripcion|truncatechars:60 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn-empty-state btn-doc-action">
+                                    Vincular evidencia
+                                </button>
+                            </form>
+                            {% endif %}
                         </article>
                         {% endfor %}
                     </div>
@@ -305,7 +332,8 @@
 
                 <div class="fragments-grid">
                     {% for frag in fragmentos_inspeccionados %}
-                    <article class="fragment-card">
+                    <article id="fragmento-{{ frag.fragmento_id }}"
+                             class="fragment-card {% if fragmento_destacado_id == frag.fragmento_id %}is-highlighted{% endif %}">
                         <div class="fragment-card-header">
                             <span><strong>Fragmento #{{ forloop.counter }}</strong> · ID {{ frag.fragmento_id }}</span>
                             <span class="fragment-location-pill">

@@ -156,3 +156,6 @@ HU09_OLLAMA_MODEL = os.getenv('HU09_OLLAMA_MODEL', '').strip()
 
 # HU09: comparación semántica opcional; vacío mantiene el filtro textual.
 HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()
+
+# HU10: proveedor local para valoración preliminar (escala 1 a 4 con evidencia).
+HU10_OLLAMA_MODEL = os.getenv('HU10_OLLAMA_MODEL', '').strip() or HU09_OLLAMA_MODEL

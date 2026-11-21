@@ -388,3 +388,12 @@
 .fragment-data-table td:last-child {
     border-right: none;
 }
+
+.fragment-card:target,
+.fragment-card.is-highlighted {
+    border-color: #c59b5f;
+    border-left-width: 5px;
+    background: #fffdf7;
+    box-shadow: 0 4px 16px rgba(197, 155, 95, 0.18);
+    scroll-margin-top: 24px;
+}
