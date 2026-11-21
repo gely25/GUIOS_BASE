@@ -38,7 +38,8 @@ def evaluacion_inicial_view(request):
                 f'Evaluación #{evaluacion.pk} registrada en estado EN_PROCESO '
                 f'con el catálogo {evaluacion.catalogo.version}.',
             )
-            return redirect(reverse('presentation:decisor-ficha-inicial'))
+            siguiente_paso = reverse('presentation:decisor-importancia-factores')
+            return redirect(f'{siguiente_paso}?evaluacion_id={evaluacion.pk}')
 
     return render(
         request,

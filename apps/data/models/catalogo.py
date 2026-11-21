@@ -64,6 +64,13 @@ class CatalogoVersion(models.Model):
 
     class Meta:
         db_table = 'catalogo_version'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['estado'],
+                condition=Q(estado='ACTIVO'),
+                name='catalogo_unico_activo',
+            ),
+        ]
 
     def __str__(self):
         return self.version

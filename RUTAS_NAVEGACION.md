@@ -39,6 +39,10 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 La ruta `/admin/` es el panel de Django. No forma parte del flujo de la aplicación y solo lo abre un
 usuario ADMINISTRADOR activo.
 
+Al registrar correctamente la ficha inicial (HU05), la aplicación continúa hacia
+`/decisor/importancia-factores/` y envía `evaluacion_id` como parámetro de consulta. HU06 debe validar
+que la evaluación pertenece al decisor autenticado antes de utilizar ese identificador.
+
 ## Cómo implementar un módulo pendiente
 
 1. La ruta ya está declarada en `apps/business_rules/menu.py` (catálogo) y en `urls_admin.py` o
