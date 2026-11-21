@@ -10,10 +10,13 @@ evaluación.
 from typing import Dict, List, NamedTuple, Optional
 
 from django.db import transaction
+from django.db.models import Q
 
 from apps.business_rules.funcion_discreta import ETIQUETAS
 from apps.business_rules.ir import calcular_ir, se_evalua
-from apps.data.models import Evaluacion, EvaluacionFactor, IndicadorFactor, ValoracionSubfactor
+from apps.data.models import (
+    Evaluacion, EvaluacionFactor, IndicadorFactor, Subfactor, ValoracionSubfactor,
+)
 
 
 class ImportanciaInvalidaError(ValueError):
@@ -106,12 +109,15 @@ class ImportanciaFactoresService:
 
         `ids` es {factor_id: ID}. Debe traer todos los factores del catálogo, con
         valores de 1 a 4, y al menos un factor debe quedar relevante (IR distinto de 1).
-        Si la evaluación ya tiene valoraciones de subfactores no se puede cambiar, porque
-        la relevancia de los factores ya condicionó esas valoraciones.
+        Al guardar se preparan las valoraciones pendientes de los subfactores de los factores
+        relevantes (las que usan después la revisión de evidencia y el cálculo). Mientras esas
+        valoraciones no tengan avance (propuesta, valor confirmado, estado o evidencias) la
+        importancia se puede volver a cambiar; con avance ya no, porque la relevancia de los
+        factores condicionó ese trabajo.
         """
-        if ValoracionSubfactor.objects.filter(evaluacion_factor__evaluacion=evaluacion).exists():
+        if self._valoraciones_con_avance(evaluacion).exists():
             raise ImportanciaInvalidaError(
-                'Esta evaluación ya tiene valoraciones de subfactores; '
+                'Esta evaluación ya tiene valoraciones de subfactores en curso; '
                 'la importancia de los factores ya no se puede cambiar.')
 
         filas = self.filas(evaluacion)
@@ -139,4 +145,27 @@ class ImportanciaFactoresService:
                     'importancia_relativa': fila.ir,
                     'relevante': fila.relevante,
                 })
+        self._preparar_valoraciones(evaluacion)
         return resultado
+
+    @staticmethod
+    def _valoraciones_con_avance(evaluacion):
+        """Valoraciones que ya tienen trabajo registrado (no son solo la fila pendiente vacía)."""
+        return ValoracionSubfactor.objects.filter(evaluacion_factor__evaluacion=evaluacion).filter(
+            Q(valor_ia__isnull=False) | Q(valor_confirmado__isnull=False)
+            | ~Q(estado_validacion=ValoracionSubfactor.PENDIENTE) | Q(evidencias__isnull=False)
+        ).distinct()
+
+    @staticmethod
+    def _preparar_valoraciones(evaluacion):
+        """
+        Deja una valoración pendiente por cada subfactor activo de cada factor relevante y
+        quita las de factores que dejaron de serlo. Es idempotente: se puede repetir.
+        """
+        factores = list(EvaluacionFactor.objects.filter(evaluacion=evaluacion))
+        relevantes = [ef for ef in factores if ef.relevante]
+        for ef in relevantes:
+            for subfactor in Subfactor.objects.filter(factor_id=ef.factor_id, activo=True):
+                ValoracionSubfactor.objects.get_or_create(evaluacion_factor=ef, subfactor=subfactor)
+        ValoracionSubfactor.objects.filter(
+            evaluacion_factor__in=[ef for ef in factores if not ef.relevante]).delete()
