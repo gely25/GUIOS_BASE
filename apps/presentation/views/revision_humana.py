@@ -50,6 +50,7 @@ def revision_humana_view(request):
         try:
             filas = PmFodaService.calcular_y_guardar(request.user, eid, _alcances(params))
             messages.success(request, f'PM y FODA calculados y guardados para {len(filas)} factores.')
+            return redirect(reverse('presentation:decisor-resultados') + '?' + urlencode({'evaluacion': eid}))
         except ValidationError as exc:
             messages.error(request, ' '.join(exc.messages))
         return redirect(base + '?' + urlencode({'etapa': 'validacion', 'evaluacion': eid}))
