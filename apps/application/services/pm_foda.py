@@ -49,7 +49,7 @@ class PmFodaService:
             filas.append({
                 'evaluacion_factor_id': f['evaluacion_factor_id'], 'factor_id': f['factor_id'],
                 'factor': f['factor'], 'ir': f['ir'], 'cantidad': len(f['valoraciones']),
-                'pm': pm, 'pm_texto': f'{float(pm):.2f}', 'alcance_catalogo': f['alcance'],
+                'pm': pm, 'pm_texto': str(_redondear(pm)), 'alcance_catalogo': f['alcance'],
                 'alcance': alcance, 'elegible': f['alcance'] not in ALCANCES_ELEGIBLES,
                 'foda': clasificar_foda(pm, alcance) if alcance else None,
             })

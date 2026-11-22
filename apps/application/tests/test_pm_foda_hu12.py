@@ -1,11 +1,12 @@
 """HU12: PM y clasificación FODA a partir de valoraciones confirmadas."""
 from datetime import date
 from decimal import Decimal
+from fractions import Fraction
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase, override_settings
 
-from apps.application.services.pm_foda import PmFodaService as Servicio
+from apps.application.services.pm_foda import PmFodaService as Servicio, _redondear
 from apps.application.services.revision_humana import RevisionHumanaService
 from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, EvaluacionFactor, Factor,
                               Organizacion, Software, Subfactor, Usuario, ValoracionSubfactor)
@@ -113,3 +114,11 @@ class PmFodaTests(TestCase):
         self.assertIsNone(self.ef(self.f_ext).ponderacion_media)
         self.assertIsNone(self.ef(self.f_amb).clasificacion_foda)
         self.assertFalse(Servicio.vista_previa(self.actor, self.ev.pk)['lista'])
+
+    def test_la_pm_mostrada_coincide_con_la_guardada(self):
+        # 17/8 = 2,125: pantalla y base deben redondear igual (2.13, mitad hacia arriba).
+        self.assertEqual(_redondear(Fraction(17, 8)), Decimal('2.13'))
+        self.confirmar_todo()
+        filas = Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
+        for fila in filas:
+            self.assertEqual(fila['pm_texto'], str(self.ef(Factor.objects.get(pk=fila['factor_id'])).ponderacion_media))
