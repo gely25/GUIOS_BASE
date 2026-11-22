@@ -83,6 +83,19 @@ class ResultadosService:
     """Lectura de PM, FODA y (si existen) recomendación de una evaluación."""
 
     @staticmethod
+    def evaluacion_de(usuario, evaluacion_id: Optional[int] = None):
+        """
+        Evaluación del decisor: la indicada o, si no se indica, la más reciente con PM calculada
+        y, a falta de esa, la más reciente. None si no existe o no es suya.
+        """
+        propias = Evaluacion.objects.filter(usuario=usuario).select_related('software', 'organizacion')
+        if evaluacion_id is not None:
+            return propias.filter(evaluacion_id=evaluacion_id).first()
+        con_pm = EvaluacionFactor.objects.filter(
+            evaluacion=OuterRef('pk'), relevante=True, ponderacion_media__isnull=False)
+        return (propias.annotate(tiene_pm=Exists(con_pm)).order_by('-tiene_pm', '-evaluacion_id').first())
+
+    @staticmethod
     def cargar(usuario, evaluacion_id: Optional[int] = None) -> ResultadosEvaluacion:
         """
         Resultados de la evaluación indicada, o de la más reciente con PM calculada.

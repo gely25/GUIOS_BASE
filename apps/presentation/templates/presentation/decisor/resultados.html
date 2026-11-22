@@ -34,16 +34,23 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
             </div>
 
             <div class="stepper-wrapper">
-                {% include "presentation/includes/evaluation_stepper.html" with current_step=5 %}
+                {% include "presentation/includes/evaluation_stepper.html" with current_step=5 eval_id=evaluacion.pk %}
             </div>
 
+            {% for message in messages %}
+            <p class="hu09-notice" role="status">{{ message }}</p>
+            {% endfor %}
+
             {% if not resultados %}
-            <section class="dashboard-block">
-                <div class="admin-panel-card informe-vacio">
-                    <h2>Aún no hay resultados</h2>
-                    <p>Cuando confirme las valoraciones y calcule la PM y el FODA en la revisión de evidencia, aquí verá la ponderación media y la clasificación FODA de sus factores.</p>
-                    <a class="btn-top-action" href="{{ url_inicio }}">Volver al inicio</a>
-                </div>
+            <section class="res-panel">
+                <h2>Aún no hay resultados</h2>
+                {% if preparacion and preparacion.filas %}
+                <p class="res-sub">Las valoraciones están confirmadas. Calcule la PM y el FODA de sus factores.</p>
+                {% include "presentation/includes/pm_foda_calculo.html" %}
+                {% else %}
+                <p class="res-sub">{% if preparacion.motivo %}{{ preparacion.motivo }}{% else %}Cuando confirme las valoraciones en la revisión de evidencia, aquí podrá calcular la ponderación media y la clasificación FODA.{% endif %}</p>
+                {% if evaluacion %}<a class="res-boton res-boton--claro" href="{{ url_anterior }}">&larr; Ir a la revisión de evidencia</a>{% else %}<a class="res-boton res-boton--claro" href="{{ url_inicio }}">Volver al inicio</a>{% endif %}
+                {% endif %}
             </section>
             {% else %}
 
@@ -130,6 +137,14 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                 <div class="res-explicacion">{{ resultados.explicacion|linebreaks }}</div>
                 <div class="res-aviso"><strong>No modifica los valores calculados.</strong>La explicación redacta los resultados; los valores salen de las reglas del sistema.</div>
             </section>
+            {% endif %}
+
+            {% if preparacion and preparacion.filas %}
+            <details class="res-panel res-recalcular">
+                <summary>Recalcular o cambiar el alcance de Soporte</summary>
+                <p class="res-sub">Use esto si cambió alguna valoración o quiere tratar Soporte como interno o externo de otra forma.</p>
+                {% include "presentation/includes/pm_foda_calculo.html" %}
+            </details>
             {% endif %}
 
             <nav class="res-navegacion" aria-label="Navegación del proceso">

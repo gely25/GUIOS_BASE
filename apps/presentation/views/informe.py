@@ -5,10 +5,15 @@ Capa: presentation. Pide los datos a ReportService y renderiza; no calcula nada.
 El decisor solo ve sus propias evaluaciones (el servicio filtra por usuario).
 """
 
+from urllib.parse import urlencode
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.http import Http404, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from apps.application.services.pm_foda import PmFodaService
 from apps.application.services.report import InformeNoDisponible, ReportService
 from apps.application.services.resultados import ResultadosService
 
@@ -48,24 +53,49 @@ def _contexto(informe, pantalla):
     }
 
 
+def _alcances(params):
+    """Elecciones interno/externo del formulario: campos `alcance_<id del factor>`."""
+    return {int(k[8:]): v for k, v in params.items() if k.startswith('alcance_') and k[8:].isdigit()}
+
+
 def resultados_view(request):
-    """Resultados (paso 5): PM y FODA calculados por HU12, y la recomendación si ya existe."""
+    """
+    Resultados (paso 5): aquí se calculan y se muestran la PM y el FODA (HU12).
+
+    Si las valoraciones ya están confirmadas y aún no hay PM, ofrece calcularla (con la
+    elección interno/externo de Soporte). La recomendación final llega de otra historia.
+    """
+    if request.method == 'POST':
+        crudo = request.POST.get('evaluacion', '')
+        if not crudo.isdigit():
+            raise Http404('Evaluación no válida.')
+        eid = int(crudo)
+        try:
+            filas = PmFodaService.calcular_y_guardar(request.user, eid, _alcances(request.POST))
+            messages.success(request, f'PM y FODA calculados y guardados para {len(filas)} factores.')
+        except ValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
+        return redirect(reverse('presentation:decisor-resultados') + '?' + urlencode({'evaluacion': eid}))
+
     evaluacion_id = _evaluacion_pedida(request)
+    evaluacion = ResultadosService.evaluacion_de(request.user, evaluacion_id)
+    if evaluacion is None and evaluacion_id is not None:
+        raise Http404('Evaluación no encontrada.')
     try:
-        resultados = ResultadosService.cargar(request.user, evaluacion_id)
+        resultados = ResultadosService.cargar(request.user, evaluacion.pk) if evaluacion else None
     except InformeNoDisponible:
-        if evaluacion_id is not None:
-            raise Http404('Evaluación no encontrada.')
         resultados = None
-    base = reverse('presentation:decisor-revision-valoraciones')
+    preparacion = PmFodaService.vista_previa(request.user, evaluacion.pk) if evaluacion else None
+
+    revision = reverse('presentation:decisor-revision-valoraciones')
     url_informe = reverse('presentation:decisor-informe')
     contexto = {
-        'resultados': resultados, 'active_tab': 'resultados',
-        'url_inicio': reverse('presentation:decisor-inicio'),
+        'resultados': resultados, 'preparacion': preparacion, 'evaluacion': evaluacion,
+        'active_tab': 'resultados', 'url_inicio': reverse('presentation:decisor-inicio'),
     }
-    if resultados is not None:
-        contexto['url_anterior'] = f'{base}?etapa=validacion&evaluacion={resultados.evaluacion_id}'
-        contexto['url_informe'] = f'{url_informe}?evaluacion={resultados.evaluacion_id}'
+    if evaluacion is not None:
+        contexto['url_anterior'] = f'{revision}?evaluacion={evaluacion.pk}'
+        contexto['url_informe'] = f'{url_informe}?evaluacion={evaluacion.pk}'
     return render(request, 'presentation/decisor/resultados.html', contexto)
 
 

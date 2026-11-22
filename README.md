@@ -154,7 +154,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 | HU06 Importancia relativa (IR) | `business_rules/ir.py`, `application/services/importancia.py` | Hecho: pantalla de valoración de factores (ID, IR, exclusión de IR = 1) |
 | HU09 Preguntas por información faltante (antes José) | `application/services/ai.py` | Pendiente |
 | HU11 Revisión humana de valoraciones (antes José) | `application/services/evaluation.py` | Pendiente |
-| HU12 PM y FODA | `business_rules/pm.py`, `foda.py` | Lógica lista y validada; falta servicio y pantalla |
+| HU12 PM y FODA | `business_rules/pm.py`, `foda.py`, `application/services/pm_foda.py` | Hecho: se calculan y guardan en la pantalla de Resultados. Falta la recomendación (HU13) y el informe (HU14). Ver `HU12_RESULTADOS.md` |
 
 ### Jorge
 
@@ -185,7 +185,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 - Acceso, roles, menú por rol y permisos por ruta (HU01): listos y probados.
 - HU03 (IL e IS): lógica validada contra el caso de referencia de la metodología GUIOS y pantalla en
   `/administracion/indicadores-literatura/` con la versión activa del catálogo.
-- HU06 (IR) y HU12 (PM, FODA): lógica lista y probada en `business_rules/`; HU12 validada con el caso de referencia de LibreOffice.
+- HU06 (IR) y HU12 (PM, FODA): lógica, servicio y pantalla listos y probados; HU12 validada con el caso de referencia de LibreOffice. Cómo verlo: `HU12_RESULTADOS.md`.
 - HU02: búsqueda en OpenAlex (2020–2025), revisión de vínculos y nueva versión del catálogo con
   TC = TC GUIOS 2021 + publicaciones aprobadas. Ver «Actualización bibliográfica (HU02)».
 

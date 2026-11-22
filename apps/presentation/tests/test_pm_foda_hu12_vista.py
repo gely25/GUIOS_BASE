@@ -1,4 +1,4 @@
-"""HU12: panel de PM y FODA dentro de la revisión de evidencia."""
+"""HU12: el cálculo de PM y FODA se hace en la pantalla de Resultados (no en la revisión)."""
 from datetime import date
 
 from django.test import Client, TestCase, override_settings
@@ -28,7 +28,8 @@ class PmFodaVistaTests(TestCase):
         version = RevisionHumanaService.obtener(cls.actor, cls.ev.pk, v.pk)['version']
         RevisionHumanaService.resolver(cls.actor, cls.ev.pk, v.pk, 'MANUAL', 4, 'Confirmada.', version)
         cls.ef = ef
-        cls.url = reverse('presentation:decisor-revision-valoraciones')
+        cls.url = reverse('presentation:decisor-resultados')
+        cls.url_revision = reverse('presentation:decisor-revision-valoraciones')
 
     def cliente(self, usuario=None):
         c = Client()
@@ -36,15 +37,27 @@ class PmFodaVistaTests(TestCase):
         return c
 
     def datos(self, **extra):
-        base = {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'accion': 'calcular_hu12'}
+        base = {'evaluacion': self.ev.pk}
         base.update(extra)
         return base
 
-    def test_el_panel_pide_elegir_el_alcance_de_soporte(self):
-        r = self.cliente().get(self.url, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
-        self.assertContains(r, 'PM y clasificación FODA')
+    def test_resultados_pide_elegir_el_alcance_de_soporte(self):
+        r = self.cliente().get(self.url, {'evaluacion': self.ev.pk})
+        self.assertContains(r, 'Aún no hay resultados')
         self.assertContains(r, f'name="alcance_{self.soporte.pk}"')
         self.assertContains(r, 'Calcular y guardar PM y FODA')
+
+    def test_la_revision_de_evidencia_ya_no_muestra_el_calculo(self):
+        r = self.cliente().get(self.url_revision, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
+        self.assertNotContains(r, 'Calcular y guardar PM y FODA')
+        self.assertNotContains(r, f'name="alcance_{self.soporte.pk}"')
+
+    def test_tras_calcular_muestra_resultados_y_permite_recalcular(self):
+        c = self.cliente()
+        r = c.post(self.url, self.datos(**{f'alcance_{self.soporte.pk}': 'externo'}), follow=True)
+        self.assertContains(r, 'Ponderación Media por factor')
+        self.assertContains(r, 'Oportunidad')
+        self.assertContains(r, 'Recalcular y guardar')
 
     def test_post_guarda_pm_y_foda(self):
         r = self.cliente().post(self.url, self.datos(**{f'alcance_{self.soporte.pk}': 'externo'}))
