@@ -196,3 +196,5 @@ pruebas de `apps/business_rules/tests/` provienen de la evaluación de referenci
 (caso LibreOffice) y quedan documentados en cada prueba.
 
 Fuente: tesis base de la metodología GUIOS.
+
+Datos que HU12 entrega a la recomendación (HU13) y al informe (HU14): `INTEGRACION_HU12_HU13.md`.
