@@ -259,7 +259,7 @@ class RevisionHumanaInterfazTests(TestCase):
         self.client.post(self.url, self.payload())
         self.client.post(self.url, self.payload(self.manual, modo='MANUAL', valor='2'))
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, 'FODA disponible para vista previa')
+        self.assertContains(res, 'Calcular y guardar PM y FODA')
         self.assertContains(res, 'Reabrir valoración')
         datos = self.payload(accion='reabrir_hu11', motivo='Nueva evidencia.', confirmar_reapertura='1')
         res = self.client.post(self.url, datos, follow=True)
