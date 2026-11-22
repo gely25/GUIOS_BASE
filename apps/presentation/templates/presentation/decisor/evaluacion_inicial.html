@@ -42,15 +42,17 @@
                                 </div>
                                 <div class="evaluacion-field">
                                     {{ form.sector.label_tag }}
-                                    {{ form.sector }}
-                                    {{ form.sector.errors }}
-                                    <div id="sector-otro-bloque" class="sector-otro" hidden>
-                                        {{ form.sector_otro }}
+                                    <div class="sector-control" id="sector-control">
+                                        {{ form.sector }}
                                         <span id="sector-chip" class="chip-etiqueta" hidden>
                                             <span class="chip-texto"></span>
                                             <button type="button" class="chip-quitar" aria-label="Quitar sector">&times;</button>
                                         </span>
-                                        <small class="sector-otro-ayuda">Escriba el sector y presione Enter.</small>
+                                    </div>
+                                    {{ form.sector.errors }}
+                                    <div id="sector-otro-bloque" class="sector-otro" hidden>
+                                        {{ form.sector_otro }}
+                                        <small id="sector-ayuda" class="sector-otro-ayuda">Escriba el sector y presione Enter.</small>
                                         {{ form.sector_otro.errors }}
                                     </div>
                                 </div>
