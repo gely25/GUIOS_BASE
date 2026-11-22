@@ -11,6 +11,7 @@ from apps.data.models import CatalogoVersion, Usuario
 class RegistroEvaluacionInterfazHU05Tests(TestCase):
 
     def setUp(self):
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
         self.decisor = Usuario.objects.create_user(
             correo='decisor.hu05.ui@guios.test',
             password='Clave-Segura-123',
@@ -49,10 +50,19 @@ class RegistroEvaluacionInterfazHU05Tests(TestCase):
         evaluacion = self.decisor.evaluaciones.select_related(
             'organizacion', 'software', 'catalogo',
         ).get()
+        self.assertEqual(respuesta.url, (
+            f'{reverse("presentation:decisor-importancia-factores")}'
+            f'?evaluacion_id={evaluacion.pk}'
+        ))
         self.assertEqual(evaluacion.organizacion.nombre, 'Instituto QA')
         self.assertEqual(evaluacion.software.nombre, 'OpenOffice')
         self.assertEqual(evaluacion.catalogo.version, 'GUIOS-TEST-UI-V1')
         self.assertEqual(evaluacion.estado, 'EN_PROCESO')
+
+        siguiente = self.client.get(respuesta.url)
+        self.assertEqual(siguiente.status_code, 200)
+        self.assertContains(siguiente, 'Valoración de factores')
+        self.assertContains(siguiente, f'Evaluación #{evaluacion.pk} registrada')
 
     def test_cp05_formulario_falla_sin_campos_obligatorios(self):
         self.client.force_login(self.decisor)

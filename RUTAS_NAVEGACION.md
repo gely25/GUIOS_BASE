@@ -19,8 +19,11 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 |------|--------|--------|------------------------|
 | `/administracion/` | `admin-inicio` | maqueta de Usuarios y roles | HU01, Angely |
 | `/administracion/usuarios-roles/` | `admin-usuarios-roles` | maqueta | HU01, Angely |
-| `/administracion/actualizacion-bibliografica/` | `admin-actualizacion-bibliografica` | módulo no disponible | HU02, Merly |
-| `/administracion/indicadores-literatura/` | `admin-indicadores-literatura` | **implementada** (datos simulados; sin opción en el menú, se abre por URL) | HU03/HU04, Angely |
+| `/administracion/actualizacion-bibliografica/` | `admin-actualizacion-bibliografica` | **implementada**: lanzar búsqueda 2020–2025 y ver progreso | HU02, Merly |
+| `/administracion/actualizacion-bibliografica/busquedas/` | `admin-bibliografia-busquedas` | **implementada**: historial; con `?id=` revisión de vínculos | HU02, Merly |
+| `/administracion/actualizacion-bibliografica/estado/` | `admin-bibliografia-estado` | **implementada**: progreso en JSON (sondeo de la interfaz) | HU02, Merly |
+| `/administracion/actualizacion-bibliografica/version/` | `admin-bibliografia-version` | **implementada**: recalcular TC/IL/IS y publicar versión | HU02, Merly |
+| `/administracion/indicadores-literatura/` | `admin-indicadores-literatura` | **implementada** (versión activa del catálogo; sin opción en el menú, se abre por URL) | HU03/HU04, Angely |
 | `/administracion/catalogo-metodologico/` | `admin-catalogo-metodologico` | módulo no disponible | por asignar |
 
 ## Espacio del Decisor (rol DECISOR)
@@ -29,7 +32,7 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 |------|--------|--------|------------------------|
 | `/decisor/` | `decisor-inicio` | maqueta de inicio | Angely (base) |
 | `/decisor/ficha-inicial/` | `decisor-ficha-inicial` | implementada | HU05, Joseph |
-| `/decisor/importancia-factores/` | `decisor-importancia-factores` | módulo no disponible | HU06, Angely |
+| `/decisor/importancia-factores/` | `decisor-importancia-factores` | **implementada**: ID por factor, IR y exclusión de factores con IR = 1 | HU06, Angely |
 | `/decisor/carga-documental/` | `decisor-carga-documental` | módulo no disponible | HU07, Jorge |
 | `/decisor/revision-valoraciones/` | `decisor-revision-valoraciones` | módulo no disponible | HU11, Angely |
 | `/decisor/resultados/` | `decisor-resultados` | módulo no disponible | HU14, Merly |
@@ -38,6 +41,11 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 
 La ruta `/admin/` es el panel de Django. No forma parte del flujo de la aplicación y solo lo abre un
 usuario ADMINISTRADOR activo.
+
+Al registrar correctamente la ficha inicial (HU05), la aplicación continúa hacia
+`/decisor/importancia-factores/` y envía `evaluacion_id` como parámetro de consulta. HU06 valida
+que la evaluación pertenece al decisor autenticado y esté EN_PROCESO antes de utilizar ese identificador;
+al guardar continúa a `/decisor/carga-documental/?evaluacion_id=...`.
 
 ## Cómo implementar un módulo pendiente
 

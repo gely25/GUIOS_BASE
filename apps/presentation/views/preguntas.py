@@ -1,4 +1,4 @@
-"""Interfaz HU09 sobre la ruta de revisión de evidencia."""
+"""Interfaz HU09 y HU10 sobre la ruta de revisión de evidencia y valoración preliminar."""
 from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -8,11 +8,13 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
+from apps.application.services.ai import AIService, ESCALA_HU10
 from apps.application.services.preguntas import PreguntasService, estado_respuesta
 from apps.application.services.analisis_preguntas import AnalisisPreguntasService, MAX_PENDIENTES
 from apps.external_services.ollama_preguntas import AnalisisNoDisponible, OllamaPreguntas
 from apps.external_services.ollama_embeddings import OllamaEmbeddings
-from apps.data.models import Evaluacion, HistorialSuficiencia
+from apps.external_services.ollama_valoracion import OllamaValoracion
+from apps.data.models import Evaluacion, Evidencia, HistorialSuficiencia, ValoracionSubfactor
 from apps.application.services.suficiencia import SuficienciaService
 from apps.application.services.preparacion_hu10 import PreparacionHU10Service
 from apps.application.services.lotes_hu09 import LotesHU09Service, ACTIVOS
@@ -105,6 +107,34 @@ def preguntas_view(request):
                 vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
                 nuevas = AnalisisPreguntasService.analizar(request.user, eid, analizador, valoracion_id=vid, vectorizador=vectorizador)
                 messages.success(request, f'Análisis IA del subfactor: {len(nuevas)} preguntas nuevas. El resultado no certifica suficiencia.')
+            elif accion == 'valorar_hu10':
+                vid = _id(request.POST.get('valoracion'))
+                if vid is None:
+                    return HttpResponseBadRequest('Subfactor inválido.')
+                modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
+                if not modelo_hu10:
+                    raise ValidationError('Configure un modelo local HU10 admitido.')
+                proveedor_hu10 = OllamaValoracion(modelo_hu10)
+                propuesta = AIService.generar_propuesta_preliminar(request.user, eid, vid, proveedor_hu10)
+                messages.success(
+                    request,
+                    f"Propuesta preliminar IA generada ({propuesta['valor_ia']}/4 · {propuesta['etiqueta']}) con fuentes {', '.join(propuesta['referencias'])}. Lista para revisión humana (HU11)."
+                )
+            elif accion == 'valorar_hu10_lote':
+                modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
+                if not modelo_hu10:
+                    raise ValidationError('Configure un modelo local HU10 admitido.')
+                proveedor_hu10 = OllamaValoracion(modelo_hu10)
+                resumen_lote = AIService.generar_propuestas_pendientes(request.user, eid, proveedor_hu10)
+                if resumen_lote['generadas']:
+                    messages.success(
+                        request,
+                        f"Propuestas preliminares HU10 generadas: {resumen_lote['generadas']} de {resumen_lote['pendientes']} pendientes."
+                    )
+                elif resumen_lote['errores']:
+                    raise ValidationError(resumen_lote['errores'][0])
+                else:
+                    messages.success(request, 'No hay subfactores habilitados pendientes de valoración preliminar HU10.')
             elif accion in ('descartar', 'restaurar'):
                 pid = _id(request.POST.get('pregunta'))
                 if pid is None:
@@ -139,19 +169,42 @@ def preguntas_view(request):
     historial = {}
     for registro in HistorialSuficiencia.objects.filter(valoracion_id__in=[f['valoracion_id'] for f in filas]):
         historial.setdefault(registro.valoracion_id, []).append(registro)
+    valoraciones_map = {
+        v.pk: v
+        for v in ValoracionSubfactor.objects.filter(valoracion_id__in=[f['valoracion_id'] for f in filas])
+    }
+    evidencias_doc_map = {
+        e.pk: e.fragmento.documento_id
+        for e in Evidencia.objects.filter(valoracion_id__in=[f['valoracion_id'] for f in filas]).select_related('fragmento')
+    }
     for f in filas:
         f['historial'] = historial.get(f['valoracion_id'], [])
         f['estado_hu10'] = PreparacionHU10Service.estado(f, evaluacion_abierta, (lote_actual or {}).get('estado') in ACTIVOS)
+        val_obj = valoraciones_map.get(f['valoracion_id'])
+        f['valor_ia'] = val_obj.valor_ia if val_obj else None
+        f['justificacion_ia'] = val_obj.justificacion_ia if val_obj else ''
+        f['etiqueta_ia'] = ESCALA_HU10.get(f['valor_ia'], '')
+        f['tiene_propuesta_hu10'] = f['valor_ia'] in (1, 2, 3, 4) and bool((f['justificacion_ia'] or '').strip())
+        for ev_item in f['evidencias']:
+            ev_item['documento_id'] = evidencias_doc_map.get(ev_item['evidencia_id'])
         f['sin_pendientes'] = not any(p['estado_respuesta'] == 'PENDIENTE' for p in f['preguntas'])
         f['cupo_ia'] = max(0, MAX_PENDIENTES - sum(p['estado_respuesta'] == 'PENDIENTE' for p in f['preguntas']))
         for p in f['preguntas']:
             p['version'] = p['fecha_respuesta'].isoformat() if p['fecha_respuesta'] else ''
             p['borrador'] = respuesta_enviada if error and p['pregunta_id'] == pid else p['respuesta']
+    habilitados_hu10 = sum(1 for f in filas if f['estado_hu10'] == 'PROPUESTA_HABILITADA')
+    propuestas_hu10_listas = sum(1 for f in filas if f['tiene_propuesta_hu10'])
+    modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
     return render(request, 'presentation/decisor/preguntas.html', {
         'evaluaciones': evaluaciones, 'evaluacion': evaluacion, 'filas': filas,
         'lote': lote_actual,
         'no_informativas': sum(p['estado_respuesta'] == 'NO_INFORMATIVA' for f in filas for p in f['preguntas']),
         'total': total, 'respondidas': respondidas, 'pendientes': total - respondidas,
-        'desconocidas': desconocidas, 'descartadas': sum(len(f['preguntas_descartadas']) for f in filas), 'modelo_ia': settings.HU09_OLLAMA_MODEL,
-        'modelo_embeddings': settings.HU09_EMBEDDING_MODEL, 'error': error, 'editable': evaluacion.estado == 'EN_PROCESO' and evaluacion.fecha_fin is None,
+        'desconocidas': desconocidas, 'descartadas': sum(len(f['preguntas_descartadas']) for f in filas),
+        'habilitados_hu10': habilitados_hu10,
+        'propuestas_hu10_listas': propuestas_hu10_listas,
+        'modelo_ia': settings.HU09_OLLAMA_MODEL,
+        'modelo_hu10': modelo_hu10,
+        'modelo_embeddings': settings.HU09_EMBEDDING_MODEL, 'error': error,
+        'editable': evaluacion.estado == 'EN_PROCESO' and evaluacion.fecha_fin is None,
     }, status=400 if error else 200)

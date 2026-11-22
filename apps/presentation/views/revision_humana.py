@@ -140,7 +140,6 @@ def revision_humana_view(request):
                valor_elegido=params.get('valor', '') if error else str(actual.valor or '') if actual else '',
                modo_elegido=params.get('modo', '') if error else actual.modo if actual else '',
                borradores=disponibles, borradores_obsoletos=obsoletos, cantidad_borradores=len(guardados), lote_editable=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and not _lote_activo(ev))
-    ctx['preparacion'] = RevisionHumanaService.vista_previa(request.user, eid)
     # Una decisión pudo haber quedado obsoleta: nunca se sustituye su versión silenciosamente.
     if error and seleccion:
         seleccion['version'] = params.get('version', '')

@@ -1,0 +1,273 @@
+/* Valoración de factores (HU06). Se apoya en evaluacion.css para paneles y botones. */
+
+.imp-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 20px;
+    align-items: start;
+}
+
+.imp-lateral {
+    position: sticky;
+    top: 16px;
+}
+
+.imp-aviso {
+    max-width: 1120px;
+    margin: 0 0 16px;
+    padding: 12px 16px;
+    border: 1px solid #e1e5ea;
+    border-radius: 8px;
+    background: #f6f8fa;
+    color: #3f4a55;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.imp-aviso-guia {
+    border-color: #ecd9bd;
+    background: #fbf5ea;
+}
+
+.imp-aviso-error {
+    border-color: #e2b4b4;
+    background: #fbeeee;
+    color: #8c2f2f;
+}
+
+.imp-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.imp-fila {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) max-content 84px;
+    gap: 12px 16px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid #edf0f3;
+}
+
+.imp-fila:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.imp-factor {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.imp-nombre {
+    font-weight: 600;
+    color: #262b2d;
+}
+
+.imp-sugerida {
+    font-size: 12px;
+    color: #7a8490;
+}
+
+.imp-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.imp-opcion {
+    cursor: pointer;
+}
+
+.imp-opcion input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.imp-opcion span {
+    display: inline-block;
+    padding: 6px 9px;
+    border: 1px solid #d6dde5;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #4a5561;
+    font-size: 12px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.imp-opcion span:hover {
+    border-color: #c2cad3;
+}
+
+.imp-opcion b {
+    margin-right: 2px;
+}
+
+.imp-opcion input:checked + span {
+    border-color: #c79a66;
+    background: #c79a66;
+    color: #ffffff;
+}
+
+/* Color por nivel: de apagado (Irrelevante) a intenso (Fundamental) */
+.imp-n1 input:checked + span { border-color: #9aa3ad; background: #9aa3ad; }
+.imp-n2 input:checked + span { border-color: #d9b48a; background: #d9b48a; }
+.imp-n3 input:checked + span { border-color: #c79a66; background: #c79a66; }
+.imp-n4 input:checked + span { border-color: #8a5a2b; background: #8a5a2b; }
+
+/* Dimensiones plegables */
+.imp-dim-cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    list-style: none;
+    padding-bottom: 14px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #edf0f3;
+}
+
+.imp-dim-cabecera::-webkit-details-marker { display: none; }
+
+/* Mismo tamano de encabezado que las demas fichas de evaluacion.css */
+.imp-dim-cabecera h2 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.3;
+    color: #262b2d;
+}
+
+.imp-dim { padding: 18px 24px 20px; }
+.imp-dim:not([open]) { padding-bottom: 18px; }
+
+/* Aire entre el indicador de pasos y el titulo de la pantalla */
+.evaluation-stepper-container { margin-bottom: 24px; }
+
+.imp-dim-resumen {
+    margin-left: auto;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f3ece2;
+    color: #7a5a35;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.imp-dim-cabecera::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid #7a8490;
+    border-bottom: 2px solid #7a8490;
+    transform: rotate(45deg);
+    transition: transform 0.15s ease;
+}
+
+.imp-dim:not([open]) .imp-dim-cabecera { border-bottom-color: transparent; margin-bottom: 0; padding-bottom: 0; }
+.imp-dim:not([open]) .imp-dim-cabecera::after { transform: rotate(-45deg); }
+
+.imp-fila { padding: 14px 0; }
+
+.imp-dim .imp-lista { margin-top: 14px; }
+
+.imp-opcion input:focus-visible + span {
+    outline: 2px solid #262b2d;
+    outline-offset: 2px;
+}
+
+.imp-resultado {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    font-size: 12px;
+    color: #65717e;
+}
+
+.imp-ir b {
+    font-size: 16px;
+    color: #262b2d;
+}
+
+.imp-estado {
+    color: #2f7a4f;
+}
+
+.imp-excluida .imp-nombre {
+    color: #8a929b;
+    text-decoration: line-through;
+}
+
+.imp-excluida .imp-estado {
+    color: #a8692c;
+    font-weight: 600;
+}
+
+.imp-resumen {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: #3f4a55;
+}
+
+.imp-nota {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #65717e;
+}
+
+.imp-btn-secundario {
+    width: 100%;
+    min-height: 40px;
+    border: 1px solid #d6dde5;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #3f4a55;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+}
+
+.imp-btn-secundario:hover {
+    border-color: #c2cad3;
+    background: #f6f8fa;
+}
+
+@media (max-width: 1180px) {
+    .imp-fila {
+        grid-template-columns: minmax(130px, 1fr) 84px;
+    }
+
+    .imp-opciones {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+}
+
+@media (max-width: 960px) {
+    .imp-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .imp-lateral {
+        position: static;
+    }
+}
+
+@media (max-width: 760px) {
+    .imp-fila {
+        grid-template-columns: 1fr;
+    }
+
+    .imp-resultado {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+    }
+}

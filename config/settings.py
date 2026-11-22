@@ -143,8 +143,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'data.Usuario'
 LOGIN_URL = 'presentation:home'
 
+# --- Actualización bibliográfica (HU02) ---------------------------------------
+# Fuente científica: OpenAlex. La API key es opcional (sin ella se usa el cupo compartido).
+BIBLIOGRAPHIC_BASE_URL = os.getenv('BIBLIOGRAPHIC_BASE_URL') or 'https://api.openalex.org'
+BIBLIOGRAPHIC_API_KEY = os.getenv('BIBLIOGRAPHIC_API_KEY') or None
+BIBLIOGRAPHIC_TIMEOUT = int(os.getenv('BIBLIOGRAPHIC_TIMEOUT') or 20)
+# Máximo de publicaciones que se guardan por consulta (una consulta por factor).
+BIBLIOGRAPHIC_MAX_RESULTADOS = int(os.getenv('BIBLIOGRAPHIC_MAX_RESULTADOS') or 50)
+
 # HU09: proveedor local opcional; vacío conserva el modo manual.
 HU09_OLLAMA_MODEL = os.getenv('HU09_OLLAMA_MODEL', '').strip()
 
 # HU09: comparación semántica opcional; vacío mantiene el filtro textual.
 HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()
+
+# HU10: proveedor local para valoración preliminar (escala 1 a 4 con evidencia).
+HU10_OLLAMA_MODEL = os.getenv('HU10_OLLAMA_MODEL', '').strip() or HU09_OLLAMA_MODEL

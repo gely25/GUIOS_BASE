@@ -14,6 +14,7 @@ from apps.data.models import (BorradorRevisionHumana, CatalogoVersion, Dimension
 class RevisionHumanaInterfazTests(TestCase):
     @classmethod
     def setUpTestData(cls):
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
         org = Organizacion.objects.create(nombre='Org revisión')
         cls.actor = Usuario.objects.create_user('decisor@revision.test', 'Clave-test-123', nombre='Decisor', organizacion=org)
         cls.otro = Usuario.objects.create_user('otro@revision.test', 'Clave-test-123', nombre='Otro', organizacion=org)
@@ -258,13 +259,15 @@ class RevisionHumanaInterfazTests(TestCase):
         self.client.post(self.url, self.payload())
         self.client.post(self.url, self.payload(self.manual, modo='MANUAL', valor='2'))
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, 'FODA disponible para vista previa')
+        self.assertNotContains(res, 'Calcular y guardar PM y FODA')
         self.assertContains(res, 'Reabrir valoración')
         datos = self.payload(accion='reabrir_hu11', motivo='Nueva evidencia.', confirmar_reapertura='1')
         res = self.client.post(self.url, datos, follow=True)
         self.assertContains(res, 'Valoración reabierta')
         self.assertContains(res, 'Nueva evidencia.')
-        self.assertContains(res, 'Cálculo no disponible')
+        # Con una valoración reabierta, Resultados ya no ofrece calcular la PM y el FODA.
+        resultados = self.client.get('/decisor/resultados/', {'evaluacion': self.ev.pk})
+        self.assertNotContains(resultados, 'Calcular y guardar PM y FODA')
         self.assertContains(res, 'Comparación con la última decisión invalidada')
         self.assertEqual(res.context['revisadas'], 1)
         self.assertEqual(RevisionHumana.objects.count(), 2)

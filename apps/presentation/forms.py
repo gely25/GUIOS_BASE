@@ -9,6 +9,21 @@ from django.contrib.auth.forms import AuthenticationForm
 from apps.data.models import Usuario
 
 
+SIN_ELEGIR = ('', 'Seleccione una opción')
+
+SECTORES = [SIN_ELEGIR] + [(v, v) for v in (
+    'Educación', 'Tecnología', 'Salud', 'Gobierno', 'Finanzas', 'Industria',
+    'Comercio', 'Investigación', 'Otro',
+)]
+
+# El valor que se guarda es el nombre; la lista muestra el rango de personal de cada tamaño.
+TAMANOS = [SIN_ELEGIR,
+           ('Microempresa', 'Microempresa · de 1 a 9 personas'),
+           ('Pequeña', 'Pequeña · de 10 a 49 personas'),
+           ('Mediana', 'Mediana · de 50 a 199 personas'),
+           ('Grande', 'Grande · 200 personas o más')]
+
+
 class EvaluacionInicialForm(forms.Form):
     nombre_organizacion = forms.CharField(
         label='Nombre de la organización', max_length=200,
@@ -16,18 +31,18 @@ class EvaluacionInicialForm(forms.Form):
             'class': 'evaluacion-input',
             'placeholder': 'Ej. Universidad Nacional',
         }))
-    sector = forms.CharField(
-        label='Sector', max_length=100, required=False,
+    sector = forms.ChoiceField(
+        label='Sector', required=False, choices=SECTORES,
+        widget=forms.Select(attrs={'class': 'evaluacion-input'}))
+    sector_otro = forms.CharField(
+        label='Otro sector', required=False, max_length=100,
         widget=forms.TextInput(attrs={
             'class': 'evaluacion-input',
-            'placeholder': 'Ej. Educación',
+            'placeholder': 'Escriba el sector',
         }))
-    tamano = forms.CharField(
-        label='Tamaño', max_length=50, required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'evaluacion-input',
-            'placeholder': 'Ej. Mediana',
-        }))
+    tamano = forms.ChoiceField(
+        label='Tamaño', required=False, choices=TAMANOS,
+        widget=forms.Select(attrs={'class': 'evaluacion-input'}))
     objetivo_adopcion = forms.CharField(
         label='Objetivo de adopción', required=False,
         widget=forms.Textarea(attrs={
@@ -60,6 +75,24 @@ class EvaluacionInicialForm(forms.Form):
             'rows': 3,
             'placeholder': 'Indique su propósito o principales características',
         }))
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get('sector') == 'Otro':
+            propio = ' '.join((datos.get('sector_otro') or '').split())
+            if not propio:
+                self.add_error('sector_otro', 'Escriba el sector de la organización.')
+            else:
+                datos['sector'] = propio
+        return datos
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ('sector', 'tamano'):
+            actual = (self.initial.get(campo) or '').strip()
+            opciones = self.fields[campo].choices
+            if actual and actual not in [valor for valor, _ in opciones]:
+                self.fields[campo].choices = list(opciones) + [(actual, actual)]
 
 
 class AccesoForm(AuthenticationForm):
@@ -116,3 +149,27 @@ class UsuarioEstadoForm(forms.Form):
                                     coerce=lambda valor: valor == '1', widget=forms.HiddenInput)
     motivo = forms.CharField(label='Motivo del cambio', max_length=500,
                              widget=forms.Textarea(attrs={'class': 'usuarios-motivo', 'rows': 3}))
+
+
+# --- Actualización bibliográfica (HU02) ---------------------------------------
+
+class RevisionVinculoForm(forms.Form):
+    """Aprobar o rechazar un vínculo publicación-factor sugerido."""
+
+    vinculo = forms.IntegerField(min_value=1, max_value=9223372036854775807, widget=forms.HiddenInput)
+    decision = forms.ChoiceField(choices=(('aprobar', 'Aprobar'), ('rechazar', 'Rechazar')))
+
+
+class VinculoManualForm(forms.Form):
+    """Vincular a mano una publicación con un factor (queda aprobado)."""
+
+    publicacion = forms.IntegerField(min_value=1, max_value=9223372036854775807, widget=forms.HiddenInput)
+    factor = forms.TypedChoiceField(label='Factor', coerce=int,
+                                    widget=forms.Select(attrs={'class': 'filter-select'}))
+    justificacion = forms.CharField(label='Justificación', max_length=2000, required=False,
+                                    widget=forms.TextInput(attrs={'class': 'filter-input',
+                                                                  'placeholder': 'Por qué es pertinente (opcional)'}))
+
+    def __init__(self, *args, factores=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['factor'].choices = [(f.pk, f.nombre) for f in factores]

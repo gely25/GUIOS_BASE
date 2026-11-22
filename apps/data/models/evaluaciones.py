@@ -4,8 +4,6 @@ Gestión de evaluaciones: software, evaluación, factores evaluados y valoracion
 
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
-
 from .catalogo import CatalogoVersion, Factor, Subfactor
 from .usuarios import Organizacion, Usuario
 
@@ -41,7 +39,7 @@ class Evaluacion(models.Model):
     fecha_inicio = models.DateTimeField(auto_now_add=True)
     fecha_fin = models.DateTimeField(null=True, blank=True)
     estado = models.CharField(max_length=30, choices=ESTADOS, default=EN_PROCESO)
-    fecha_actualizacion = models.DateTimeField(default=timezone.now)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'evaluacion'

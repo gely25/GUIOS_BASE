@@ -7,4 +7,5 @@ Cada archivo de `services/` expone una clase: `AIService`, `BibliographicService
 `DocumentService`, `EvaluationService`, `ReportService`, `RetrievalService`.
 `tests/test_servicios.py` comprueba que cada una exista.
 
-Ejemplo completo: `services/indicadores_literatura/` (HU03).
+Ejemplos completos: `services/indicadores_literatura/` (HU03) y `services/actualizacion_bibliografica/`
+(HU02: `busquedas.py`, `revision.py`, `versiones.py`), ambos detrás de `BibliographicService`.

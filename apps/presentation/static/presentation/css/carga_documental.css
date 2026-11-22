@@ -1,0 +1,399 @@
+.upload-grid-layout {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    gap: 20px;
+    align-items: stretch;
+}
+
+@media (max-width: 960px) {
+    .upload-grid-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dropzone-area {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 190px;
+}
+
+.dropzone-area:hover,
+.dropzone-area.drag-over {
+    border-color: #c59b5f;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.dropzone-area.has-file {
+    border-style: solid;
+    border-color: #c59b5f;
+    background: #ffffff;
+}
+
+.dropzone-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e293b;
+    margin: 0 auto 12px auto;
+}
+
+.dropzone-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px 0;
+}
+
+.dropzone-subtitle {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0 0 14px 0;
+}
+
+.format-pills-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.format-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 3px 10px;
+}
+
+.selected-file-card {
+    width: 100%;
+    max-width: 460px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.selected-file-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 6px 10px;
+    flex-shrink: 0;
+}
+
+.selected-file-meta {
+    overflow: hidden;
+    flex: 1;
+}
+
+.selected-file-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0 0 2px 0;
+}
+
+.selected-file-size {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.btn-clear-file {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.btn-clear-file:hover {
+    border-color: #94a3b8;
+    color: #1e293b;
+}
+
+.dropzone-client-error {
+    display: none;
+    color: #dc2626;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 10px 0 0 0;
+}
+
+.upload-side-panel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.side-field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+
+.side-text-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 0.9rem;
+    color: #1e293b;
+    box-sizing: border-box;
+}
+
+.side-text-input:focus {
+    outline: none;
+    border-color: #c59b5f;
+}
+
+.side-helper-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.btn-submit-doc {
+    width: 100%;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    padding: 11px 16px;
+    font-size: 0.92rem;
+    transition: opacity 0.2s ease;
+}
+
+.btn-submit-doc:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.flash-messages-wrap {
+    margin-bottom: 16px;
+}
+
+.flash-message-card {
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-left: 4px solid #16a34a;
+}
+
+.flash-message-card.is-error {
+    border-left-color: #dc2626;
+}
+
+.section-spaced {
+    margin-bottom: 20px;
+}
+
+.eval-selector-form {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.eval-selector-input {
+    max-width: 380px;
+}
+
+.table-scroll-box {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.doc-table th {
+    padding: 11px 12px;
+    text-align: left;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.doc-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+.doc-row-active {
+    background: #f8fafc;
+    border-left: 3px solid #c59b5f;
+}
+
+.hash-cell {
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.doc-actions-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-doc-action {
+    padding: 5px 11px;
+    font-size: 0.8rem;
+}
+
+.btn-doc-delete {
+    padding: 5px 11px;
+    font-size: 0.8rem;
+    border: 1px solid #fca5a5;
+    background: #fef2f2;
+    color: #b91c1c;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-doc-delete:hover {
+    background: #fee2e2;
+}
+
+.fragments-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.fragment-card {
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #c59b5f;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #ffffff;
+}
+
+.fragment-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.fragment-location-pill {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.fragment-body-text {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.89rem;
+    line-height: 1.55;
+    color: #1e293b;
+}
+
+/* Tabla limpia por columnas para fragmentos de Excel y tablas de Word */
+.fragment-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.fragment-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    text-align: left;
+}
+
+.fragment-data-table thead th {
+    background: #f8fafc;
+    color: #1e293b;
+    font-weight: 700;
+    padding: 9px 12px;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+}
+
+.fragment-data-table tbody td {
+    padding: 8px 12px;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #f1f5f9;
+}
+
+.fragment-data-table tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+.fragment-data-table th:last-child,
+.fragment-data-table td:last-child {
+    border-right: none;
+}
+
+.fragment-card:target,
+.fragment-card.is-highlighted {
+    border-color: #c59b5f;
+    border-left-width: 5px;
+    background: #fffdf7;
+    box-shadow: 0 4px 16px rgba(197, 155, 95, 0.18);
+    scroll-margin-top: 24px;
+}
