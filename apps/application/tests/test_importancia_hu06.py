@@ -12,16 +12,18 @@ from apps.data.models import (
 )
 
 
-def crear_catalogo_con_factores(sugeridas):
-    """Catálogo ACTIVO con un factor por cada IS de `sugeridas` ({nombre: IS})."""
+def crear_catalogo_con_factores(sugeridas, subfactores=0):
+    """Catálogo ACTIVO con un factor por cada IS de `sugeridas` ({nombre: IS}) y `subfactores` cada uno."""
     CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
     catalogo = CatalogoVersion.objects.create(
         version=f'HU06-TEST-{CatalogoVersion.objects.count() + 1}', fecha_creacion=date.today(), estado='ACTIVO')
     dimension, _ = Dimension.objects.get_or_create(nombre='Tecnológica')
     for nombre, sugerida in sugeridas.items():
         factor, _ = Factor.objects.get_or_create(dimension=dimension, nombre=nombre, defaults={'alcance': 'interno'})
+        for n in range(subfactores):
+            Subfactor.objects.get_or_create(factor=factor, descripcion=f'{nombre} · requisito {n + 1}')
         IndicadorFactor.objects.create(
-            catalogo=catalogo, factor=factor, numero_subfactores=1, importancia_sugerida=sugerida)
+            catalogo=catalogo, factor=factor, numero_subfactores=max(subfactores, 1), importancia_sugerida=sugerida)
     return catalogo
 
 
@@ -88,11 +90,11 @@ class ServicioImportanciaTests(TestCase):
             self.servicio.guardar(evaluacion, {f.factor_id: 1 for f in filas})
         self.assertFalse(EvaluacionFactor.objects.filter(evaluacion=evaluacion).exists())
 
-    def test_no_permite_cambiar_si_ya_hay_valoraciones(self):
+    def test_no_permite_cambiar_si_ya_hay_valoraciones_con_avance(self):
         self.servicio.guardar(self.evaluacion, self.ids())
         ef = EvaluacionFactor.objects.filter(evaluacion=self.evaluacion).first()
         subfactor = Subfactor.objects.create(factor=ef.factor, descripcion='Subfactor de prueba')
-        ValoracionSubfactor.objects.create(evaluacion_factor=ef, subfactor=subfactor)
+        ValoracionSubfactor.objects.create(evaluacion_factor=ef, subfactor=subfactor, valor_confirmado=3)
         with self.assertRaises(ImportanciaInvalidaError):
             self.servicio.guardar(self.evaluacion, self.ids(Compatibilidad=4))
 
@@ -108,3 +110,52 @@ class ServicioImportanciaTests(TestCase):
         self.assertFalse(self.servicio.tiene_importancias(self.evaluacion))
         self.servicio.guardar(self.evaluacion, self.ids())
         self.assertTrue(self.servicio.tiene_importancias(self.evaluacion))
+
+
+class PrepararValoracionesTests(TestCase):
+    """Al guardar la importancia quedan listas las valoraciones pendientes de los subfactores."""
+
+    def setUp(self):
+        crear_catalogo_con_factores({'Compatibilidad': 3, 'Documentación': 2}, subfactores=2)
+        self.decisor = crear_decisor('prepara@guios.test')
+        self.evaluacion = registrar_evaluacion(self.decisor)
+        self.servicio = ImportanciaFactoresService()
+
+    def ids(self, **por_nombre):
+        return {f.factor_id: por_nombre.get(f.nombre, f.is_) for f in self.servicio.filas(self.evaluacion)}
+
+    def valoraciones(self):
+        return ValoracionSubfactor.objects.filter(evaluacion_factor__evaluacion=self.evaluacion)
+
+    def test_crea_una_valoracion_pendiente_por_subfactor_de_factor_relevante(self):
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.assertEqual(self.valoraciones().count(), 4)
+        self.assertFalse(self.valoraciones().exclude(estado_validacion=ValoracionSubfactor.PENDIENTE).exists())
+        self.assertFalse(self.valoraciones().filter(valor_ia__isnull=False).exists())
+
+    def test_los_factores_excluidos_no_generan_valoraciones(self):
+        self.servicio.guardar(self.evaluacion, self.ids(Documentación=1))
+        nombres = set(self.valoraciones().values_list('evaluacion_factor__factor__nombre', flat=True))
+        self.assertEqual(nombres, {'Compatibilidad'})
+        self.assertEqual(self.valoraciones().count(), 2)
+
+    def test_guardar_otra_vez_no_duplica_y_ajusta_los_cambios(self):
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.assertEqual(self.valoraciones().count(), 4)
+        self.servicio.guardar(self.evaluacion, self.ids(Documentación=1))
+        self.assertEqual(self.valoraciones().count(), 2)
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.assertEqual(self.valoraciones().count(), 4)
+
+    def test_ignora_subfactores_inactivos(self):
+        Subfactor.objects.filter(descripcion__startswith='Compatibilidad').update(activo=False)
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.assertEqual(self.valoraciones().count(), 2)
+
+    def test_con_avance_ya_no_deja_cambiar_la_importancia(self):
+        self.servicio.guardar(self.evaluacion, self.ids())
+        self.valoraciones().update(valor_ia=3)
+        with self.assertRaises(ImportanciaInvalidaError):
+            self.servicio.guardar(self.evaluacion, self.ids(Documentación=1))
+        self.assertEqual(self.valoraciones().count(), 4)
