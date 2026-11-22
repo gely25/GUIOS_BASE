@@ -8,6 +8,7 @@
     <div class="workspace-body-container">
         {% include 'presentation/includes/app_topbar.html' with current_area='decisor' %}
         <main class="workspace-inner-content hu09">
+            {% include "presentation/includes/evaluation_stepper.html" with current_step=4 eval_id=evaluacion.pk %}
             <div class="page-title-row">
                 <div>
                     <h1 class="page-main-heading">Información complementaria y valoración preliminar</h1>
@@ -277,6 +278,7 @@
                 </div>
             </dialog>
             {% endif %}
+            {% if evaluacion %}{% url 'presentation:decisor-carga-documental' as u_ant %}{% url 'presentation:decisor-resultados' as u_sig %}{% with ev=evaluacion.pk|stringformat:"s" %}{% include "presentation/includes/paso_navegacion.html" with anterior_url=u_ant|add:"?evaluacion_id="|add:ev siguiente_url=u_sig|add:"?evaluacion="|add:ev nota="Solo las valoraciones confirmadas participan en el cálculo." %}{% endwith %}{% endif %}
         </main>
     </div>
 </div>

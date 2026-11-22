@@ -1,0 +1,29 @@
+{% comment %}
+Formulario de cálculo de PM y FODA (HU12). Contexto: preparacion (PmFodaService.vista_previa), evaluacion.
+Soporte tiene alcance mixto: el decisor elige si, para su organización, es interno o externo.
+{% endcomment %}
+<form method="post" action="{% url 'presentation:decisor-resultados' %}">
+    {% csrf_token %}
+    <input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}">
+    <div class="admin-table-container">
+        <table class="res-tabla" aria-label="Cálculo de PM y FODA por factor">
+            <thead>
+                <tr><th scope="col">Factor</th><th scope="col" class="num">IR</th><th scope="col" class="num">Valoraciones</th><th scope="col" class="num">PM / 4</th><th scope="col">Alcance</th><th scope="col">FODA</th></tr>
+            </thead>
+            <tbody>
+                {% for fila in preparacion.filas %}
+                <tr>
+                    <td>{{ fila.factor }}</td>
+                    <td class="num">{{ fila.ir }}</td>
+                    <td class="num">{{ fila.cantidad }}</td>
+                    <td class="num">{{ fila.pm_texto }}</td>
+                    <td>{% if fila.elegible %}<select name="alcance_{{ fila.factor_id }}" class="res-select" aria-label="Alcance de {{ fila.factor }}"><option value="">Elegir…</option><option value="interno"{% if fila.alcance == 'interno' %} selected{% endif %}>Interno</option><option value="externo"{% if fila.alcance == 'externo' %} selected{% endif %}>Externo</option></select>{% else %}{{ fila.alcance|capfirst }}{% endif %}</td>
+                    <td>{% if fila.foda %}<span class="res-etiqueta res-etiqueta--{{ fila.foda }}">{{ fila.foda }}</span>{% else %}Pendiente{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="res-nota">Algunos factores, como Soporte, pueden ser internos o externos según la organización: elija cómo se trata en su caso. La PM es la media de las valoraciones confirmadas.</p>
+    <button type="submit" class="res-boton res-boton--principal">{% if preparacion.guardado %}Recalcular y guardar{% else %}Calcular y guardar PM y FODA{% endif %}</button>
+</form>
