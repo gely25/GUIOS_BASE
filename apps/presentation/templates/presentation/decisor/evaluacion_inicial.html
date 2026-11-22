@@ -3,6 +3,7 @@
 
 {% block title %}Nueva evaluación | GUIOS PRO{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/evaluacion.css' %}">{% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/ficha_sector.js' %}" defer></script>{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
@@ -22,75 +23,100 @@
                 <p class="hu09-notice" role="status">{{ message }}</p>
             {% endfor %}
 
-            <section class="evaluacion-form-wrapper">
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {{ form.non_field_errors }}
+            <div class="ficha-layout">
+                <section class="evaluacion-form-wrapper">
+                    <form method="post" id="form-ficha" novalidate>
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
 
-                    <div class="evaluacion-section">
-                        <div class="evaluacion-section-heading">
-                            <h2>Organización</h2>
-                            <p>Información del contexto institucional.</p>
+                        <div class="evaluacion-section">
+                            <div class="evaluacion-section-heading">
+                                <h2>Organización</h2>
+                                <p>Identifique a la institución y su objetivo de adopción.</p>
+                            </div>
+                            <div class="evaluacion-grid">
+                                <div class="evaluacion-field evaluacion-field-full">
+                                    {{ form.nombre_organizacion.label_tag }}
+                                    {{ form.nombre_organizacion }}
+                                    {{ form.nombre_organizacion.errors }}
+                                </div>
+                                <div class="evaluacion-field">
+                                    {{ form.sector.label_tag }}
+                                    {{ form.sector }}
+                                    {{ form.sector.errors }}
+                                    <div id="sector-otro-bloque" class="sector-otro" hidden>
+                                        {{ form.sector_otro }}
+                                        <span id="sector-chip" class="chip-etiqueta" hidden>
+                                            <span class="chip-texto"></span>
+                                            <button type="button" class="chip-quitar" aria-label="Quitar sector">&times;</button>
+                                        </span>
+                                        <small class="sector-otro-ayuda">Escriba el sector y presione Enter.</small>
+                                        {{ form.sector_otro.errors }}
+                                    </div>
+                                </div>
+                                <div class="evaluacion-field">
+                                    {{ form.tamano.label_tag }}
+                                    {{ form.tamano }}
+                                    {{ form.tamano.errors }}
+                                    <small class="campo-ayuda">Según el número de personas que trabajan en la organización.</small>
+                                </div>
+                                <div class="evaluacion-field evaluacion-field-full">
+                                    {{ form.objetivo_adopcion.label_tag }}
+                                    {{ form.objetivo_adopcion }}
+                                    {{ form.objetivo_adopcion.errors }}
+                                </div>
+                            </div>
                         </div>
-                        <div class="evaluacion-grid">
-                            <div class="evaluacion-field evaluacion-field-wide">
-                                {{ form.nombre_organizacion.label_tag }}
-                                {{ form.nombre_organizacion }}
-                                {{ form.nombre_organizacion.errors }}
-                            </div>
-                            <div class="evaluacion-field">
-                                {{ form.sector.label_tag }}
-                                {{ form.sector }}
-                                {{ form.sector.errors }}
-                            </div>
-                            <div class="evaluacion-field">
-                                {{ form.tamano.label_tag }}
-                                {{ form.tamano }}
-                                {{ form.tamano.errors }}
-                            </div>
-                            <div class="evaluacion-field evaluacion-field-full">
-                                {{ form.objetivo_adopcion.label_tag }}
-                                {{ form.objetivo_adopcion }}
-                                {{ form.objetivo_adopcion.errors }}
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="evaluacion-section">
-                        <div class="evaluacion-section-heading">
-                            <h2>Software evaluado</h2>
-                            <p>Datos identificativos de la tecnología a considerar.</p>
+                        <div class="evaluacion-section">
+                            <div class="evaluacion-section-heading">
+                                <h2>Software a evaluar</h2>
+                                <p>Describa la solución FLOSS candidata.</p>
+                            </div>
+                            <div class="evaluacion-grid">
+                                <div class="evaluacion-field evaluacion-field-wide">
+                                    {{ form.nombre_software.label_tag }}
+                                    {{ form.nombre_software }}
+                                    {{ form.nombre_software.errors }}
+                                </div>
+                                <div class="evaluacion-field">
+                                    {{ form.version_software.label_tag }}
+                                    {{ form.version_software }}
+                                    {{ form.version_software.errors }}
+                                </div>
+                                <div class="evaluacion-field evaluacion-field-full">
+                                    {{ form.proveedor.label_tag }}
+                                    {{ form.proveedor }}
+                                    {{ form.proveedor.errors }}
+                                </div>
+                                <div class="evaluacion-field evaluacion-field-full">
+                                    {{ form.descripcion_software.label_tag }}
+                                    {{ form.descripcion_software }}
+                                    {{ form.descripcion_software.errors }}
+                                </div>
+                            </div>
                         </div>
-                        <div class="evaluacion-grid">
-                            <div class="evaluacion-field evaluacion-field-wide">
-                                {{ form.nombre_software.label_tag }}
-                                {{ form.nombre_software }}
-                                {{ form.nombre_software.errors }}
-                            </div>
-                            <div class="evaluacion-field">
-                                {{ form.version_software.label_tag }}
-                                {{ form.version_software }}
-                                {{ form.version_software.errors }}
-                            </div>
-                            <div class="evaluacion-field evaluacion-field-full">
-                                {{ form.proveedor.label_tag }}
-                                {{ form.proveedor }}
-                                {{ form.proveedor.errors }}
-                            </div>
-                            <div class="evaluacion-field evaluacion-field-full">
-                                {{ form.descripcion_software.label_tag }}
-                                {{ form.descripcion_software }}
-                                {{ form.descripcion_software.errors }}
-                            </div>
-                        </div>
-                    </div>
+                    </form>
+                </section>
 
-                    <div class="evaluacion-form-actions">
-                        <a href="{% url 'presentation:decisor-inicio' %}" class="evaluacion-cancel-link">Cancelar</a>
-                        <button type="submit" class="evaluacion-submit">Registrar evaluación</button>
-                    </div>
-                </form>
-            </section>
+                <aside class="ficha-lateral" aria-label="Resumen de la ficha">
+                    <section class="evaluacion-section">
+                        <h2>Ficha de trabajo</h2>
+                        <p class="ficha-dato-etiqueta">Responsable</p>
+                        <p class="ficha-dato">{{ request.user.nombre }} · Decisor</p>
+                        <p class="ficha-dato-etiqueta">Fecha</p>
+                        <p class="ficha-dato">{% now "d/m/Y" %}</p>
+                    </section>
+                    <section class="evaluacion-section">
+                        <h2>Antes de comenzar</h2>
+                        <p class="ficha-dato">Reúna requisitos institucionales, documentación técnica y estimaciones de costos.</p>
+                        <p class="ficha-dato-etiqueta">Podrá revisar y confirmar cada valoración antes de generar resultados.</p>
+                    </section>
+                </aside>
+            </div>
+
+            {% url 'presentation:decisor-inicio' as url_inicio %}
+            {% include "presentation/includes/paso_navegacion.html" with anterior_url=url_inicio siguiente_form="form-ficha" nota="Al continuar se registra la evaluación." %}
         </main>
     </div>
 </div>

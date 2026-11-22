@@ -1304,3 +1304,32 @@ button.topbar-logout-link { background: none; border: 0; font: inherit; cursor: 
 
 /* Aire bajo el indicador de pasos de la evaluacion */
 .evaluation-stepper-container { margin-bottom: 24px; }
+
+
+/* 4.10 Pie de navegación de los pasos (Anterior / Siguiente) */
+.paso-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0 32px;
+}
+.paso-nav-nota { font-size: 13px; color: #64748b; text-align: center; }
+.paso-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border: 0;
+    border-radius: 8px;
+    background: #a8692c;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+.paso-nav-btn:hover { background: #8f5822; }
+.paso-nav-btn--inactivo { background: #e9e3d8; color: #9a917f; cursor: not-allowed; }
+.paso-nav-btn--inactivo:hover { background: #e9e3d8; }

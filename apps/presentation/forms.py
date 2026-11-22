@@ -16,7 +16,12 @@ SECTORES = [SIN_ELEGIR] + [(v, v) for v in (
     'Comercio', 'Investigación', 'Otro',
 )]
 
-TAMANOS = [SIN_ELEGIR] + [(v, v) for v in ('Microempresa', 'Pequeña', 'Mediana', 'Grande')]
+# El valor que se guarda es el nombre; la lista muestra el rango de personal de cada tamaño.
+TAMANOS = [SIN_ELEGIR,
+           ('Microempresa', 'Microempresa · de 1 a 9 personas'),
+           ('Pequeña', 'Pequeña · de 10 a 49 personas'),
+           ('Mediana', 'Mediana · de 50 a 199 personas'),
+           ('Grande', 'Grande · 200 personas o más')]
 
 
 class EvaluacionInicialForm(forms.Form):
@@ -29,6 +34,12 @@ class EvaluacionInicialForm(forms.Form):
     sector = forms.ChoiceField(
         label='Sector', required=False, choices=SECTORES,
         widget=forms.Select(attrs={'class': 'evaluacion-input'}))
+    sector_otro = forms.CharField(
+        label='Otro sector', required=False, max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'evaluacion-input',
+            'placeholder': 'Escriba el sector',
+        }))
     tamano = forms.ChoiceField(
         label='Tamaño', required=False, choices=TAMANOS,
         widget=forms.Select(attrs={'class': 'evaluacion-input'}))
@@ -64,6 +75,16 @@ class EvaluacionInicialForm(forms.Form):
             'rows': 3,
             'placeholder': 'Indique su propósito o principales características',
         }))
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get('sector') == 'Otro':
+            propio = ' '.join((datos.get('sector_otro') or '').split())
+            if not propio:
+                self.add_error('sector_otro', 'Escriba el sector de la organización.')
+            else:
+                datos['sector'] = propio
+        return datos
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
