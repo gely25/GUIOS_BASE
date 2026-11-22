@@ -9,6 +9,16 @@ from django.contrib.auth.forms import AuthenticationForm
 from apps.data.models import Usuario
 
 
+SIN_ELEGIR = ('', 'Seleccione una opción')
+
+SECTORES = [SIN_ELEGIR] + [(v, v) for v in (
+    'Educación', 'Tecnología', 'Salud', 'Gobierno', 'Finanzas', 'Industria',
+    'Comercio', 'Investigación', 'Otro',
+)]
+
+TAMANOS = [SIN_ELEGIR] + [(v, v) for v in ('Microempresa', 'Pequeña', 'Mediana', 'Grande')]
+
+
 class EvaluacionInicialForm(forms.Form):
     nombre_organizacion = forms.CharField(
         label='Nombre de la organización', max_length=200,
@@ -16,18 +26,12 @@ class EvaluacionInicialForm(forms.Form):
             'class': 'evaluacion-input',
             'placeholder': 'Ej. Universidad Nacional',
         }))
-    sector = forms.CharField(
-        label='Sector', max_length=100, required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'evaluacion-input',
-            'placeholder': 'Ej. Educación',
-        }))
-    tamano = forms.CharField(
-        label='Tamaño', max_length=50, required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'evaluacion-input',
-            'placeholder': 'Ej. Mediana',
-        }))
+    sector = forms.ChoiceField(
+        label='Sector', required=False, choices=SECTORES,
+        widget=forms.Select(attrs={'class': 'evaluacion-input'}))
+    tamano = forms.ChoiceField(
+        label='Tamaño', required=False, choices=TAMANOS,
+        widget=forms.Select(attrs={'class': 'evaluacion-input'}))
     objetivo_adopcion = forms.CharField(
         label='Objetivo de adopción', required=False,
         widget=forms.Textarea(attrs={
@@ -60,6 +64,14 @@ class EvaluacionInicialForm(forms.Form):
             'rows': 3,
             'placeholder': 'Indique su propósito o principales características',
         }))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for campo in ('sector', 'tamano'):
+            actual = (self.initial.get(campo) or '').strip()
+            opciones = self.fields[campo].choices
+            if actual and actual not in [valor for valor, _ in opciones]:
+                self.fields[campo].choices = list(opciones) + [(actual, actual)]
 
 
 class AccesoForm(AuthenticationForm):
