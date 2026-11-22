@@ -10,6 +10,7 @@ from django.shortcuts import render
 from django.urls import reverse
 
 from apps.application.services.report import InformeNoDisponible, ReportService
+from apps.application.services.resultados import ResultadosService
 
 
 def _evaluacion_pedida(request):
@@ -48,8 +49,24 @@ def _contexto(informe, pantalla):
 
 
 def resultados_view(request):
-    informe, _ = _cargar(request)
-    return render(request, 'presentation/decisor/resultados.html', _contexto(informe, 'resultados'))
+    """Resultados (paso 5): PM y FODA calculados por HU12, y la recomendación si ya existe."""
+    evaluacion_id = _evaluacion_pedida(request)
+    try:
+        resultados = ResultadosService.cargar(request.user, evaluacion_id)
+    except InformeNoDisponible:
+        if evaluacion_id is not None:
+            raise Http404('Evaluación no encontrada.')
+        resultados = None
+    base = reverse('presentation:decisor-revision-valoraciones')
+    url_informe = reverse('presentation:decisor-informe')
+    contexto = {
+        'resultados': resultados, 'active_tab': 'resultados',
+        'url_inicio': reverse('presentation:decisor-inicio'),
+    }
+    if resultados is not None:
+        contexto['url_anterior'] = f'{base}?etapa=validacion&evaluacion={resultados.evaluacion_id}'
+        contexto['url_informe'] = f'{url_informe}?evaluacion={resultados.evaluacion_id}'
+    return render(request, 'presentation/decisor/resultados.html', contexto)
 
 
 def informe_view(request):

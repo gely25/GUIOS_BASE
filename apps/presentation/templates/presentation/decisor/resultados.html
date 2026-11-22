@@ -1,14 +1,15 @@
 {% extends "presentation/layouts/base.html" %}
+{% load static %}
 
 {% comment %}
-Pantalla de Resultados (HU14), Espacio del Decisor. Paso 5 del flujo de evaluación.
-Contexto: informe (InformeEvaluacion o None), url_informe, url_inicio.
-Los valores salen del servicio ya calculados; aquí no se calcula nada.
+Pantalla de Resultados (paso 5 del flujo). Diseño de Figma: "Evaluación · Resultados".
+Contexto: resultados (ResultadosEvaluacion o None), url_anterior, url_informe, url_inicio.
+PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
 {% endcomment %}
 
 {% block title %}Resultados | GUIOS PRO{% endblock %}
 
-{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}{% endblock %}
+{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}">{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
@@ -17,97 +18,129 @@ Los valores salen del servicio ya calculados; aquí no se calcula nada.
     <div class="workspace-body-container">
         {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
 
-        <main class="workspace-inner-content informe-pagina">
+        <main class="workspace-inner-content informe-pagina resultados-pagina">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Resultados de la evaluación</h1>
+                    {% if resultados %}
+                    <p class="res-meta">{{ resultados.codigo }} · {{ resultados.software_completo }} · {{ resultados.organizacion }}{% if resultados.fecha_corte %} · Corte: {{ resultados.fecha_corte|date:"d/m/Y H:i" }}{% endif %}</p>
+                    {% else %}
+                    <p class="page-main-subheading">Ponderación Media y clasificación FODA de los factores evaluados.</p>
+                    {% endif %}
+                </div>
+                {% if resultados %}
+                <span class="res-insignia{% if not resultados.completa %} res-insignia--parcial{% endif %}">{{ resultados.confirmadas }} de {{ resultados.total }} confirmadas</span>
+                {% endif %}
+            </div>
+
             <div class="stepper-wrapper">
                 {% include "presentation/includes/evaluation_stepper.html" with current_step=5 %}
             </div>
 
-            <div class="page-title-row">
-                <div>
-                    <h1 class="page-main-heading">Resultados</h1>
-                    <p class="page-main-subheading">
-                        {% if informe %}Evaluación de {{ informe.software_completo }} para {{ informe.organizacion }}.
-                        {% else %}Resultado final de la evaluación de adopción FLOSS.{% endif %}
-                    </p>
-                </div>
-                {% if informe %}
-                <div class="informe-acciones">
-                    <a class="btn-top-action" href="{{ url_informe }}">Ir al informe</a>
-                </div>
-                {% endif %}
-            </div>
-
-            {% if not informe %}
+            {% if not resultados %}
             <section class="dashboard-block">
                 <div class="admin-panel-card informe-vacio">
                     <h2>Aún no hay resultados</h2>
-                    <p>Cuando finalice una evaluación, aquí verá la recomendación y la clasificación FODA de sus factores.</p>
+                    <p>Cuando confirme las valoraciones y calcule la PM y el FODA en la revisión de evidencia, aquí verá la ponderación media y la clasificación FODA de sus factores.</p>
                     <a class="btn-top-action" href="{{ url_inicio }}">Volver al inicio</a>
                 </div>
             </section>
             {% else %}
 
-            <section class="dashboard-block kpi-cards-section" aria-label="Resumen FODA">
-                <div class="kpi-grid">
-                    {% for nombre, cantidad in informe.resumen_foda.filas_plural %}
-                    <div class="kpi-card">
-                        <span class="kpi-label">{{ nombre }}</span>
-                        <div class="kpi-value">{{ cantidad }}</div>
+            {% if resultados.tiene_recomendacion %}
+            <section class="res-banner" aria-label="Recomendación final">
+                <div>
+                    <small>Recomendación final{% if resultados.version_regla %} · Regla {{ resultados.version_regla }}{% endif %}</small>
+                    <h2>{{ resultados.recomendacion|linebreaksbr }}</h2>
+                </div>
+            </section>
+            {% else %}
+            <section class="res-banner res-banner--pendiente" aria-label="Recomendación final">
+                <div>
+                    <small>Recomendación final · pendiente</small>
+                    <p>La recomendación se genera con la regla de recomendación, a partir de la PM y el FODA que se muestran abajo.</p>
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="res-panel">
+                <h2>Ponderación Media por factor</h2>
+                <p class="res-sub">PM: media aritmética de las valoraciones confirmadas de los subfactores · IR: importancia relativa.</p>
+                <div class="admin-table-container">
+                    <table class="res-tabla" aria-label="Ponderación media y clasificación FODA por factor">
+                        <thead>
+                            <tr>
+                                <th scope="col">Factor</th>
+                                <th scope="col">Confirmadas</th>
+                                <th scope="col" class="num">IR</th>
+                                <th scope="col" class="num">PM / 4</th>
+                                <th scope="col">Etiqueta FODA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in resultados.factores %}
+                            <tr>
+                                <td>{{ f.factor }}</td>
+                                <td>{{ f.confirmadas_texto }}</td>
+                                <td class="num">{{ f.ir|default_if_none:"—" }}</td>
+                                <td class="num">{{ f.pm|floatformat:2 }}</td>
+                                <td>{% if f.foda %}<span class="res-etiqueta res-etiqueta--{{ f.foda }}">{{ f.foda }}</span>{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="res-nota">Solo participan las valoraciones confirmadas por el decisor. Los factores con IR = 1 se excluyen de la evaluación.</p>
+            </section>
+
+            <div class="res-dos-columnas">
+                <section class="res-panel">
+                    <h2>Matriz FODA</h2>
+                    <p class="res-sub">Fortaleza y Debilidad: factores internos · Oportunidad y Amenaza: factores externos.</p>
+                    <div class="res-matriz">
+                        {% for clase, factores in resultados.cuadrantes %}
+                        <div class="res-cuadrante res-cuadrante--{{ clase }}">
+                            <h3>{{ clase }}</h3>
+                            {% if factores %}
+                            <ul>{% for f in factores %}<li><strong>{{ f.factor }}</strong> · {{ f.pm|floatformat:2 }}</li>{% endfor %}</ul>
+                            {% else %}<p class="res-vacio">Ningún factor en esta clase.</p>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="res-panel">
+                    <h2>Perfil de cumplimiento</h2>
+                    <p class="res-sub">Ponderación Media · Escala de 1 a 4</p>
+                    {% for f in resultados.factores %}
+                    <div class="res-barra-fila">
+                        <div class="res-barra-etiqueta"><span>{{ f.factor }}</span><strong>{{ f.pm|floatformat:2 }}</strong></div>
+                        <div class="res-pista" role="img" aria-label="{{ f.factor }}: {{ f.pm|floatformat:2 }} de 4"><span style="width: {{ f.porcentaje }}%"></span></div>
                     </div>
                     {% endfor %}
-                </div>
-            </section>
+                    <div class="res-escala" aria-hidden="true"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
+                    <p class="res-nota">{{ resultados.confirmadas }} valoraciones confirmadas, incluidas las modificadas por el decisor.</p>
+                </section>
+            </div>
 
-            <section class="dashboard-block">
-                <div class="admin-panel-card">
-                    <h2 class="admin-panel-title">Recomendación</h2>
-                    <div class="informe-recomendacion">{{ informe.recomendacion|linebreaksbr }}</div>
-                    {% if informe.explicacion %}
-                    <h3 class="admin-panel-title" style="margin-top:18px;">Explicación</h3>
-                    <div class="informe-explicacion">{{ informe.explicacion|linebreaks }}</div>
-                    <p class="informe-nota">La explicación redacta los resultados; no modifica ningún valor calculado por las reglas del sistema.</p>
-                    {% endif %}
-                </div>
+            {% if resultados.explicacion %}
+            <section class="res-panel">
+                <h2>Explicación redactada por IA</h2>
+                <p class="res-sub">Narrativa de apoyo · No forma parte del motor de cálculo.</p>
+                <div class="res-explicacion">{{ resultados.explicacion|linebreaks }}</div>
+                <div class="res-aviso"><strong>No modifica los valores calculados.</strong>La explicación redacta los resultados; los valores salen de las reglas del sistema.</div>
             </section>
+            {% endif %}
 
-            <section class="dashboard-block">
-                <div class="admin-panel-card">
-                    <h2 class="admin-panel-title">Factores relevantes</h2>
-                    <p class="page-main-subheading">IS: importancia sugerida · ID: importancia del decisor · IR: importancia relativa · PM: ponderación media.</p>
-                    <div class="admin-table-container">
-                        <table class="admin-table inf-table" aria-label="Factores relevantes con sus valores">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Dimensión</th>
-                                    <th scope="col">Factor</th>
-                                    <th scope="col">Alcance</th>
-                                    <th scope="col" class="num">IS</th>
-                                    <th scope="col" class="num">ID</th>
-                                    <th scope="col" class="num">IR</th>
-                                    <th scope="col" class="num">PM</th>
-                                    <th scope="col">FODA</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for f in informe.factores %}
-                                <tr>
-                                    <td class="sub">{{ f.dimension }}</td>
-                                    <td class="factor">{{ f.factor }}</td>
-                                    <td class="sub">{{ f.alcance_texto }}</td>
-                                    <td class="num">{{ f.importancia_sugerida|default_if_none:"—" }}</td>
-                                    <td class="num">{{ f.importancia_decisor|default_if_none:"—" }}</td>
-                                    <td class="num">{{ f.importancia_relativa|default_if_none:"—" }}</td>
-                                    <td class="num">{% if f.ponderacion_media is not None %}{{ f.ponderacion_media|floatformat:2 }}{% else %}—{% endif %}</td>
-                                    <td>{% if f.clasificacion_foda %}<span class="foda foda--{{ f.clasificacion_foda }}">{{ f.clasificacion_foda }}</span>{% else %}—{% endif %}</td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="8">Esta evaluación no tiene factores relevantes registrados.</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+            <nav class="res-navegacion" aria-label="Navegación del proceso">
+                <a class="res-boton res-boton--claro" href="{{ url_anterior }}">&larr; Anterior</a>
+                <span class="res-corte">{% if resultados.fecha_corte %}Corte confirmado · {{ resultados.fecha_corte|date:"d/m/Y H:i" }}{% endif %}</span>
+                {% if resultados.tiene_recomendacion %}
+                <a class="res-boton res-boton--principal" href="{{ url_informe }}">Siguiente · Informe &rarr;</a>
+                {% else %}
+                <span class="res-boton res-boton--inactivo" aria-disabled="true" title="El informe estará disponible cuando se genere la recomendación">Siguiente · Informe &rarr;</span>
+                {% endif %}
+            </nav>
             {% endif %}
         </main>
     </div>
