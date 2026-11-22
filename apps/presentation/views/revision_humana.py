@@ -7,12 +7,18 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from urllib.parse import urlencode
 
+from apps.application.services.pm_foda import PmFodaService
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
 from apps.data.models import BorradorRevisionHumana, Evaluacion, ReaperturaRevisionHumana, RevisionHumana
 from django.db.models import OuterRef, Subquery
 
 ESCALA = ((1, 'No cumple'), (2, 'Desconozco / No sé'), (3, 'Cumple parcialmente'), (4, 'Cumple'))
+
+
+def _alcances(params):
+    """Elecciones interno/externo del formulario: campos `alcance_<id del factor>`."""
+    return {int(k[8:]): v for k, v in params.items() if k.startswith('alcance_') and k[8:].isdigit()}
 
 
 def _id(raw):
@@ -40,6 +46,13 @@ def revision_humana_view(request):
         return HttpResponseBadRequest('Evaluación inválida.')
     ev = PreguntasService._evaluacion(request.user, eid)
     accion = params.get('accion')
+    if request.method == 'POST' and accion == 'calcular_hu12':
+        try:
+            filas = PmFodaService.calcular_y_guardar(request.user, eid, _alcances(params))
+            messages.success(request, f'PM y FODA calculados y guardados para {len(filas)} factores.')
+        except ValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
+        return redirect(base + '?' + urlencode({'etapa': 'validacion', 'evaluacion': eid}))
     if request.method == 'POST' and accion == 'resolver_lote_hu11':
         try:
             if params.get('confirmar_lote') != '1':
@@ -140,7 +153,7 @@ def revision_humana_view(request):
                valor_elegido=params.get('valor', '') if error else str(actual.valor or '') if actual else '',
                modo_elegido=params.get('modo', '') if error else actual.modo if actual else '',
                borradores=disponibles, borradores_obsoletos=obsoletos, cantidad_borradores=len(guardados), lote_editable=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and not _lote_activo(ev))
-    ctx['preparacion'] = RevisionHumanaService.vista_previa(request.user, eid)
+    ctx['preparacion'] = PmFodaService.vista_previa(request.user, eid, _alcances(params))
     # Una decisión pudo haber quedado obsoleta: nunca se sustituye su versión silenciosamente.
     if error and seleccion:
         seleccion['version'] = params.get('version', '')

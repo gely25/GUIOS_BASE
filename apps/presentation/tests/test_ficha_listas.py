@@ -1,4 +1,4 @@
-﻿"""Ficha inicial: sector y tamaño se eligen de una lista en vez de escribirse."""
+"""Ficha inicial: sector y tamaño se eligen de una lista en vez de escribirse."""
 
 from django.test import SimpleTestCase
 
