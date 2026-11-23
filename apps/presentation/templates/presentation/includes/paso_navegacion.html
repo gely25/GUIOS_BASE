@@ -1,7 +1,7 @@
 {% comment %}
 Pie de navegación de cada paso (Figma: "Anterior" a la izquierda, "Siguiente" a la derecha).
 Parámetros: anterior_url, siguiente_url (enlace) o siguiente_form (id de un formulario a enviar),
-siguiente_inactivo (si no se puede avanzar), nota (texto central, opcional).
+siguiente_confirmar (id de un <dialog> que se abre antes de avanzar), siguiente_inactivo (si no se puede avanzar), nota (texto central, opcional).
 {% endcomment %}
 <nav class="paso-nav" aria-label="Navegación entre pasos">
     {% if anterior_url %}<a class="paso-nav-btn" href="{{ anterior_url }}">&larr; Anterior</a>{% else %}<span></span>{% endif %}
@@ -11,6 +11,6 @@ siguiente_inactivo (si no se puede avanzar), nota (texto central, opcional).
     {% elif siguiente_form %}
     <button type="submit" form="{{ siguiente_form }}" class="paso-nav-btn">Siguiente &rarr;</button>
     {% elif siguiente_url %}
-    <a class="paso-nav-btn" href="{{ siguiente_url }}">Siguiente &rarr;</a>
+    <a class="paso-nav-btn" href="{{ siguiente_url }}"{% if siguiente_confirmar %} data-confirmar="{{ siguiente_confirmar }}"{% endif %}>Siguiente &rarr;</a>
     {% endif %}
 </nav>

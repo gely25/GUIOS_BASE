@@ -38,6 +38,14 @@ class ImportanciaFactoresVistaTests(TestCase):
         self.client.force_login(admin)
         self.assertEqual(self.client.get(URL).status_code, 403)
 
+    def test_incluye_la_confirmacion_con_el_resumen_antes_de_continuar(self):
+        self.client.force_login(self.decisor)
+        respuesta = self.client.get(URL)
+        self.assertContains(respuesta, 'id="imp-confirmar"')
+        self.assertContains(respuesta, 'Confirmar y continuar')
+        self.assertContains(respuesta, 'Volver a editar')
+        self.assertContains(respuesta, 'IR 1 · Excluidos')
+
     def test_sin_evaluacion_invita_a_registrar_la_ficha(self):
         otro = crear_decisor('sin.evaluacion@guios.test')
         self.client.force_login(otro)
@@ -68,7 +76,7 @@ class ImportanciaFactoresVistaTests(TestCase):
         self.assertContains(respuesta, 'Valoración de factores')
         self.assertContains(respuesta, 'Compatibilidad')
         self.assertContains(respuesta, 'Documentación')
-        self.assertContains(respuesta, 'Sugerida: 3')
+        self.assertContains(respuesta, 'Sugerida: Importante')
         self.assertContains(respuesta, f'Evaluación #{self.evaluacion.pk}')
 
     def test_sin_parametro_usa_la_evaluacion_mas_reciente(self):
@@ -105,7 +113,7 @@ class ImportanciaFactoresVistaTests(TestCase):
         respuesta = self.client.post(
             URL, {'evaluacion_id': evaluacion.pk, f'id_{fila.factor_id}': 1})
         self.assertContains(respuesta, 'Al menos un factor debe quedar relevante')
-        self.assertContains(respuesta, 'Se excluye')
+        self.assertContains(respuesta, 'Excluido de la evaluación')
 
     def test_no_guarda_en_la_evaluacion_de_otro(self):
         otro = crear_decisor('otro.decisor@guios.test')

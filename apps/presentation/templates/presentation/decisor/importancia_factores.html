@@ -3,8 +3,8 @@
 
 {% block title %}Valoración de factores | GUIOS PRO{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'presentation/css/evaluacion.css' %}">
-<link rel="stylesheet" href="{% static 'presentation/css/importancia.css' %}">
+<link rel="stylesheet" href="{% static 'presentation/css/evaluacion.css' %}?v=7">
+<link rel="stylesheet" href="{% static 'presentation/css/importancia.css' %}?v=8">
 {% endblock %}
 
 {% block content %}
@@ -13,14 +13,14 @@
     <div class="workspace-body-container">
         {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
         <main class="workspace-inner-content">
-            {% include "presentation/includes/evaluation_stepper.html" with current_step=2 %}
+            {% include "presentation/includes/evaluation_stepper.html" with current_step=2 eval_id=evaluacion.pk %}
             <div class="page-title-row">
                 <div>
                     <h1 class="page-main-heading">Valoración de factores</h1>
                     {% if evaluacion %}
                     <p class="page-main-subheading">
                         Evaluación #{{ evaluacion.pk }} · {{ evaluacion.software.nombre }}{% if evaluacion.software.version %} {{ evaluacion.software.version }}{% endif %}
-                        · Catálogo {{ evaluacion.catalogo.version }}
+                        · Catálogo {{ evaluacion.catalogo.version }} · Ajuste la importancia al contexto institucional.
                     </p>
                     {% endif %}
                 </div>
@@ -42,12 +42,6 @@
                 </section>
             {% else %}
 
-            <p class="imp-aviso imp-aviso-guia" role="note">
-                <strong>¿Qué tan importante es cada factor para su organización?</strong>
-                Partimos de la importancia sugerida por la literatura. Cambie solo los factores donde su
-                criterio sea distinto; los que resulten irrelevantes se excluyen de la evaluación.
-            </p>
-
             {% if error %}
                 <p class="imp-aviso imp-aviso-error" role="alert">{{ error }}</p>
             {% endif %}
@@ -60,65 +54,117 @@
                     </div>
                 </section>
             {% else %}
-            <form method="post" novalidate id="importancia-form" class="evaluacion-form-wrapper">
+            <form method="post" novalidate id="importancia-form" class="evaluacion-form-wrapper"{% for valor, etiqueta in niveles %} data-n{{ valor }}="{{ etiqueta }}"{% endfor %}>
                 {% csrf_token %}
                 <input type="hidden" name="evaluacion_id" value="{{ evaluacion.pk }}">
 
-                <div class="imp-layout">
-                    <div class="imp-principal">
+                <div class="imp-cols">
+                    <section class="evaluacion-section imp-card">
+                        <div class="imp-card-cabecera">
+                            <div>
+                                <h2>Importancia de los factores</h2>
+                                <p class="imp-leyenda">Sugerida = según la literatura · Su valoración = importancia para su organización</p>
+                            </div>
+                            <button type="button" class="imp-btn-secundario" id="imp-restablecer">Usar todas las sugeridas</button>
+                        </div>
+
+                        <div class="imp-tabs" role="tablist" aria-label="Dimensiones">
+                            {% for grupo in grupos %}
+                            <button type="button" role="tab" class="imp-tab{% if forloop.first %} imp-tab-activa{% endif %}" data-panel="imp-panel-{{ forloop.counter }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">{{ grupo.dimension }} <small class="imp-tab-n">{{ grupo.relevantes }}/{{ grupo.filas|length }}</small></button>
+                            {% endfor %}
+                        </div>
+
                         {% for grupo in grupos %}
-                        <details class="evaluacion-section imp-dim">
-                            <summary class="imp-dim-cabecera">
-                                <h2>Dimensión {{ grupo.dimension|lower }}</h2>
-                                <span class="imp-dim-resumen"><b class="imp-dim-n">{{ grupo.relevantes }}</b> de {{ grupo.filas|length }} se evalúan</span>
-                            </summary>
+                        <div class="imp-panel" id="imp-panel-{{ forloop.counter }}" role="tabpanel">
                             <ul class="imp-lista">
                                 {% for fila in grupo.filas %}
-                                <li class="imp-fila{% if not fila.relevante %} imp-excluida{% endif %}" data-is="{{ fila.is_ }}">
+                                <li class="imp-fila{% if not fila.relevante %} imp-excluida{% endif %}" data-is="{{ fila.is_ }}" data-factor="{{ fila.factor_id }}" data-nombre="{{ fila.nombre }}">
                                     <div class="imp-factor">
-                                        <span class="imp-nombre">{{ fila.nombre }}</span>
-                                        <span class="imp-sugerida">Sugerida: {{ fila.is_ }}</span>
+                                        <span class="imp-nombre">{% if fila.id_ != fila.is_ %}<span class="imp-ajustado" title="Ajustado por usted"></span>{% else %}<span class="imp-ajustado" title="Ajustado por usted" hidden></span>{% endif %}{{ fila.nombre }}</span>
+                                        <span class="imp-sugerida">Sugerida: {% for valor, etiqueta in niveles %}{% if valor == fila.is_ %}{{ etiqueta }}{% endif %}{% endfor %}{% if fila.subfactores %} · {{ fila.subfactores }} subfactor{{ fila.subfactores|pluralize:"es" }}{% endif %}<span class="imp-estado-excluido"{% if fila.relevante %} hidden{% endif %}> · Excluido de la evaluación</span></span>
                                     </div>
-                                    <div class="imp-opciones" role="radiogroup" aria-label="Importancia de {{ fila.nombre }}">
+                                    <div class="imp-barras imp-l{{ fila.id_ }}" role="radiogroup" aria-label="Su valoración de {{ fila.nombre }}">
                                         {% for valor, etiqueta in niveles %}
-                                        <label class="imp-opcion imp-n{{ valor }}">
+                                        <label class="imp-barra imp-b{{ valor }}{% if fila.id_ >= valor %} on{% endif %}" title="{{ etiqueta }}">
                                             <input type="radio" name="id_{{ fila.factor_id }}" value="{{ valor }}"{% if fila.id_ == valor %} checked{% endif %}>
-                                            <span><b>{{ valor }}</b> {{ etiqueta }}</span>
+                                            <span></span>
                                         </label>
                                         {% endfor %}
                                     </div>
-                                    <div class="imp-resultado">
-                                        <span class="imp-ir">IR <b>{{ fila.ir }}</b></span>
-                                        <span class="imp-estado">{% if fila.relevante %}Se evalúa{% else %}Se excluye{% endif %}</span>
-                                    </div>
+                                    <span class="imp-palabra">{% for valor, etiqueta in niveles %}{% if valor == fila.id_ %}{{ etiqueta }}{% endif %}{% endfor %}</span>
+                                    <span class="imp-insignia imp-ir-chip">{% if fila.relevante %}IR {{ fila.ir }}{% else %}Excluido{% endif %}</span>
                                 </li>
                                 {% endfor %}
                             </ul>
-                        </details>
+                        </div>
                         {% endfor %}
-                    </div>
+                    </section>
 
-                    <aside class="imp-lateral">
+                    <aside class="imp-lado">
                         <section class="evaluacion-section">
-                            <div class="evaluacion-section-heading">
-                                <h2>Resumen</h2>
-                            </div>
-                            <p class="imp-resumen"><b id="imp-relevantes">{{ relevantes }}</b> de <b>{{ total }}</b> factores se evaluarán.</p>
-                            <button type="button" class="imp-btn-secundario" id="imp-restablecer">Usar todas las sugeridas</button>
+                            <h2>Cobertura</h2>
+                            <p class="imp-cobertura-cifra"><b id="imp-relevantes">{{ relevantes }}</b> activos · <b id="imp-excluidos-n">{{ excluidos|length }}</b> <span id="imp-excluidos-pal">excluido{{ excluidos|length|pluralize }}</span></p>
+                            <p class="imp-nota">Suma de IR activos: <b id="imp-suma-ir">{{ suma_ir }}</b> de {{ total }} factores.</p>
                         </section>
+
                         <section class="evaluacion-section">
-                            <div class="evaluacion-section-heading">
-                                <h2>Cómo se calcula</h2>
-                            </div>
-                            <p class="imp-nota">La importancia relativa (IR) combina su valoración con la sugerida. Si el resultado es 1 (Irrelevante), el factor no se evalúa.</p>
+                            <h2>Cómo leer la escala</h2>
+                            <ul class="imp-niveles">
+                                {% for valor, etiqueta in niveles %}
+                                <li class="imp-nivel"><span class="imp-punto imp-p{{ valor }}" aria-hidden="true"></span><span><b>{{ etiqueta }}</b> <span class="imp-nivel-texto">{% if valor == 1 %}se excluye{% elif valor == 2 %}se evalúa, importancia baja{% elif valor == 3 %}se evalúa, importancia alta{% else %}se evalúa, imprescindible{% endif %}</span></span></li>
+                                {% endfor %}
+                            </ul>
+                            <details class="imp-calculo">
+                                <summary>¿Cómo se calcula el IR?</summary>
+                                <p class="imp-nota">Se promedian la importancia sugerida y la suya, y se redondea hacia abajo. Si el resultado es 1, el factor se excluye.</p>
+                                <p class="imp-ejemplo" id="imp-ejemplo"><b>Ejemplo:</b> sugerida <em>Importante (3)</em> + su valoración <em>Opcional (2)</em> = 2,5 &rarr; <strong>IR 2</strong>. Al cambiar un factor, este ejemplo muestra su cuenta.</p>
+                                <details class="imp-combinaciones">
+                                    <summary>Ver todas las combinaciones</summary>
+                                    <table class="imp-matriz">
+                                        <tr><th></th><th colspan="4">Sugerida</th></tr>
+                                        <tr><th>Valoración</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+                                        {% for fila_m in matriz %}
+                                        <tr><th>{{ fila_m.id }}</th>{% for celda in fila_m.celdas %}<td data-id="{{ fila_m.id }}" data-is="{{ celda.is_ }}"{% if celda.ir == 1 %} class="uno"{% endif %}>{{ celda.ir }}</td>{% endfor %}</tr>
+                                        {% endfor %}
+                                    </table>
+                                </details>
+                            </details>
                         </section>
+
                     </aside>
                 </div>
 
-                <div class="evaluacion-form-actions">
-                    <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="evaluacion-cancel-link">&larr; Ficha inicial</a>
-                    <button type="submit" class="evaluacion-submit">Guardar y continuar &rarr;</button>
-                </div>
+                <dialog class="imp-modal" id="imp-confirmar" aria-labelledby="imp-modal-titulo">
+                    <div class="imp-modal-cuerpo">
+                        <header class="imp-modal-cab">
+                            <span class="imp-modal-icono" aria-hidden="true">&#10003;</span>
+                            <div>
+                                <h2 id="imp-modal-titulo">Confirme la importancia de los factores</h2>
+                                <p class="imp-nota">Revise el resumen antes de continuar. Los factores con IR 1 no se evaluarán.</p>
+                            </div>
+                        </header>
+                        <div class="imp-modal-cifras">
+                            <div class="imp-cifra"><strong id="imp-m-activos">0</strong><span>activos</span></div>
+                            <div class="imp-cifra"><strong id="imp-m-excluidos">0</strong><span id="imp-m-excluidos-pal">excluidos</span></div>
+                            <div class="imp-cifra"><strong id="imp-m-suma">0</strong><span>suma de IR</span></div>
+                        </div>
+                        <div class="imp-modal-grupos">
+                            {% for grupo in resumen_niveles %}
+                            <section class="imp-grupo{% if not grupo.filas %} vacio{% endif %}" data-ir="{{ grupo.ir }}">
+                                <div class="imp-grupo-cab"><span class="imp-punto imp-p{{ grupo.ir }}"></span><span class="imp-grupo-titulo">{% if grupo.ir == 1 %}IR 1 · Excluidos{% else %}IR {{ grupo.ir }} · {{ grupo.etiqueta }}{% endif %}</span><span class="imp-insignia imp-grupo-n">{{ grupo.filas|length }}</span></div>
+                                <ul class="imp-grupo-nombres">{% for fila in grupo.filas %}<li>{{ fila.nombre }}</li>{% endfor %}</ul>
+                            </section>
+                            {% endfor %}
+                        </div>
+                        <div class="imp-modal-acciones">
+                            <button type="button" class="imp-btn-secundario" id="imp-modal-volver">Volver a editar</button>
+                            <button type="button" class="imp-btn-primario" id="imp-modal-confirmar">Confirmar y continuar &rarr;</button>
+                        </div>
+                    </div>
+                </dialog>
+
+                {% url 'presentation:decisor-ficha-inicial' as url_ficha %}
+                {% include "presentation/includes/paso_navegacion.html" with anterior_url=url_ficha siguiente_form="importancia-form" %}
             </form>
             {% endif %}
             {% endif %}
@@ -128,5 +174,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'presentation/js/importancia.js' %}" defer></script>
+<script src="{% static 'presentation/js/importancia.js' %}?v=8" defer></script>
 {% endblock %}

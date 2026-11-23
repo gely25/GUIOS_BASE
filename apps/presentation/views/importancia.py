@@ -72,6 +72,14 @@ def importancia_factores_view(request):
         'niveles': servicio.NIVELES.items(),
         'total': len(filas),
         'relevantes': sum(1 for fila in filas if fila.relevante),
+        'excluidos': [fila for fila in filas if not fila.relevante],
+        'suma_ir': sum(fila.ir for fila in filas if fila.relevante),
+        'filas': filas,
+        'matriz': servicio.matriz_ir(),
+        'resumen_niveles': [
+            {'ir': nivel, 'etiqueta': etiqueta, 'filas': [f for f in filas if f.ir == nivel]}
+            for nivel, etiqueta in sorted(servicio.NIVELES.items(), reverse=True)
+        ],
         'error': error,
         'active_tab': 'nueva-evaluacion',
         'current_step': 2,
