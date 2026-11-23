@@ -81,7 +81,7 @@ class EvidenciaCargaTests(TestCase):
             return []
         with mock.patch(BUSCAR, side_effect=buscar) as m:
             r = self.preparar()
-        self.assertEqual(m.call_args.kwargs['umbral_similitud'], 0.15)
+        self.assertEqual(m.call_args.kwargs['umbral_similitud'], 0.05)
         self.assertEqual(Evidencia.objects.filter(valoracion=self.v1).count(), 2)   # máximo 2 por subfactor
         self.assertEqual(Evidencia.objects.filter(valoracion=self.v2).count(), 0)
         self.assertEqual(r.status_code, 302)

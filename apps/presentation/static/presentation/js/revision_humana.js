@@ -1,14 +1,23 @@
 (() => {
+    const lista = document.querySelector('#hu11-lista');
+    const abrir = document.querySelector('#hu11-abrir-lista');
+    if (lista && abrir && typeof lista.showModal === 'function') {
+        abrir.addEventListener('click', () => lista.showModal());
+        document.querySelector('#hu11-cerrar-lista').addEventListener('click', () => lista.close());
+        lista.addEventListener('click', e => { if (e.target === lista) lista.close(); });
+    }
     const buscar = document.querySelector('#hu11-buscar');
     const filtro = document.querySelector('#hu11-filtro');
     const links = [...document.querySelectorAll('[data-hu11-nav]')];
+    const filtroEv = document.querySelector('#hu11-filtro-ev');
     const normalizar = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
     function filtrar() {
         let visibles = 0;
         links.forEach(a => {
             const estado = filtro.value;
             const coincide = normalizar(a.dataset.busqueda).includes(normalizar(buscar.value.trim())) &&
-                (!estado || (estado === 'BORRADOR' ? a.dataset.borrador === '1' : a.dataset.estado === estado));
+                (!estado || (estado === 'BORRADOR' ? a.dataset.borrador === '1' : a.dataset.estado === estado)) &&
+                (!filtroEv || !filtroEv.value || (filtroEv.value === 'si' ? a.dataset.evid === 'si' : a.dataset.evid !== 'si'));
             a.hidden = !coincide;
             if (coincide) visibles++;
         });
@@ -26,6 +35,7 @@
     if (buscar && filtro) {
         buscar.addEventListener('input', filtrar);
         filtro.addEventListener('change', filtrar);
+        if (filtroEv) filtroEv.addEventListener('change', filtrar);
     }
     // El tipo de decisión se deduce de la valoración elegida: igual a la propuesta de IA = confirmar; distinta = modificar.
     const modo = document.querySelector('#hu11-modo');
@@ -38,6 +48,7 @@
         if (!elegido) { modo.value = ''; nota.textContent = 'Elija una valoración. Si coincide con la propuesta de IA, la confirma; si no, la modifica.'; return; }
         const igual = elegido.value === modo.dataset.ia;
         modo.value = igual ? 'CONFIRMAR' : 'MODIFICAR';
+        nota.classList.toggle('hu11-nota--mod', !igual);
         nota.textContent = igual ? 'Confirma la propuesta de IA.' : 'Modifica la propuesta de IA (propuesta ' + modo.dataset.ia + ' → decisión ' + elegido.value + '). La propuesta original se conserva.';
     }
     radios.forEach(r => r.addEventListener('change', sincronizarModo));

@@ -69,8 +69,8 @@ def cobertura(evaluacion, valoraciones, estado_embeddings):
     }
 
 
-UMBRAL_AUTO = 0.15      # solo se asocian pasajes de relevancia media o alta
-MAX_AUTO = 2            # pasajes que se asocian automáticamente a cada subfactor
+UMBRAL_AUTO = 0.05      # igual que la sugerencia anterior; la relevancia se muestra en el paso 4
+MAX_AUTO = 3            # pasajes que se asocian automáticamente a cada subfactor
 
 
 def proponer_evidencia(servicio_retrieval, evaluacion, valoraciones):

@@ -111,7 +111,7 @@ def carga_documental_view(request):
         if accion == 'preparar_evidencia':
             # RF11: el sistema recupera por sí solo los pasajes relacionados con cada subfactor.
             url_paso4 = (f"{reverse('presentation:decisor-revision-valoraciones')}"
-                         f"?evaluacion={evaluacion.evaluacion_id}")
+                         f"?evaluacion={evaluacion.evaluacion_id}&etapa=validacion")
             if evaluacion.documentos.exists():
                 creadas, cubiertos = evidencia_carga.preparar_evidencia(
                     retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)))
@@ -222,13 +222,22 @@ def carga_documental_view(request):
                 request,
                 f'Documento «{doc.nombre}» ({doc.tipo}) procesado e indexado en pgvector: {fragmentos_total} fragmentos.'
             )
-            if len(archivos) == 1:
+            if len(archivos) == 1 and request.POST.get('volver') != 'validacion':
                 return redirect(f'{url_destino}&doc_id={doc.documento_id}')
         elif cargados:
             messages.success(
                 request,
                 f'{len(cargados)} documentos procesados e indexados: {fragmentos_total} fragmentos en total.'
             )
+        if request.POST.get('volver') == 'validacion':
+            # Se subió desde el paso 4: se asocian los pasajes y se vuelve a la revisión.
+            if cargados:
+                try:
+                    evidencia_carga.preparar_evidencia(
+                        retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)))
+                except ValidationError as err:
+                    messages.error(request, err.messages[0] if hasattr(err, 'messages') else str(err))
+            return redirect(f"{reverse('presentation:decisor-revision-valoraciones')}?etapa=validacion&evaluacion={evaluacion.evaluacion_id}")
         return redirect(url_destino)
 
     documentos = []
@@ -308,7 +317,7 @@ def carga_documental_view(request):
     nota_paso = ''
     if evaluacion:
         anterior_url = f"{reverse('presentation:decisor-importancia-factores')}?evaluacion_id={evaluacion.evaluacion_id}"
-        siguiente_url = f"{reverse('presentation:decisor-revision-valoraciones')}?evaluacion={evaluacion.evaluacion_id}"
+        siguiente_url = f"{reverse('presentation:decisor-revision-valoraciones')}?evaluacion={evaluacion.evaluacion_id}&etapa=validacion"
         total_docs = len(documentos)
         nota_paso = (
             f'{total_docs} documento{"" if total_docs == 1 else "s"} cargado{"" if total_docs == 1 else "s"}'

@@ -1,4 +1,6 @@
 """Pantalla HU11 dentro de la ruta de trabajo del decisor."""
+import json
+import re
 from decimal import Decimal
 
 from django.contrib import messages
@@ -11,7 +13,8 @@ from urllib.parse import urlencode
 
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
-from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, ReaperturaRevisionHumana, RevisionHumana
+from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, FragmentoDocumento, ReaperturaRevisionHumana, RevisionHumana
+from django.db import transaction
 from django.db.models import OuterRef, Subquery
 
 ESCALA = ((1, 'No cumple'), (2, 'Desconozco / No sé'), (3, 'Cumple parcialmente'), (4, 'Cumple'))
@@ -23,6 +26,51 @@ def _id(raw):
         return numero if 0 < numero <= 9223372036854775807 else None
     except (TypeError, ValueError):
         return None
+
+
+PREGUNTA_FORMAL = '¿Existe documentación o un acuerdo formal que respalde este subfactor?'
+
+
+def _destino(base, eid, **extra):
+    return base + '?' + urlencode({'etapa': 'validacion', 'evaluacion': eid, **extra})
+
+
+@transaction.atomic
+def _preparar_faltantes(actor, eid):
+    """Crea las preguntas de los subfactores pendientes que no tienen evidencia ni preguntas. Devuelve cuántos atendió."""
+    evaluacion = PreguntasService._evaluacion(actor, eid, escritura=True)
+    con_evidencia = set(Evidencia.objects.filter(fragmento__documento__evaluacion=evaluacion).values_list('valoracion_id', flat=True))
+    atendidos = 0
+    for v in PreguntasService._valoraciones(evaluacion).filter(estado_validacion='PENDIENTE', valor_confirmado__isnull=True):
+        if v.pk in con_evidencia or v.preguntas_complementarias.exists():
+            continue
+        v = PreguntasService._valoracion_editable(evaluacion, v.pk)
+        descripcion = v.subfactor.descripcion.strip()[:860]
+        for texto in (PREGUNTA_FORMAL, f'¿Qué información verificable puede aportar sobre este subfactor: {descripcion}?'):
+            PreguntasService._registrar(v, texto, 'SIN_EVIDENCIA')
+        atendidos += 1
+    return atendidos
+
+
+def _guardar_respuestas(actor, eid, crudo):
+    """Guarda en lote las respuestas del modal. Devuelve (guardadas, errores)."""
+    try:
+        items = json.loads(crudo or '[]')
+    except ValueError:
+        raise ValidationError('Respuestas inválidas.')
+    if not isinstance(items, list) or len(items) > 500:
+        raise ValidationError('Respuestas inválidas.')
+    guardadas, errores = 0, []
+    for item in items:
+        if not isinstance(item, dict) or _id(item.get('id')) is None or not isinstance(item.get('respuesta'), str) or not item['respuesta'].strip():
+            continue
+        version = item.get('version')
+        try:
+            PreguntasService.responder(actor, eid, _id(item['id']), item['respuesta'], version if isinstance(version, str) else '')
+            guardadas += 1
+        except (ValidationError, PermissionDenied) as exc:
+            errores.append(' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc))
+    return guardadas, errores
 
 
 @never_cache
@@ -60,6 +108,29 @@ def revision_humana_view(request):
         except ValidationError as exc:
             messages.error(request, ' '.join(exc.messages))
         return redirect(base + '?' + urlencode({'etapa': 'validacion', 'evaluacion': eid}))
+    if request.method == 'POST' and accion == 'preparar_faltantes_hu11':
+        try:
+            atendidos = _preparar_faltantes(request.user, eid)
+        except (ValidationError, PermissionDenied) as exc:
+            messages.error(request, ' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc))
+            return redirect(_destino(base, eid))
+        if not atendidos:
+            messages.info(request, 'No hay subfactores nuevos que necesiten preguntas.')
+        return redirect(_destino(base, eid, completar=1, **({'valoracion': params.get('valoracion')} if _id(params.get('valoracion')) else {})))
+    if request.method == 'POST' and accion == 'responder_faltantes_hu11':
+        extra = {'valoracion': params.get('valoracion')} if _id(params.get('valoracion')) else {}
+        try:
+            guardadas, errores = _guardar_respuestas(request.user, eid, params.get('respuestas'))
+        except ValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
+            return redirect(_destino(base, eid, completar=1, **extra))
+        if guardadas:
+            messages.success(request, f'Respuestas guardadas: {guardadas}. Quedan como declaraciones suyas, no como evidencia documental.')
+        elif not errores:
+            messages.info(request, 'No había respuestas nuevas para guardar.')
+        for e in errores[:3]:
+            messages.error(request, e)
+        return redirect(_destino(base, eid, **({'completar': 1} if errores else {}), **extra))
     valoraciones = list(PreguntasService._valoraciones(ev).annotate(
         ultimo_modo=Subquery(RevisionHumana.objects.filter(valoracion_id=OuterRef('pk')).order_by('-fecha', '-pk').values('modo')[:1]),
         ultima_reapertura_id=Subquery(ReaperturaRevisionHumana.objects.filter(valoracion_id=OuterRef('pk')).order_by('-pk').values('pk')[:1])))
@@ -112,10 +183,14 @@ def revision_humana_view(request):
     obsoletos = []
     candidatos = [v for v in valoraciones if v.pk in guardados and v.estado_validacion == 'PENDIENTE'
                   and v.valor_confirmado is None]
-    contextos = {f['valoracion_id']: f for f in PreguntasService.contexto(request.user, eid)} if candidatos else {}
+    contextos = {f['valoracion_id']: f for f in PreguntasService.contexto(request.user, eid)}
     for v in valoraciones:
         b = guardados.get(v.pk)
         v.tiene_borrador = bool(b)
+        c = contextos.get(v.pk) or {}
+        v.n_evidencia = len(c.get('evidencias', []))
+        v.con_declaracion = any(p['estado_respuesta'] == 'APORTADA' for p in c.get('preguntas', []))
+        v.ev_estado = 'si' if v.n_evidencia else 'dc' if v.con_declaracion else 'no'
         v.etiqueta_hu11 = 'VALIDACIÓN MANUAL' if v.ultimo_modo == 'MANUAL' and v.estado_validacion in ESTADOS_VALIDOS else v.estado_validacion
         if b and v.pk in contextos and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None:
             if b.huella_contexto != _version(v, contextos[v.pk], v.ultima_reapertura_id):
@@ -132,9 +207,18 @@ def revision_humana_view(request):
         # Solo presentacion: nivel de relevancia con que el sistema asocio cada pasaje (no altera la version de las fuentes).
         relevancias = dict(Evidencia.objects.filter(
             pk__in=[f['evidencia_id'] for f in seleccion['fuentes'] if f.get('origen') == 'DOCUMENTO']).values_list('pk', 'relevancia'))
+        docs = dict(FragmentoDocumento.objects.filter(
+            pk__in=[f['fragmento_id'] for f in seleccion['fuentes'] if f.get('origen') == 'DOCUMENTO']).values_list('pk', 'documento_id'))
+        base_carga = reverse('presentation:decisor-carga-documental')
         for f in seleccion['fuentes']:
             r = relevancias.get(f.get('evidencia_id'))
             f['nivel'] = None if r is None else ('alta' if r >= Decimal('0.40') else 'media' if r >= Decimal('0.20') else 'baja')
+            if f.get('origen') == 'DOCUMENTO' and f.get('fragmento_id') in docs:
+                doc_id, frag_id = docs[f['fragmento_id']], f['fragmento_id']
+                vecinos = FragmentoDocumento.objects.filter(documento_id=doc_id)
+                f['antes'] = vecinos.filter(pk__lt=frag_id).order_by('-pk').values_list('contenido', flat=True).first()
+                f['despues'] = vecinos.filter(pk__gt=frag_id).order_by('pk').values_list('contenido', flat=True).first()
+                f['url_documento'] = f'{base_carga}?{urlencode({"evaluacion_id": eid, "doc_id": doc_id, "panel": 1})}'
     actual = guardados.get(vid)
     if seleccion:
         seleccion['etiqueta_hu11'] = next(v.etiqueta_hu11 for v in valoraciones if v.pk == vid)
@@ -148,6 +232,30 @@ def revision_humana_view(request):
                valor_elegido=params.get('valor', '') if error else str(actual.valor or '') if actual else '',
                modo_elegido=params.get('modo', '') if error else actual.modo if actual else '',
                borradores=disponibles, borradores_obsoletos=obsoletos, cantidad_borradores=len(guardados), lote_editable=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and not _lote_activo(ev))
+    # Solo presentación: posición y subfactor anterior/siguiente para la barra de navegación.
+    ids = [v.pk for v in valoraciones]
+    if seleccion and vid in ids:
+        i = ids.index(vid)
+        ctx.update(posicion=i + 1, anterior_pk=ids[i - 1] if i else None, siguiente_pk=ids[i + 1] if i + 1 < len(ids) else None)
+    if seleccion:
+        seleccion['hay_documentos'] = any(f.get('origen') == 'DOCUMENTO' for f in seleccion['fuentes'])
+    # Solo presentación: cobertura de evidencia y datos del modal «Completar información faltante».
+    faltantes = []
+    for v in valoraciones:
+        c = contextos.get(v.pk) or {}
+        if v.n_evidencia or not c.get('editable') or not c.get('preguntas'):
+            continue
+        faltantes.append({'vid': v.pk, 'factor': v.evaluacion_factor.factor.nombre, 'subfactor': v.subfactor.descripcion,
+            'preguntas': [{'id': p['pregunta_id'], 'texto': p['texto'], 'respuesta': p['respuesta'],
+                           'version': p['fecha_respuesta'].isoformat() if p['fecha_respuesta'] else ''} for p in c['preguntas']]})
+    con_ev = sum(1 for v in valoraciones if v.n_evidencia)
+    sin_ev = [v for v in valoraciones if not v.n_evidencia]
+    ctx.update(faltantes=faltantes, n_con_evidencia=con_ev, n_sin_evidencia=len(sin_ev),
+               n_sin_evidencia_resp=sum(1 for v in sin_ev if v.con_declaracion),
+               n_sin_evidencia_pend=sum(1 for v in sin_ev if not v.con_declaracion),
+               completar=params.get('completar') == '1' and request.method == 'GET',
+               puede_completar=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and any(
+                   not v.n_evidencia and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None for v in valoraciones))
     # Una decisión pudo haber quedado obsoleta: nunca se sustituye su versión silenciosamente.
     if error and seleccion:
         seleccion['version'] = params.get('version', '')
