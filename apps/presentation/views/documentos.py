@@ -60,6 +60,30 @@ def _parsear_fragmento_tabular(contenido: str):
     }
 
 
+def _respaldo_subfactores(request, evaluacion, evaluaciones, retrieval_service,
+                         valoraciones, estado_embeddings, cobertura):
+    """Pantalla «Respaldo de los subfactores»: elegir qué pasaje respalda cada subfactor (se guarda por POST aparte)."""
+    base = reverse('presentation:decisor-carga-documental')
+    url_paso3 = f"{base}?evaluacion_id={evaluacion.evaluacion_id}"
+    datos = evidencia_carga.datos_respaldo(
+        retrieval_service, evaluacion, valoraciones,
+        url_base=url_paso3, hay_indexados=cobertura['listos'] > 0)
+    pendientes = [d for d in datos if not d['guardados']]
+    altas = sum(1 for d in pendientes if d['candidatos'] and d['candidatos'][0]['nivel'] == 'alta')
+    return render(request, 'presentation/decisor/respaldo_subfactores.html', {
+        'active_tab': 'carga-documental',
+        'current_step': 3,
+        'evaluacion': evaluacion,
+        'evaluaciones': evaluaciones,
+        'datos': datos,
+        'total': len(datos),
+        'n_con': len(datos) - len(pendientes),
+        'n_pendientes': len(pendientes),
+        'n_altas': altas,
+        'url_volver': url_paso3,
+    })
+
+
 def carga_documental_view(request):
     """
     Pantalla «Decisor · Carga documental» (HU07 + HU08).
@@ -284,12 +308,13 @@ def carga_documental_view(request):
                 request, evaluacion, documento_inspeccionado, retrieval_service,
                 valoraciones_evaluacion, _parsear_fragmento_tabular, fragmento_destacado_id)
 
-    cobertura = opciones = sugeridas = None
+    cobertura = opciones = None
     if evaluacion:
         cobertura = evidencia_carga.cobertura(evaluacion, valoraciones_evaluacion, estado_embeddings)
         opciones = evidencia_carga.opciones_subfactores(valoraciones_evaluacion)
-        if request.GET.get('sugerir') and cobertura['puede_sugerir']:
-            sugeridas = evidencia_carga.sugerencias(retrieval_service, evaluacion, valoraciones_evaluacion)
+        if request.GET.get('revisar'):
+            return _respaldo_subfactores(request, evaluacion, evaluaciones, retrieval_service,
+                                         valoraciones_evaluacion, estado_embeddings, cobertura)
 
     explorar_abierto = bool(consulta_semantica or subfactor_seleccionado_id)
     anterior_url = siguiente_url = ''
@@ -317,7 +342,6 @@ def carga_documental_view(request):
         'panel': panel,
         'cobertura': cobertura,
         'opciones': opciones,
-        'sugeridas': sugeridas,
         'fragmento_destacado_id': fragmento_destacado_id,
         'valoraciones_evaluacion': valoraciones_evaluacion,
         'estado_embeddings': estado_embeddings,

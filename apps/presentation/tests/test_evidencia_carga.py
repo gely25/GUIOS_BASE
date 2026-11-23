@@ -42,7 +42,7 @@ class EvidenciaCargaTests(TestCase):
         return self.client.get(URL, {'evaluacion_id': self.ev.pk, **extra})
 
     def item(self, frag, sim):
-        return {'fragmento_id': frag.pk, 'documento_nombre': 'Guía.pdf', 'ubicacion_referencia': f'Página {frag.pagina}',
+        return {'fragmento_id': frag.pk, 'documento_id': frag.documento_id, 'documento_nombre': 'Guía.pdf', 'ubicacion_referencia': f'Página {frag.pagina}',
                 'contenido': frag.contenido, 'similitud': sim}
 
     def test_resumen_muestra_cobertura_y_avisa_de_subfactores_sin_evidencia(self):
@@ -63,13 +63,41 @@ class EvidenciaCargaTests(TestCase):
         items = r.context['opciones'][0]['items']
         self.assertEqual(items[0]['subfactor_id'], self.sf2.pk)  # sin evidencia primero
 
-    def test_sugerir_no_crea_nada_y_marca_la_mejor(self):
-        with mock.patch(BUSCAR, side_effect=lambda **k: [self.item(self.f1, 0.8), self.item(self.f2, 0.2)]):
-            r = self.get(sugerir=1)
-        self.assertContains(r, 'id="cd-sugerencias"')
+    def test_boton_sugerir_lleva_a_la_pantalla_de_respaldo(self):
+        r = self.get()
+        self.assertContains(r, 'revisar=1')
+        self.assertNotContains(r, 'id="cd-sugerencias"')
+
+    def test_pantalla_respaldo_no_crea_nada_y_clasifica_relevancia(self):
+        def buscar(**k):
+            if k['subfactor_id'] == self.sf1.pk:
+                return [self.item(self.f1, 0.8)]
+            return [self.item(self.f2, 0.2), self.item(self.f1, 0.07)]
+        with mock.patch(BUSCAR, side_effect=buscar):
+            r = self.get(revisar=1)
+        self.assertTemplateUsed(r, 'presentation/decisor/respaldo_subfactores.html')
+        self.assertContains(r, 'Respaldo de los subfactores')
         self.assertEqual(Evidencia.objects.count(), 0)
-        self.assertEqual(r.context['sugeridas']['subfactores'], 2)
-        self.assertEqual(r.context['sugeridas']['marcadas'], 2)
+        datos = {d['id']: d for d in r.context['datos']}
+        self.assertEqual(datos[self.v1.pk]['candidatos'][0]['nivel'], 'alta')
+        self.assertEqual([c['nivel'] for c in datos[self.v2.pk]['candidatos']], ['media', 'baja'])
+        self.assertEqual(r.context['n_altas'], 1)
+
+    def test_pantalla_respaldo_no_sugiere_donde_ya_hay_evidencia(self):
+        Evidencia.objects.create(valoracion=self.v1, fragmento=self.f1)
+        with mock.patch(BUSCAR, return_value=[self.item(self.f2, 0.5)]) as m:
+            r = self.get(revisar=1)
+        datos = {d['id']: d for d in r.context['datos']}
+        self.assertEqual(datos[self.v1.pk]['candidatos'], [])
+        self.assertEqual(len(datos[self.v1.pk]['guardados']), 1)
+        self.assertEqual(m.call_count, 1)  # solo el subfactor pendiente
+
+    def test_pantalla_respaldo_sin_embeddings_no_busca(self):
+        FragmentoDocumento.objects.filter(documento=self.doc).update(embedding=None)
+        with mock.patch(BUSCAR) as m:
+            r = self.get(revisar=1)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(m.call_count, 0)
 
     def test_vincular_sugeridas_crea_solo_lo_confirmado_y_no_duplica(self):
         datos = {'evaluacion_id': self.ev.pk, 'accion': 'vincular_sugeridas',

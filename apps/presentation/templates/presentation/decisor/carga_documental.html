@@ -199,7 +199,7 @@
                     <div class="cd-cob-cifra"><strong>{{ cobertura.con_evidencia }}</strong><span>de {{ cobertura.total_subfactores }} subfactores con evidencia</span></div>
                     <div class="cd-cob-barra" role="img" aria-label="{{ cobertura.porcentaje }}% de subfactores con evidencia"><span style="width: {{ cobertura.porcentaje }}%"></span></div>
                     {% if cobertura.puede_sugerir %}
-                    <a class="cd-btn-sugerir" href="?evaluacion_id={{ evaluacion.evaluacion_id }}&amp;sugerir=1">Sugerir evidencia</a>
+                    <a class="cd-btn-sugerir" href="?evaluacion_id={{ evaluacion.evaluacion_id }}&amp;revisar=1">Sugerir evidencia</a>
                     {% endif %}
                 </div>
                 {% if cobertura.total_subfactores and not cobertura.puede_sugerir and cobertura.sin_evidencia %}
@@ -492,46 +492,6 @@
                         <a class="cd-btn-prim" href="{{ siguiente_url }}">Continuar &rarr;</a>
                     </div>
                 </div>
-            </dialog>
-            {% endif %}
-
-            {% if sugeridas is not None %}
-            <dialog class="cd-modal cd-modal-ancho" id="cd-sugerencias" open data-abrir aria-labelledby="cd-sug-titulo">
-                <form method="post" class="cd-modal-cuerpo">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="vincular_sugeridas">
-                    <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                    <header class="cd-modal-cab">
-                        <span class="cd-modal-icono" aria-hidden="true">&#10024;</span>
-                        <div>
-                            <h2 id="cd-sug-titulo">Evidencia sugerida</h2>
-                            <p class="cd-sub">Estos fragmentos se parecen más a cada subfactor sin evidencia. Nada se vincula hasta que usted confirme; desmarque lo que no sirva.</p>
-                        </div>
-                    </header>
-                    {% if sugeridas.grupos %}
-                    <div class="cd-sug-lista">
-                        {% for g in sugeridas.grupos %}
-                        <section class="cd-sug-grupo">
-                            <h3><small>{{ g.factor }}</small>{{ g.subfactor|truncatechars:120 }}</h3>
-                            {% for i in g.items %}
-                            <label class="cd-sug-item">
-                                <input type="checkbox" name="sel" value="{{ i.valor }}"{% if i.marcado %} checked{% endif %}>
-                                <span class="cd-sug-texto"><b>{{ i.documento }} · {{ i.ubicacion }}</b><em>{{ i.extracto }}</em></span>
-                                <span class="cd-sug-pct">{{ i.porcentaje }}%</span>
-                            </label>
-                            {% endfor %}
-                        </section>
-                        {% endfor %}
-                    </div>
-                    {% if sugeridas.sin_candidatos > 0 %}<p class="cd-nota-cob">{{ sugeridas.sin_candidatos }} subfactor{{ sugeridas.sin_candidatos|pluralize:"es" }} sin fragmentos parecidos; puede vincularlos a mano.</p>{% endif %}
-                    {% else %}
-                    <p class="cd-alerta">No se encontraron fragmentos suficientemente parecidos. Puede vincular evidencia a mano desde «Ver fragmentos».</p>
-                    {% endif %}
-                    <div class="cd-modal-acciones">
-                        <a class="cd-btn-sec" href="?evaluacion_id={{ evaluacion.evaluacion_id }}">Cancelar</a>
-                        {% if sugeridas.grupos %}<button type="submit" class="cd-btn-prim">Vincular las marcadas</button>{% endif %}
-                    </div>
-                </form>
             </dialog>
             {% endif %}
 
