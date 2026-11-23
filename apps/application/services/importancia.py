@@ -31,6 +31,7 @@ class FilaImportancia(NamedTuple):
     id_: int
     ir: int
     relevante: bool
+    subfactores: int = 0
 
 
 class ImportanciaFactoresService:
@@ -86,6 +87,7 @@ class ImportanciaFactoresService:
                 id_=decisor,
                 ir=ir,
                 relevante=se_evalua(ir),
+                subfactores=indicador.numero_subfactores,
             ))
         return filas
 
@@ -97,6 +99,14 @@ class ImportanciaFactoresService:
         return [
             {'dimension': nombre, 'filas': filas, 'relevantes': sum(1 for f in filas if f.relevante)}
             for nombre, filas in grupos.items()
+        ]
+
+    def matriz_ir(self) -> List[dict]:
+        # Tabla de la funcion de importancia (ID por IS -> IR), para explicarla en pantalla.
+        return [
+            {'id': id_decisor, 'celdas': [{'is_': sugerida, 'ir': calcular_ir(id_decisor, sugerida)}
+                                          for sugerida in (1, 2, 3, 4)]}
+            for id_decisor in (4, 3, 2, 1)
         ]
 
     def tiene_importancias(self, evaluacion) -> bool:
