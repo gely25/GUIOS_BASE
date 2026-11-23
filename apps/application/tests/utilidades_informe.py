@@ -31,6 +31,7 @@ def crear_decisor(correo="decisor@guios.test", nombre="Dario Decisor"):
 
 def crear_evaluacion(decisor, con_resultado=True, software="LibreOffice"):
     """Evaluación con 2 factores relevantes, 1 no relevante, 1 valoración con evidencia y 1 documento."""
+    CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
     dimension, _ = Dimension.objects.get_or_create(nombre="Tecnológica")
     compat = Factor.objects.create(dimension=dimension, nombre="Compatibilidad", alcance="externo")
     forma = Factor.objects.create(dimension=dimension, nombre="Formación", alcance="interno")

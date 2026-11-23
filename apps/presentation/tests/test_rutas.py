@@ -6,7 +6,6 @@ from apps.data.models import Usuario
 
 PENDIENTES = [
     'admin-catalogo-metodologico',
-    'decisor-historial-evaluaciones',
 ]
 
 

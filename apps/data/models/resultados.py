@@ -14,6 +14,8 @@ class ResultadoEvaluacion(models.Model):
     recomendacion = models.TextField()
     explicacion = models.TextField(blank=True, null=True)
     version_regla = models.CharField(max_length=30)
+    conteos_foda = models.JSONField(default=dict)
+    factores_criticos = models.JSONField(default=list)
     fecha_generacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -169,8 +169,8 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 | Historia | Dónde se implementa | Estado |
 |----------|---------------------|--------|
 | HU05 Catálogo y evaluaciones | `application/services/catalog.py`, `evaluation.py` | Pendiente |
-| HU13 Recomendación | `application/services/evaluation.py` | Pendiente |
-| HU15 Historial | `application/services/evaluation.py` | Pendiente |
+| HU13 Recomendación | `application/services/recomendacion.py` | Hecho: regla versionada 1.0 basada en conteos FODA e IR; bloqueo si faltan valoraciones confirmadas |
+| HU15 Historial | `application/services/historial.py`, `presentation/views/historial.py` | Hecho: listado privado por decisor, estados, recomendaciones y enlaces a resultados e informe |
 
 ### Merly
 

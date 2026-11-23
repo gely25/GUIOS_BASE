@@ -1,0 +1,98 @@
+{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Historial de evaluaciones | GUIOS PRO{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}">
+<link rel="stylesheet" href="{% static 'presentation/css/historial.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="workspace-screen-layout">
+    {% include "presentation/includes/app_sidebar.html" with current_area="decisor" active_item=active_tab %}
+
+    <div class="workspace-body-container">
+        {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
+
+        <main class="workspace-inner-content informe-pagina">
+            <div class="page-title-row">
+                <div>
+                    <h1 class="page-main-heading">Historial de evaluaciones</h1>
+                    <p class="page-main-subheading">Consulte las evaluaciones registradas a su nombre y vuelva a sus resultados o informes disponibles.</p>
+                </div>
+                <a class="btn-top-action" href="{{ url_nueva }}">+ Nueva evaluación</a>
+            </div>
+
+            {% if not evaluaciones %}
+            <section class="dashboard-block">
+                <div class="admin-panel-card informe-vacio" role="region" aria-label="Historial vacío">
+                    <h2>Aún no hay evaluaciones registradas</h2>
+                    <p>Las evaluaciones que cree aparecerán aquí sin modificar ni eliminar el historial anterior.</p>
+                    <a class="btn-top-action" href="{{ url_nueva }}">Iniciar ficha de evaluación</a>
+                </div>
+            </section>
+            {% else %}
+            <section class="dashboard-block">
+                <div class="admin-panel-card">
+                    <div class="admin-table-container">
+                        <table class="res-tabla" aria-label="Historial de evaluaciones">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Código</th>
+                                    <th scope="col">Software</th>
+                                    <th scope="col">Organización</th>
+                                    <th scope="col">Fechas</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col">PM / FODA</th>
+                                    <th scope="col">Recomendación</th>
+                                    <th scope="col">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for evaluacion in evaluaciones %}
+                                <tr>
+                                    <td><strong>{{ evaluacion.codigo }}</strong></td>
+                                    <td>
+                                        {{ evaluacion.software_completo }}
+                                        {% if evaluacion.proveedor %}<small class="historial-proveedor">{{ evaluacion.proveedor }}</small>{% endif %}
+                                    </td>
+                                    <td>{{ evaluacion.organizacion }}</td>
+                                    <td>
+                                        <span>Inicio: {{ evaluacion.fecha_inicio|date:"d/m/Y H:i" }}</span>
+                                        {% if evaluacion.fecha_fin %}<br><span>Fin: {{ evaluacion.fecha_fin|date:"d/m/Y H:i" }}</span>{% endif %}
+                                    </td>
+                                    <td>{{ evaluacion.estado }}</td>
+                                    <td>
+                                        {% if evaluacion.tiene_pm_foda %}
+                                        <span class="res-etiqueta">Calculada</span>
+                                        {% else %}
+                                        <span class="res-etiqueta res-etiqueta--pendiente">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if evaluacion.tiene_recomendacion %}
+                                        {{ evaluacion.recomendacion|truncatechars:90 }}
+                                        {% else %}
+                                        <span class="historial-pendiente">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="historial-acciones">
+                                        <a class="res-boton res-boton--claro" href="{% url 'presentation:decisor-resultados' %}?evaluacion={{ evaluacion.evaluacion_id }}">Ver resultados</a>
+                                        {% if evaluacion.tiene_recomendacion %}
+                                        <a class="res-boton res-boton--principal" href="{% url 'presentation:decisor-informe' %}?evaluacion={{ evaluacion.evaluacion_id }}">Abrir informe</a>
+                                        {% else %}
+                                        <span class="historial-sin-informe" aria-disabled="true">Informe no disponible</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

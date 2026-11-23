@@ -61,7 +61,7 @@ No hay que tocar ninguna pantalla: en cuanto exista la fila, la pantalla de Resu
 ## 4. Cuándo deja de ser válida
 
 - Si el decisor **reabre una valoración** en la revisión de evidencia, el sistema borra la PM y el FODA de todos los factores y **elimina el `ResultadoEvaluacion`**, después de guardar una copia histórica en `ReaperturaRevisionHumana.resultados_anteriores`. La recomendación debe generarse de nuevo tras volver a calcular.
-- Punto abierto: si el decisor usa **Recalcular** en Resultados y cambia la elección de Soporte, el FODA de ese factor puede cambiar, pero HU12 **no borra** el `ResultadoEvaluacion` existente. Quien implemente HU13 debe decidir si regenera o invalida la recomendación cuando cambie el FODA.
+- Cuando el decisor usa **Recalcular** en Resultados y cambia el alcance de Soporte, HU13 vuelve a ejecutar la regla 1.0 y actualiza el `ResultadoEvaluacion` existente.
 
 ## 5. Cómo probarlo rápido con datos de demostración
 

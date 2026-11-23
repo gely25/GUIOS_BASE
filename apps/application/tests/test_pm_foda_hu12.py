@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from apps.application.services.pm_foda import PmFodaService as Servicio, _redondear
 from apps.application.services.revision_humana import RevisionHumanaService
 from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, EvaluacionFactor, Factor,
-                              Organizacion, Software, Subfactor, Usuario, ValoracionSubfactor)
+                              Organizacion, ResultadoEvaluacion, Software, Subfactor, Usuario, ValoracionSubfactor)
 
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
@@ -122,3 +122,16 @@ class PmFodaTests(TestCase):
         filas = Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
         for fila in filas:
             self.assertEqual(fila['pm_texto'], str(self.ef(Factor.objects.get(pk=fila['factor_id'])).ponderacion_media))
+
+    def test_calculo_persiste_recomendacion_hu13(self):
+        self.confirmar_todo()
+        Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
+        resultado = ResultadoEvaluacion.objects.get(evaluacion=self.ev)
+        self.assertEqual(resultado.version_regla, '1.0')
+        self.assertIn(resultado.recomendacion, (
+            'Adoptar el FLOSS seleccionado',
+            'Es posible adoptar, con matices',
+            'Se sugiere analizar la adopción y debería ser pospuesta',
+        ))
+        self.assertEqual(sum(resultado.conteos_foda.values()), 3)
+        self.assertTrue(resultado.explicacion)
