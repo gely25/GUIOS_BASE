@@ -16,6 +16,7 @@ from django.db import transaction
 
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.revision_humana import RevisionHumanaService
+from apps.application.services.recomendacion import RecomendacionService
 from apps.business_rules.foda import EXTERNO, INTERNO, clasificar_foda
 from apps.business_rules.pm import calcular_pm
 from apps.data.models import EvaluacionFactor
@@ -94,4 +95,5 @@ class PmFodaService:
         for fila in filas:
             EvaluacionFactor.objects.filter(pk=fila['evaluacion_factor_id'], evaluacion_id=evaluacion_id).update(
                 ponderacion_media=_redondear(fila['pm']), clasificacion_foda=fila['foda'])
+        RecomendacionService.generar(actor, evaluacion_id)
         return filas

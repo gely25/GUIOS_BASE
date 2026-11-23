@@ -3,7 +3,7 @@ Rutas del Espacio del Decisor - GUIOS PRO.
 """
 from .views.documentos import carga_documental_view
 from django.urls import path
-from .views import decisor_home_view, modulo_pendiente_view
+from .views import decisor_home_view, historial_evaluaciones_view
 from .views.evaluacion import evaluacion_inicial_view
 from .views.importancia import importancia_factores_view
 from .views.preguntas import preguntas_view
@@ -48,12 +48,7 @@ urlpatterns = [
     ),
     path(
         'historial-evaluaciones/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Historial de evaluaciones',
-            'area': 'decisor',
-            'referencia_figma': 'nodo 7:4609',
-        },
+        historial_evaluaciones_view,
         name='decisor-historial-evaluaciones'
     ),
 ]
