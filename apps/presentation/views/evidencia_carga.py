@@ -3,11 +3,10 @@ Apoyo de la pantalla de Carga documental para vincular evidencia con menos traba
 
 Nada de aquí cambia la lógica existente de HU07/HU08:
 - `cobertura` y `opciones_subfactores` solo leen.
-- `datos_respaldo` usa `RetrievalService.buscar_por_subfactor` tal cual (solo lectura).
+- `proponer_evidencia` usa `RetrievalService.buscar_por_subfactor` tal cual (solo lectura).
 - `vincular_en_lote` crea evidencias con el mismo `get_or_create` de la acción individual
   «vincular_evidencia», pero para varias a la vez y solo con lo que la persona confirmó.
 """
-import re
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
@@ -70,87 +69,39 @@ def cobertura(evaluacion, valoraciones, estado_embeddings):
     }
 
 
-STOP = {'para', 'como', 'esta', 'este', 'estos', 'estas', 'entre', 'sobre', 'desde', 'hasta', 'cuando', 'donde',
-        'tiene', 'tienen', 'puede', 'pueden', 'cada', 'otros', 'otras', 'bien', 'sino', 'pero', 'aunque', 'según'}
-UMBRAL_MIN = 0.05
-UMBRAL_ALTA = 0.30
-UMBRAL_MEDIA = 0.15
-VENTANA = 520
-MAX_TEXTO = 4000
+UMBRAL_AUTO = 0.15      # solo se asocian pasajes de relevancia media o alta
+MAX_AUTO = 2            # pasajes que se asocian automáticamente a cada subfactor
 
 
-def _nivel(similitud):
-    return 'alta' if similitud >= UMBRAL_ALTA else 'media' if similitud >= UMBRAL_MEDIA else 'baja'
-
-
-def _raices(texto):
-    """Raíces (6 letras) de las palabras significativas del subfactor, para mostrar por qué se sugiere un pasaje."""
-    vistas, raices = set(), []
-    for palabra in re.findall(r'[a-záéíóúñü]{5,}', (texto or '').lower()):
-        raiz = palabra[:6]
-        if palabra not in STOP and raiz not in vistas:
-            vistas.add(raiz)
-            raices.append(raiz)
-    return raices
-
-
-def _ventana(texto, comunes):
-    posiciones = [texto.lower().find(c) for c in comunes if texto.lower().find(c) >= 0]
-    if not posiciones or len(texto) <= VENTANA:
-        corte = texto[:VENTANA]
-        return corte if len(texto) <= VENTANA else corte.rstrip() + '…'
-    inicio = max(min(posiciones) - VENTANA // 3, 0)
-    corte = texto[inicio:inicio + VENTANA].strip()
-    return ('…' if inicio else '') + corte + ('…' if inicio + VENTANA < len(texto) else '')
-
-
-def datos_respaldo(servicio_retrieval, evaluacion, valoraciones, url_base, hay_indexados):
+def proponer_evidencia(servicio_retrieval, evaluacion, valoraciones):
     """
-    Datos para la pantalla «Respaldo de los subfactores»: por cada subfactor, el respaldo ya guardado y,
-    si aún no tiene, los pasajes más parecidos (solo lectura; no crea nada).
+    Pasajes que el sistema asocia solo (RAG) a cada subfactor que aún no tiene evidencia.
+    Devuelve textos «valoracion_id:fragmento_id:similitud» listos para `vincular_en_lote`.
     """
     valoraciones = list(valoraciones)
-    guardados = {}
-    for e in (Evidencia.objects.filter(valoracion_id__in=[v.pk for v in valoraciones])
-              .select_related('fragmento__documento').order_by('pk')):
-        guardados.setdefault(e.valoracion_id, []).append({
-            'documento': e.fragmento.documento.nombre,
-            'ubicacion': e.referencia or servicio_retrieval._formatear_ubicacion(e.fragmento),
-        })
-    resultado = []
+    con_evidencia = set(Evidencia.objects.filter(valoracion__in=valoraciones).values_list('valoracion_id', flat=True))
+    propuestas = []
     for v in valoraciones:
-        candidatos = []
-        if hay_indexados and v.pk not in guardados:
-            try:
-                encontrados = servicio_retrieval.buscar_por_subfactor(
-                    evaluacion_id=evaluacion.evaluacion_id, subfactor_id=v.subfactor_id,
-                    top_k=TOP_POR_SUBFACTOR, umbral_similitud=UMBRAL_MIN)
-            except ValidationError:
-                encontrados = []
-            raices = _raices(v.subfactor.descripcion)
-            for r in encontrados:
-                texto = ' '.join((r['contenido'] or '').split())
-                comunes = [c for c in raices if c in texto.lower()]
-                nombre = r['documento_nombre']
-                candidatos.append({
-                    'valor': f"{v.pk}:{r['fragmento_id']}:{r['similitud']}",
-                    'documento': nombre,
-                    'tipo': (nombre.rsplit('.', 1)[-1] if '.' in nombre else '').upper(),
-                    'ubicacion': r['ubicacion_referencia'],
-                    'nivel': _nivel(r['similitud']),
-                    'extracto': _ventana(texto, comunes),
-                    'texto': texto[:MAX_TEXTO],
-                    'comunes': comunes[:6],
-                    'url': f"{url_base}&doc_id={r['documento_id']}&fragmento_id={r['fragmento_id']}&panel=1",
-                })
-        resultado.append({
-            'id': v.pk,
-            'factor': v.evaluacion_factor.factor.nombre,
-            'texto': v.subfactor.descripcion,
-            'guardados': guardados.get(v.pk, []),
-            'candidatos': candidatos,
-        })
-    return resultado
+        if v.pk in con_evidencia:
+            continue
+        try:
+            encontrados = servicio_retrieval.buscar_por_subfactor(
+                evaluacion_id=evaluacion.evaluacion_id, subfactor_id=v.subfactor_id,
+                top_k=TOP_POR_SUBFACTOR, umbral_similitud=UMBRAL_AUTO)
+        except ValidationError:
+            continue
+        for r in encontrados[:MAX_AUTO]:
+            propuestas.append(f"{v.pk}:{r['fragmento_id']}:{r['similitud']}")
+    return propuestas
+
+
+def preparar_evidencia(servicio_retrieval, evaluacion, valoraciones):
+    """Deja la evidencia lista para el paso 4. Devuelve (pasajes_asociados, subfactores_cubiertos)."""
+    valoraciones = list(valoraciones)
+    servicio_retrieval.sincronizar_evaluacion(evaluacion_id=evaluacion.evaluacion_id)
+    propuestas = proponer_evidencia(servicio_retrieval, evaluacion, valoraciones)
+    creadas, _ = vincular_en_lote(servicio_retrieval, evaluacion, valoraciones, propuestas)
+    return creadas, len({t.split(':')[0] for t in propuestas})
 
 
 def vincular_en_lote(servicio_retrieval, evaluacion, valoraciones, seleccion):

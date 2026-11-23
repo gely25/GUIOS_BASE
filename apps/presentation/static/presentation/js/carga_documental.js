@@ -38,44 +38,65 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedView.style.display = 'none';
         defaultView.style.display = 'block';
         submitBtn.disabled = true;
+        submitBtn.textContent = 'Cargar y fragmentar';
     }
 
-    function applyFile(file) {
-        clearError();
-        if (!file) {
-            resetSelection();
-            return;
-        }
+    const listEl = document.getElementById('selectedFileList');
 
+    function validar(file) {
         const parts = file.name.split('.');
         const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
+        if (!ALLOWED_EXT.includes(ext)) return { ext: ext, error: 'formato no permitido (.' + (ext || 'desconocido') + '); use PDF, DOCX o XLSX' };
+        if (file.size <= 0) return { ext: ext, error: 'el archivo está vacío' };
+        if (file.size > MAX_BYTES) return { ext: ext, error: 'supera el límite de 20 MB' };
+        return { ext: ext, error: '' };
+    }
 
-        if (!ALLOWED_EXT.includes(ext)) {
+    function applyFiles(files) {
+        clearError();
+        const validos = [];
+        const omitidos = [];
+        Array.prototype.forEach.call(files || [], function (f) {
+            const r = validar(f);
+            if (r.error) { omitidos.push('«' + f.name + '»: ' + r.error); } else { validos.push(f); }
+        });
+
+        const dt = new DataTransfer();
+        validos.forEach(function (f) { dt.items.add(f); });
+        fileInput.files = dt.files;
+
+        if (omitidos.length) showError('Se omitió: ' + omitidos.join('; ') + '.');
+        if (!validos.length) {
             resetSelection();
-            showError('Formato no permitido (.' + (ext || 'desconocido') + '). Usa PDF, DOCX o XLSX.');
             return;
         }
 
-        if (file.size <= 0) {
-            resetSelection();
-            showError('El archivo seleccionado está vacío.');
-            return;
+        const total = validos.reduce(function (acc, f) { return acc + f.size; }, 0);
+        listEl.textContent = '';
+        if (validos.length === 1) {
+            fileExtBadge.textContent = validate_ext(validos[0]);
+            fileNameEl.textContent = validos[0].name;
+            fileSizeEl.textContent = formatBytes(total) + ' · Listo para cargar y fragmentar';
+        } else {
+            fileExtBadge.textContent = String(validos.length);
+            fileNameEl.textContent = validos.length + ' documentos seleccionados';
+            fileSizeEl.textContent = formatBytes(total) + ' en total · Listos para cargar y fragmentar';
+            validos.forEach(function (f) {
+                const li = document.createElement('li');
+                li.textContent = f.name + ' · ' + formatBytes(f.size);
+                listEl.appendChild(li);
+            });
         }
-
-        if (file.size > MAX_BYTES) {
-            resetSelection();
-            showError('El archivo supera el límite máximo de 20 MB.');
-            return;
-        }
-
-        fileExtBadge.textContent = ext.toUpperCase();
-        fileNameEl.textContent = file.name;
-        fileSizeEl.textContent = formatBytes(file.size) + ' · Listo para cargar y fragmentar';
+        submitBtn.textContent = validos.length > 1 ? 'Cargar ' + validos.length + ' documentos' : 'Cargar y fragmentar';
 
         defaultView.style.display = 'none';
         selectedView.style.display = 'flex';
         dropZone.classList.add('has-file');
         submitBtn.disabled = false;
+    }
+
+    function validate_ext(file) {
+        return validar(file).ext.toUpperCase();
     }
 
     dropZone.addEventListener('click', function () {
@@ -97,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     fileInput.addEventListener('change', function () {
         if (fileInput.files && fileInput.files.length > 0) {
-            applyFile(fileInput.files[0]);
+            applyFiles(fileInput.files);
         } else {
             resetSelection();
         }
@@ -123,15 +144,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const files = e.dataTransfer && e.dataTransfer.files;
         if (!files || files.length === 0) return;
 
-        const dt = new DataTransfer();
-        dt.items.add(files[0]);
-        fileInput.files = dt.files;
-        applyFile(files[0]);
+        applyFiles(files);
     });
 
     uploadForm.addEventListener('submit', function () {
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Procesando documento...';
+        submitBtn.textContent = 'Procesando documentos...';
     });
 
     document.querySelectorAll('.js-confirm-delete').forEach(function (form) {
@@ -186,30 +204,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('[data-cerrar-dialogo]').forEach(function (b) {
         b.addEventListener('click', function () { b.closest('dialog').close(); });
     });
-    var sug = document.querySelector('dialog[data-abrir]');
-    if (sug && typeof sug.showModal === 'function') {
-        sug.removeAttribute('open');
-        sug.showModal();
-    }
 })();
 
-/* Visor de documento y renombrar */
+/* Renombrar documento */
 (function () {
     'use strict';
-    var visor = document.getElementById('cd-visor');
-    var marco = document.getElementById('cd-visor-frame');
-    if (visor && typeof visor.showModal === 'function') {
-        document.querySelectorAll('.js-ver-doc').forEach(function (b) {
-            b.addEventListener('click', function () {
-                document.getElementById('cd-visor-titulo').textContent = b.getAttribute('data-nombre');
-                document.getElementById('cd-visor-nueva').setAttribute('href', b.getAttribute('data-src'));
-                document.getElementById('cd-visor-texto').setAttribute('href', b.getAttribute('data-texto'));
-                marco.setAttribute('src', b.getAttribute('data-src'));
-                visor.showModal();
-            });
-        });
-        visor.addEventListener('close', function () { marco.setAttribute('src', 'about:blank'); });
-    }
     var ren = document.getElementById('cd-renombrar');
     if (ren && typeof ren.showModal === 'function') {
         document.querySelectorAll('.js-renombrar').forEach(function (b) {
@@ -222,4 +221,18 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+})();
+
+/* Versión de la carga: etiquetas para elegir o una nueva */
+(function () {
+    'use strict';
+    var nueva = document.getElementById('cd-ver-nueva');
+    var texto = document.getElementById('version');
+    if (!nueva || !texto) { return; }
+    function sync() {
+        texto.hidden = !nueva.checked;
+        texto.disabled = !nueva.checked;
+        if (nueva.checked) { texto.focus(); }
+    }
+    document.querySelectorAll('.cd-chip input').forEach(function (i) { i.addEventListener('change', sync); });
 })();

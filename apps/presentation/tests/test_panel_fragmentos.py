@@ -39,7 +39,7 @@ class PanelFragmentosTests(TestCase):
     def test_el_panel_no_se_abre_solo(self):
         r = self.client.get(URL, {'evaluacion_id': self.ev.pk, 'doc_id': self.doc.pk})
         self.assertNotContains(r, 'id="panel-fragmentos"')
-        self.assertContains(r, 'panel=1')
+        self.assertNotContains(r, 'panel=1')  # el ojito ya no está en la tabla
 
     def test_pagina_los_fragmentos_de_diez_en_diez(self):
         r = self.abrir()

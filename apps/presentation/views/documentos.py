@@ -8,6 +8,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db.models import Count, Q, ProtectedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -60,28 +61,14 @@ def _parsear_fragmento_tabular(contenido: str):
     }
 
 
-def _respaldo_subfactores(request, evaluacion, evaluaciones, retrieval_service,
-                         valoraciones, estado_embeddings, cobertura):
-    """Pantalla «Respaldo de los subfactores»: elegir qué pasaje respalda cada subfactor (se guarda por POST aparte)."""
-    base = reverse('presentation:decisor-carga-documental')
-    url_paso3 = f"{base}?evaluacion_id={evaluacion.evaluacion_id}"
-    datos = evidencia_carga.datos_respaldo(
-        retrieval_service, evaluacion, valoraciones,
-        url_base=url_paso3, hay_indexados=cobertura['listos'] > 0)
-    pendientes = [d for d in datos if not d['guardados']]
-    altas = sum(1 for d in pendientes if d['candidatos'] and d['candidatos'][0]['nivel'] == 'alta')
-    return render(request, 'presentation/decisor/respaldo_subfactores.html', {
-        'active_tab': 'carga-documental',
-        'current_step': 3,
-        'evaluacion': evaluacion,
-        'evaluaciones': evaluaciones,
-        'datos': datos,
-        'total': len(datos),
-        'n_con': len(datos) - len(pendientes),
-        'n_pendientes': len(pendientes),
-        'n_altas': altas,
-        'url_volver': url_paso3,
-    })
+DOCS_POR_PAGINA = 5
+VERSIONES_BASE = ['v1.0', 'v2.0', 'v3.0']
+
+
+def _versiones_sugeridas(documentos):
+    """Etiquetas de versión para elegir: las habituales y las que ya se usaron en la evaluación."""
+    usadas = sorted({d.version for d in documentos if d.version})
+    return VERSIONES_BASE + [v for v in usadas if v not in VERSIONES_BASE]
 
 
 def carga_documental_view(request):
@@ -102,21 +89,6 @@ def carga_documental_view(request):
             raise Http404('El archivo físico no se encuentra en el servidor.')
         return FileResponse(open(ruta, 'rb'), as_attachment=True, filename=doc.nombre)
 
-    ver_id = request.GET.get('ver_id')
-    if evaluacion and ver_id:
-        doc = get_object_or_404(Documento, documento_id=ver_id, evaluacion=evaluacion)
-        if doc.tipo.upper() != 'PDF':
-            return redirect(
-                f"{reverse('presentation:decisor-carga-documental')}"
-                f"?evaluacion_id={evaluacion.evaluacion_id}&doc_id={doc.documento_id}&panel=1")
-        ruta = servicio.ruta_absoluta_documento(doc)
-        if not ruta.exists():
-            raise Http404('El archivo físico no se encuentra en el servidor.')
-        respuesta = FileResponse(open(ruta, 'rb'), content_type='application/pdf')
-        respuesta['Content-Disposition'] = 'inline'
-        respuesta['X-Frame-Options'] = 'SAMEORIGIN'  # solo el propio sitio puede incrustarlo en el visor
-        return respuesta
-
     if request.method == 'POST':
         if not evaluacion:
             messages.error(request, 'No existe una evaluación activa seleccionada.')
@@ -136,18 +108,23 @@ def carga_documental_view(request):
             )
             return redirect(url_destino)
 
-        if accion == 'vincular_sugeridas':
-            seleccion = request.POST.getlist('sel')
-            if not seleccion:
-                messages.info(request, 'No marcó ninguna sugerencia, así que no se vinculó nada.')
-                return redirect(url_destino)
-            creadas, existentes = evidencia_carga.vincular_en_lote(
-                retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)), seleccion)
-            texto = f'{creadas} evidencia{"" if creadas == 1 else "s"} vinculada{"" if creadas == 1 else "s"}'
-            if existentes:
-                texto += f' ({existentes} ya existía{"" if existentes == 1 else "n"})'
-            messages.success(request, texto + '. Puede revisarlas en el paso 4.')
-            return redirect(url_destino)
+        if accion == 'preparar_evidencia':
+            # RF11: el sistema recupera por sí solo los pasajes relacionados con cada subfactor.
+            url_paso4 = (f"{reverse('presentation:decisor-revision-valoraciones')}"
+                         f"?evaluacion={evaluacion.evaluacion_id}")
+            if evaluacion.documentos.exists():
+                creadas, cubiertos = evidencia_carga.preparar_evidencia(
+                    retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)))
+                if creadas:
+                    messages.success(
+                        request,
+                        f'Se asociaron {creadas} pasaje{"" if creadas == 1 else "s"} de sus documentos a '
+                        f'{cubiertos} subfactor{"" if cubiertos == 1 else "es"}. Revíselos en este paso.')
+                else:
+                    messages.info(
+                        request,
+                        'No se encontraron pasajes suficientemente relacionados con los subfactores pendientes.')
+            return redirect(url_paso4)
 
         if accion == 'vincular_evidencia':
             frag_id = (request.POST.get('fragmento_id') or '').strip()
@@ -221,25 +198,38 @@ def carga_documental_view(request):
                 )
             return redirect(url_destino)
 
-        archivo = request.FILES.get('archivo')
+        archivos = request.FILES.getlist('archivo') or [None]
         version = request.POST.get('version', '')
-        try:
-            doc = servicio.procesar_carga(
-                evaluacion=evaluacion,
-                usuario=request.user,
-                archivo=archivo,
-                version=version,
-            )
-            total_frag = doc.fragmentos.count()
+        cargados, fragmentos_total = [], 0
+        for archivo in archivos:
+            try:
+                doc = servicio.procesar_carga(
+                    evaluacion=evaluacion,
+                    usuario=request.user,
+                    archivo=archivo,
+                    version=version,
+                )
+            except ValidationError as err:
+                mensaje = err.messages[0] if hasattr(err, 'messages') else str(err)
+                nombre = f'«{archivo.name}»: ' if archivo is not None and len(archivos) > 1 else ''
+                messages.error(request, nombre + mensaje)
+                continue
+            cargados.append(doc)
+            fragmentos_total += doc.fragmentos.count()
+        if len(cargados) == 1:
+            doc = cargados[0]
             messages.success(
                 request,
-                f'Documento «{doc.nombre}» ({doc.tipo}) procesado e indexado en pgvector: {total_frag} fragmentos.'
+                f'Documento «{doc.nombre}» ({doc.tipo}) procesado e indexado en pgvector: {fragmentos_total} fragmentos.'
             )
-            return redirect(f'{url_destino}&doc_id={doc.documento_id}')
-        except ValidationError as err:
-            mensaje = err.messages[0] if hasattr(err, 'messages') else str(err)
-            messages.error(request, mensaje)
-            return redirect(url_destino)
+            if len(archivos) == 1:
+                return redirect(f'{url_destino}&doc_id={doc.documento_id}')
+        elif cargados:
+            messages.success(
+                request,
+                f'{len(cargados)} documentos procesados e indexados: {fragmentos_total} fragmentos en total.'
+            )
+        return redirect(url_destino)
 
     documentos = []
     documento_inspeccionado = None
@@ -312,9 +302,6 @@ def carga_documental_view(request):
     if evaluacion:
         cobertura = evidencia_carga.cobertura(evaluacion, valoraciones_evaluacion, estado_embeddings)
         opciones = evidencia_carga.opciones_subfactores(valoraciones_evaluacion)
-        if request.GET.get('revisar'):
-            return _respaldo_subfactores(request, evaluacion, evaluaciones, retrieval_service,
-                                         valoraciones_evaluacion, estado_embeddings, cobertura)
 
     explorar_abierto = bool(consulta_semantica or subfactor_seleccionado_id)
     anterior_url = siguiente_url = ''
@@ -338,6 +325,8 @@ def carga_documental_view(request):
         'evaluacion': evaluacion,
         'evaluaciones': evaluaciones,
         'documentos': documentos,
+        'docs_pagina': Paginator(documentos, DOCS_POR_PAGINA).get_page(request.GET.get('pag')),
+        'versiones_sugeridas': _versiones_sugeridas(documentos),
         'documento_inspeccionado': documento_inspeccionado,
         'panel': panel,
         'cobertura': cobertura,

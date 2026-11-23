@@ -1,10 +1,13 @@
-"""Resumen de cobertura, selector agrupado y «Sugerir evidencia» de la Carga documental."""
+"""Resumen antes de «Siguiente», asociación automática de evidencia y selector agrupado de la Carga documental."""
 from datetime import date
 from unittest import mock
 
+from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from apps.application.services.retrieval import RetrievalService
+from apps.presentation.views import evidencia_carga
 from apps.data.models import (CatalogoVersion, Dimension, Documento, Evaluacion, EvaluacionFactor, Evidencia, Factor,
     FragmentoDocumento, Organizacion, Software, Subfactor, Usuario, ValoracionSubfactor)
 
@@ -45,14 +48,19 @@ class EvidenciaCargaTests(TestCase):
         return {'fragmento_id': frag.pk, 'documento_id': frag.documento_id, 'documento_nombre': 'Guía.pdf', 'ubicacion_referencia': f'Página {frag.pagina}',
                 'contenido': frag.contenido, 'similitud': sim}
 
-    def test_resumen_muestra_cobertura_y_avisa_de_subfactores_sin_evidencia(self):
+    def test_resumen_antes_de_siguiente_prepara_la_evidencia(self):
         Evidencia.objects.create(valoracion=self.v1, fragmento=self.f1)
         r = self.get()
         self.assertContains(r, 'id="cd-resumen"')
         self.assertContains(r, 'data-confirmar="cd-resumen"')
-        self.assertContains(r, '1 subfactor sin evidencia')
-        self.assertContains(r, 'Costo de soporte')
+        self.assertContains(r, 'value="preparar_evidencia"')
+        self.assertContains(r, 'subfactores por respaldar')
         self.assertEqual(r.context['cobertura']['con_evidencia'], 1)
+
+    def test_el_paso_3_no_pide_vincular_ni_sugerir_nada(self):
+        r = self.get(doc_id=self.doc.pk, panel=1)
+        for texto in ('Sugerir evidencia', 'revisar=1', 'Vincular a subfactor', 'vincular_evidencia', 'Ninguna sirve'):
+            self.assertNotContains(r, texto)
 
     def test_selector_agrupa_por_factor_y_cuenta_evidencias(self):
         Evidencia.objects.create(valoracion=self.v1, fragmento=self.f1)
@@ -63,63 +71,47 @@ class EvidenciaCargaTests(TestCase):
         items = r.context['opciones'][0]['items']
         self.assertEqual(items[0]['subfactor_id'], self.sf2.pk)  # sin evidencia primero
 
-    def test_boton_sugerir_lleva_a_la_pantalla_de_respaldo(self):
-        r = self.get()
-        self.assertContains(r, 'revisar=1')
-        self.assertNotContains(r, 'id="cd-sugerencias"')
+    def preparar(self):
+        return self.client.post(URL, {'evaluacion_id': self.ev.pk, 'accion': 'preparar_evidencia'})
 
-    def test_pantalla_respaldo_no_crea_nada_y_clasifica_relevancia(self):
+    def test_preparar_asocia_los_mejores_pasajes_y_avanza_al_paso_4(self):
         def buscar(**k):
             if k['subfactor_id'] == self.sf1.pk:
-                return [self.item(self.f1, 0.8)]
-            return [self.item(self.f2, 0.2), self.item(self.f1, 0.07)]
+                return [self.item(self.f1, 0.8), self.item(self.f2, 0.5), self.item(self.f1, 0.2)]
+            return []
+        with mock.patch(BUSCAR, side_effect=buscar) as m:
+            r = self.preparar()
+        self.assertEqual(m.call_args.kwargs['umbral_similitud'], 0.15)
+        self.assertEqual(Evidencia.objects.filter(valoracion=self.v1).count(), 2)   # máximo 2 por subfactor
+        self.assertEqual(Evidencia.objects.filter(valoracion=self.v2).count(), 0)
+        self.assertEqual(r.status_code, 302)
+        self.assertIn(reverse('presentation:decisor-revision-valoraciones'), r['Location'])
+        self.assertTrue(any('Se asociaron 2 pasajes de sus documentos a 1 subfactor' in str(x) for x in get_messages(r.wsgi_request)))
         with mock.patch(BUSCAR, side_effect=buscar):
-            r = self.get(revisar=1)
-        self.assertTemplateUsed(r, 'presentation/decisor/respaldo_subfactores.html')
-        self.assertContains(r, 'Respaldo de los subfactores')
-        self.assertEqual(Evidencia.objects.count(), 0)
-        datos = {d['id']: d for d in r.context['datos']}
-        self.assertEqual(datos[self.v1.pk]['candidatos'][0]['nivel'], 'alta')
-        self.assertEqual([c['nivel'] for c in datos[self.v2.pk]['candidatos']], ['media', 'baja'])
-        self.assertEqual(r.context['n_altas'], 1)
+            self.preparar()
+        self.assertEqual(Evidencia.objects.count(), 2)                               # no duplica
 
-    def test_pantalla_respaldo_no_sugiere_donde_ya_hay_evidencia(self):
+    def test_preparar_no_toca_subfactores_que_ya_tienen_evidencia(self):
         Evidencia.objects.create(valoracion=self.v1, fragmento=self.f1)
-        with mock.patch(BUSCAR, return_value=[self.item(self.f2, 0.5)]) as m:
-            r = self.get(revisar=1)
-        datos = {d['id']: d for d in r.context['datos']}
-        self.assertEqual(datos[self.v1.pk]['candidatos'], [])
-        self.assertEqual(len(datos[self.v1.pk]['guardados']), 1)
-        self.assertEqual(m.call_count, 1)  # solo el subfactor pendiente
+        with mock.patch(BUSCAR, return_value=[self.item(self.f2, 0.9)]) as m:
+            self.preparar()
+        self.assertEqual(m.call_count, 1)
+        self.assertEqual(Evidencia.objects.filter(valoracion=self.v1).count(), 1)
 
-    def test_pantalla_respaldo_sin_embeddings_no_busca(self):
-        FragmentoDocumento.objects.filter(documento=self.doc).update(embedding=None)
+    def test_preparar_sin_documentos_solo_avanza(self):
+        self.doc.delete()
         with mock.patch(BUSCAR) as m:
-            r = self.get(revisar=1)
-        self.assertEqual(r.status_code, 200)
+            r = self.preparar()
         self.assertEqual(m.call_count, 0)
+        self.assertIn(reverse('presentation:decisor-revision-valoraciones'), r['Location'])
 
-    def test_vincular_sugeridas_crea_solo_lo_confirmado_y_no_duplica(self):
-        datos = {'evaluacion_id': self.ev.pk, 'accion': 'vincular_sugeridas',
-                 'sel': [f'{self.v1.pk}:{self.f1.pk}:0.81', f'{self.v2.pk}:{self.f2.pk}:0.40']}
-        self.client.post(URL, datos)
-        self.assertEqual(Evidencia.objects.count(), 2)
-        e = Evidencia.objects.get(valoracion=self.v1)
-        self.assertEqual(e.fragmento_id, self.f1.pk)
-        self.assertTrue(e.referencia)
-        self.client.post(URL, datos)
-        self.assertEqual(Evidencia.objects.count(), 2)
-
-    def test_vincular_sugeridas_ignora_valores_ajenos_o_mal_formados(self):
+    def test_vincular_en_lote_ignora_valores_ajenos_o_mal_formados(self):
         otra = Evaluacion.objects.create(organizacion=self.ev.organizacion, usuario=self.actor, catalogo=self.ev.catalogo,
                                          software=Software.objects.create(nombre='Otra'))
         doc2 = Documento.objects.create(evaluacion=otra, usuario=self.actor, nombre='x.pdf', tipo='PDF', ubicacion='x')
         ajeno = FragmentoDocumento.objects.create(documento=doc2, pagina=1, contenido='ajeno')
-        self.client.post(URL, {'evaluacion_id': self.ev.pk, 'accion': 'vincular_sugeridas',
-                               'sel': [f'{self.v1.pk}:{ajeno.pk}:0.5', 'basura', '99999:1:0.5', f'{self.v1.pk}:{self.f1.pk}:abc']})
-        self.assertEqual(Evidencia.objects.count(), 1)
+        creadas, _ = evidencia_carga.vincular_en_lote(
+            RetrievalService(), self.ev, [self.v1, self.v2],
+            [f'{self.v1.pk}:{ajeno.pk}:0.5', 'basura', '99999:1:0.5', f'{self.v1.pk}:{self.f1.pk}:abc'])
+        self.assertEqual(creadas, 1)
         self.assertIsNone(Evidencia.objects.get().relevancia)
-
-    def test_sin_seleccion_no_vincula(self):
-        self.client.post(URL, {'evaluacion_id': self.ev.pk, 'accion': 'vincular_sugeridas'})
-        self.assertEqual(Evidencia.objects.count(), 0)

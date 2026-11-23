@@ -36,27 +36,11 @@ class VisorYRenombrarTests(TestCase):
         return self.client.post(URL, {'evaluacion_id': self.ev.pk, 'accion': 'renombrar',
                                       'documento_id': doc.pk, 'nombre': nombre})
 
-    def test_pdf_se_muestra_en_linea_y_solo_en_el_propio_sitio(self):
-        r = self.client.get(URL, {'evaluacion_id': self.ev.pk, 'ver_id': self.pdf.pk})
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r['Content-Type'], 'application/pdf')
-        self.assertEqual(r['Content-Disposition'], 'inline')
-        self.assertEqual(r['X-Frame-Options'], 'SAMEORIGIN')
-
-    def test_no_pdf_lleva_al_contenido_extraido(self):
-        r = self.client.get(URL, {'evaluacion_id': self.ev.pk, 'ver_id': self.docx.pk})
-        self.assertEqual(r.status_code, 302)
-        self.assertIn('panel=1', r['Location'])
-
-    def test_no_se_puede_ver_un_documento_de_otra_evaluacion(self):
-        r = self.client.get(URL, {'evaluacion_id': self.ev.pk, 'ver_id': self.ajeno.pk})
-        self.assertEqual(r.status_code, 404)
-
-    def test_la_tabla_ofrece_visor_para_pdf_y_contenido_para_los_demas(self):
+    def test_la_tabla_ya_no_ofrece_ver_contenido(self):
         r = self.client.get(URL, {'evaluacion_id': self.ev.pk})
-        self.assertContains(r, 'js-ver-doc', count=1)
-        self.assertContains(r, 'Ver contenido', count=1)
-        self.assertContains(r, 'id="cd-visor"')
+        self.assertNotContains(r, 'title="Ver contenido"')
+        self.assertNotContains(r, 'id="cd-visor"')
+        self.assertContains(r, 'title="Eliminar"', count=2)
         self.assertContains(r, 'js-renombrar')
 
     def test_renombrar_conserva_la_extension(self):

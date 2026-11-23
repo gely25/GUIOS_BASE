@@ -4,7 +4,7 @@
 {% block title %}Carga documental | GUIOS PRO{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'presentation/css/carga_documental.css' %}?v=6">
+<link rel="stylesheet" href="{% static 'presentation/css/carga_documental.css' %}?v=10">
 {% endblock %}
 
 {% block content %}
@@ -59,21 +59,6 @@
             </section>
             {% else %}
 
-            {% if evaluaciones|length > 1 %}
-            <section class="dashboard-block section-spaced">
-                <form method="get" class="eval-selector-form">
-                    <label for="evaluacion_id"><strong>Evaluación activa:</strong></label>
-                    <select id="evaluacion_id" name="evaluacion_id" onchange="this.form.submit()" class="side-text-input eval-selector-input">
-                        {% for ev in evaluaciones %}
-                        <option value="{{ ev.evaluacion_id }}" {% if ev.evaluacion_id == evaluacion.evaluacion_id %}selected{% endif %}>
-                            #{{ ev.evaluacion_id }} - {{ ev.software.nombre }} ({{ ev.estado }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                </form>
-            </section>
-            {% endif %}
-
             <!-- Documentos de la evaluación: subida (HU07) y tabla -->
             <section class="dashboard-block section-spaced cd-tarjeta">
                 <div class="cd-cabecera">
@@ -85,9 +70,9 @@
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="subir">
                     <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                    <input id="archivoInput" type="file" name="archivo" accept=".pdf,.docx,.xlsx" required hidden>
+                    <input id="archivoInput" type="file" name="archivo" accept=".pdf,.docx,.xlsx" multiple required hidden>
 
-                    <div id="dropZone" class="dropzone-area cd-drop" role="button" tabindex="0" aria-label="Zona para arrastrar o seleccionar archivo">
+                    <div id="dropZone" class="dropzone-area cd-drop" role="button" tabindex="0" aria-label="Zona para arrastrar o seleccionar uno o varios archivos">
                         <div id="dropzoneDefault">
                             <div class="dropzone-icon-wrap">
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -96,9 +81,9 @@
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
                                 </svg>
                             </div>
-                            <p class="dropzone-title">Arrastre su documento aquí</p>
+                            <p class="dropzone-title">Arrastre sus documentos aquí</p>
                             <p class="dropzone-subtitle">PDF, DOCX o XLSX · Hasta 20 MB por archivo</p>
-                            <span class="cd-btn-sel">Seleccionar archivo</span>
+                            <span class="cd-btn-sel">Seleccionar archivos</span>
                         </div>
 
                         <div id="dropzoneSelected" class="selected-file-card" style="display: none;">
@@ -106,6 +91,7 @@
                             <div class="selected-file-meta">
                                 <p id="selectedFileName" class="selected-file-name">archivo.pdf</p>
                                 <p id="selectedFileSize" class="selected-file-size">0 KB · Listo para procesar</p>
+                                <ul id="selectedFileList" class="cd-lista-sel"></ul>
                             </div>
                             <button type="button" id="clearFileBtn" class="btn-clear-file">Quitar</button>
                         </div>
@@ -115,8 +101,14 @@
 
                     <div class="cd-subir-fila">
                         <div class="cd-version">
-                            <label for="version" class="side-field-label">Versión del documento (opcional)</label>
-                            <input id="version" type="text" name="version" placeholder="Ej. v1.0, 2026, Borrador" class="side-text-input">
+                            <span class="side-field-label" id="cd-version-lbl">Versión de esta carga (opcional)</span>
+                            <div class="cd-chips" role="radiogroup" aria-labelledby="cd-version-lbl">
+                                <label class="cd-chip"><input type="radio" name="version" value="" checked><span>Sin versión</span></label>
+                                {% for v in versiones_sugeridas %}<label class="cd-chip"><input type="radio" name="version" value="{{ v }}"><span>{{ v }}</span></label>{% endfor %}
+                                <label class="cd-chip"><input type="radio" name="_nueva" value="1" id="cd-ver-nueva"><span>+ Nueva</span></label>
+                            </div>
+                            <input id="version" type="text" name="version" maxlength="30" class="side-text-input cd-ver-txt" placeholder="Escriba la etiqueta, ej. v2.0" hidden disabled>
+                            <small class="cd-sub">Se aplica a todos los archivos que cargue ahora.</small>
                         </div>
                         <button id="submitUploadBtn" type="submit" class="btn-top-action btn-submit-doc cd-btn-subir" disabled>
                             Cargar y fragmentar
@@ -131,19 +123,19 @@
                             <tr>
                                 <th>Nombre</th>
                                 <th>Tipo</th>
+                                <th>Versión</th>
                                 <th>Fecha</th>
-                                <th>Hash SHA-256</th>
                                 <th>Estado</th>
                                 <th><span class="cd-sr">Acciones</span></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for doc in documentos %}
+                            {% for doc in docs_pagina %}
                             <tr class="{% if documento_inspeccionado and doc.documento_id == documento_inspeccionado.documento_id %}doc-row-active{% endif %}">
-                                <td class="cd-nombre"><strong>{{ doc.nombre }}</strong>{% if doc.version %}<span class="cd-version-tag">{{ doc.version }}</span>{% endif %}</td>
+                                <td class="cd-nombre"><strong title="Huella SHA-256: {{ doc.hash_sha256|default:'—' }}">{{ doc.nombre }}</strong></td>
                                 <td><span class="cd-tipo">{{ doc.tipo }}</span></td>
+                                <td class="cd-fecha">{{ doc.version|default:"—" }}</td>
                                 <td class="cd-fecha">{{ doc.fecha_carga|date:"d M Y" }}</td>
-                                <td class="hash-cell" title="{{ doc.hash_sha256 }}">{% if doc.hash_sha256 %}{{ doc.hash_sha256|slice:":6" }}…{{ doc.hash_sha256|slice:"-4:" }}{% else %}—{% endif %}</td>
                                 <td>
                                     {% if doc.total_fragmentos == 0 %}
                                     <span class="cd-estado cd-estado--aviso">Sin fragmentos</span>
@@ -155,25 +147,16 @@
                                 </td>
                                 <td>
                                     <div class="doc-actions-row cd-acciones">
-                                        {% if doc.tipo == "PDF" %}
-                                        <button type="button" class="btn-empty-state btn-doc-action js-ver-doc"
-                                                data-src="?evaluacion_id={{ evaluacion.evaluacion_id }}&ver_id={{ doc.documento_id }}"
-                                                data-nombre="{{ doc.nombre }}"
-                                                data-texto="?evaluacion_id={{ evaluacion.evaluacion_id }}&doc_id={{ doc.documento_id }}&panel=1">Ver documento</button>
-                                        {% else %}
-                                        <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&doc_id={{ doc.documento_id }}&panel=1"
-                                           class="btn-empty-state btn-doc-action">Ver contenido</a>
-                                        {% endif %}
                                         <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&descargar_id={{ doc.documento_id }}"
-                                           class="btn-empty-state btn-doc-action">Descargar</a>
-                                        <button type="button" class="btn-empty-state btn-doc-action js-renombrar"
-                                                data-id="{{ doc.documento_id }}" data-nombre="{{ doc.nombre }}">Renombrar</button>
+                                           class="cd-ico" title="Descargar" aria-label="Descargar {{ doc.nombre }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
+                                        <button type="button" class="cd-ico js-renombrar" title="Renombrar" aria-label="Renombrar {{ doc.nombre }}"
+                                                data-id="{{ doc.documento_id }}" data-nombre="{{ doc.nombre }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
                                         <form method="post" class="js-confirm-delete">
                                             {% csrf_token %}
                                             <input type="hidden" name="accion" value="eliminar">
                                             <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
                                             <input type="hidden" name="documento_id" value="{{ doc.documento_id }}">
-                                            <button type="submit" class="btn-doc-delete">Eliminar</button>
+                                            <button type="submit" class="cd-ico cd-ico--del" title="Eliminar" aria-label="Eliminar {{ doc.nombre }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button>
                                         </form>
                                     </div>
                                 </td>
@@ -181,6 +164,13 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    {% if docs_pagina.paginator.num_pages > 1 %}
+                    <nav class="cd-pag" aria-label="Paginación de documentos">
+                        {% if docs_pagina.has_previous %}<a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&pag={{ docs_pagina.previous_page_number }}">&lsaquo; Página anterior</a>{% else %}<span class="cd-pag-off">&lsaquo; Página anterior</span>{% endif %}
+                        <span>Página {{ docs_pagina.number }} de {{ docs_pagina.paginator.num_pages }} · {{ docs_pagina.paginator.count }} documentos</span>
+                        {% if docs_pagina.has_next %}<a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&pag={{ docs_pagina.next_page_number }}">Página siguiente &rsaquo;</a>{% else %}<span class="cd-pag-off">Página siguiente &rsaquo;</span>{% endif %}
+                    </nav>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="cd-vacio">
@@ -189,154 +179,14 @@
                 {% endif %}
             </section>
 
-            {% if cobertura %}
-            <section class="dashboard-block section-spaced cd-cobertura" id="cobertura">
-                <div class="cd-cabecera">
-                    <h2 class="block-title">Evidencia vinculada</h2>
-                    <p class="cd-sub">La evidencia son los fragmentos que respaldan cada subfactor. Alimenta la revisión del paso 4 y el informe final.</p>
-                </div>
-                <div class="cd-cob-fila">
-                    <div class="cd-cob-cifra"><strong>{{ cobertura.con_evidencia }}</strong><span>de {{ cobertura.total_subfactores }} subfactores con evidencia</span></div>
-                    <div class="cd-cob-barra" role="img" aria-label="{{ cobertura.porcentaje }}% de subfactores con evidencia"><span style="width: {{ cobertura.porcentaje }}%"></span></div>
-                    {% if cobertura.puede_sugerir %}
-                    <a class="cd-btn-sugerir" href="?evaluacion_id={{ evaluacion.evaluacion_id }}&amp;revisar=1">Sugerir evidencia</a>
-                    {% endif %}
-                </div>
-                {% if cobertura.total_subfactores and not cobertura.puede_sugerir and cobertura.sin_evidencia %}
-                <p class="cd-nota-cob">{% if cobertura.listos %}Todos los subfactores ya tienen evidencia.{% else %}Cargue un documento y actualice la búsqueda para recibir sugerencias.{% endif %}</p>
-                {% endif %}
-            </section>
+            {% if documentos %}
+            <p class="cd-sub cd-siguiente-nota">Al pulsar «Siguiente», el sistema relaciona sus documentos con cada subfactor. Esa evidencia la revisa y valida en el paso 4.</p>
             {% endif %}
 
             <p class="cd-aviso" role="note">
-                <strong>El procesamiento no cambia los archivos originales.</strong>
-                Al cargar un archivo se calcula su huella, se divide en fragmentos (PDF por página, DOCX por sección, XLSX por hoja) y se indexa su vector de 1536 dimensiones en pgvector. Los hashes mostrados están abreviados; pase el cursor para verlos completos.
+                <strong>Sus archivos originales no se modifican.</strong> Solo los leemos para encontrar la información útil de cada subfactor.
             </p>
             <!-- Búsqueda semántica en todos los documentos (HU08) -->
-            <details class="cd-explorar" id="explorar"{% if explorar_abierto %} open{% endif %}>
-                <summary>
-                    <span>Buscar evidencia en todos los documentos</span>
-                    <small>Por subfactor o por texto · {{ estado_embeddings.indexados }} de {{ estado_embeddings.total_fragmentos }} fragmentos listos</small>
-                </summary>
-
-                <section class="dashboard-block section-spaced">
-                    <div class="block-header">
-                        <h2 class="block-title">Búsqueda por significado</h2>
-                        <div class="cd-busqueda-estado">
-                            {% if estado_embeddings.total_fragmentos > 0 %}
-                            {% if estado_embeddings.pendientes == 0 %}
-                            <span class="cd-al-dia">&#10003; Búsqueda al día · {{ estado_embeddings.total_fragmentos }} fragmento{{ estado_embeddings.total_fragmentos|pluralize }}</span>
-                            {% else %}
-                            <span class="cd-pendientes">{{ estado_embeddings.pendientes }} fragmento{{ estado_embeddings.pendientes|pluralize }} sin preparar</span>
-                            {% endif %}
-                            <form method="post" style="margin: 0;">
-                                {% csrf_token %}
-                                <input type="hidden" name="accion" value="sincronizar_embeddings">
-                                <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                                <button type="submit" class="cd-btn-actualizar{% if estado_embeddings.pendientes > 0 %} destacado{% endif %}" title="Prepara los fragmentos para que la búsqueda por significado los encuentre">
-                                    Actualizar búsqueda
-                                </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </div>
-                <form method="get" class="eval-selector-form" style="margin-bottom: 12px; flex-wrap: wrap;">
-                    <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                    {% if documento_inspeccionado %}
-                    <input type="hidden" name="doc_id" value="{{ documento_inspeccionado.documento_id }}">
-                    {% endif %}
-
-                    {% if subfactores_catalogo %}
-                    <select
-                        name="subfactor_id"
-                        class="side-text-input"
-                        style="max-width: 340px;"
-                        onchange="if(this.value && this.form.q) this.form.q.value='';"
-                    >
-                        <option value="">-- Buscar por subfactor del catálogo --</option>
-                        {% for sf in subfactores_catalogo %}
-                        <option value="{{ sf.subfactor_id }}" {% if subfactor_seleccionado_id == sf.subfactor_id %}selected{% endif %}>
-                            {{ sf.factor.nombre }} · {{ sf.descripcion|truncatechars:55 }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    {% endif %}
-
-                    <input
-                        type="text"
-                        name="q"
-                        value="{{ consulta_semantica }}"
-                        placeholder="O escribe una consulta libre (ej. costos de licencia, compatibilidad)..."
-                        class="side-text-input"
-                        style="flex: 1; min-width: 240px;"
-                        oninput="if(this.value && this.form.subfactor_id) this.form.subfactor_id.value='';"
-                    >
-                    <button type="submit" class="btn-top-action">
-                        Buscar evidencia
-                    </button>
-                    {% if consulta_semantica or subfactor_seleccionado_id %}
-                    <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}{% if documento_inspeccionado %}&doc_id={{ documento_inspeccionado.documento_id }}{% endif %}" class="btn-empty-state btn-doc-action">
-                        Limpiar
-                    </a>
-                    {% endif %}
-                </form>
-
-                {% if consulta_semantica or subfactor_seleccionado_id %}
-                    {% if resultados_semanticos %}
-                    <div class="fragments-grid">
-                        {% for item in resultados_semanticos %}
-                        <article class="fragment-card">
-                            <div class="fragment-card-header">
-                                <span>
-                                    <strong>#{{ forloop.counter }} · {{ item.documento_nombre }}</strong>
-                                    ({{ item.ubicacion_referencia }})
-                                </span>
-                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                    <span class="fragment-location-pill">
-                                        Similitud: {{ item.relevancia_porcentaje }}%
-                                    </span>
-                                    <a href="?evaluacion_id={{ evaluacion.evaluacion_id }}&doc_id={{ item.documento_id }}&fragmento_id={{ item.fragmento_id }}#fragmento-{{ item.fragmento_id }}"
-                                       class="btn-empty-state btn-doc-action">
-                                        Abrir ubicación
-                                    </a>
-                                </div>
-                            </div>
-                            <p class="fragment-body-text">{{ item.contenido }}</p>
-
-                            {% if valoraciones_evaluacion %}
-                            <form method="post" style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                                {% csrf_token %}
-                                <input type="hidden" name="accion" value="vincular_evidencia">
-                                <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                                <input type="hidden" name="fragmento_id" value="{{ item.fragmento_id }}">
-                                <input type="hidden" name="relevancia" value="{{ item.similitud }}">
-                                <select name="valoracion_id" class="side-text-input" style="max-width: 380px;" required>
-                                    <option value="">-- Vincular como evidencia a subfactor --</option>
-                                    {% for v in valoraciones_evaluacion %}
-                                    <option value="{{ v.pk }}" {% if subfactor_seleccionado_id == v.subfactor_id %}selected{% endif %}>
-                                        {{ v.evaluacion_factor.factor.nombre }} · {{ v.subfactor.descripcion|truncatechars:60 }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <button type="submit" class="btn-empty-state btn-doc-action">
-                                    Vincular evidencia
-                                </button>
-                            </form>
-                            {% endif %}
-                        </article>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="empty-state-box">
-                        <p class="empty-state-description">
-                            No se encontraron fragmentos indexados para la búsqueda solicitada en esta evaluación.
-                        </p>
-                    </div>
-                    {% endif %}
-                {% endif %}
-                </section>
-
-            </details>
 
             {% if panel %}
             <div class="cdp-capa">
@@ -398,21 +248,6 @@
                                 {% endif %}
                             </div>
                             <button type="button" class="cdp-mas" data-mas hidden>Ver más</button>
-
-                            {% if valoraciones_evaluacion %}
-                            <form method="post" class="cdp-vincular">
-                                {% csrf_token %}
-                                <input type="hidden" name="accion" value="vincular_evidencia">
-                                <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
-                                <input type="hidden" name="fragmento_id" value="{{ item.frag.fragmento_id }}">
-                                <input type="hidden" name="relevancia" value="{{ item.similitud|default_if_none:'' }}">
-                                <select name="valoracion_id" required aria-label="Subfactor al que vincular">
-                                    <option value="">Vincular a subfactor…</option>
-                                    {% for g in opciones %}<optgroup label="{{ g.factor }}">{% for o in g.items %}<option value="{{ o.valoracion_id }}" {% if panel.sugerido_id == o.subfactor_id %}selected{% endif %}>{% if o.n %}✓ {{ o.n }} · {% else %}○ {% endif %}{{ o.descripcion|truncatechars:70 }}</option>{% endfor %}</optgroup>{% endfor %}
-                                </select>
-                                <button type="submit" class="cdp-btn">Vincular</button>
-                            </form>
-                            {% endif %}
                         </article>
                         {% empty %}
                         <p class="cdp-vacio">No hay fragmentos con estos filtros.</p>
@@ -431,20 +266,6 @@
             {% endif %}
 
             {% if documentos %}
-            <dialog class="cd-modal cd-visor" id="cd-visor" aria-labelledby="cd-visor-titulo">
-                <div class="cd-modal-cuerpo">
-                    <header class="cd-visor-cab">
-                        <h2 id="cd-visor-titulo">Documento</h2>
-                        <div class="cd-visor-acc">
-                            <a class="cd-btn-sec" id="cd-visor-nueva" href="#" target="_blank" rel="noopener">Abrir en pestaña nueva</a>
-                            <a class="cd-btn-sec" id="cd-visor-texto" href="#">Ver texto extraído</a>
-                            <button type="button" class="cd-btn-prim" data-cerrar-dialogo>Cerrar</button>
-                        </div>
-                    </header>
-                    <iframe id="cd-visor-frame" class="cd-visor-frame" title="Vista del documento"></iframe>
-                </div>
-            </dialog>
-
             <dialog class="cd-modal" id="cd-renombrar" aria-labelledby="cd-ren-titulo">
                 <form method="post" class="cd-modal-cuerpo">
                     {% csrf_token %}
@@ -464,34 +285,30 @@
 
             {% if cobertura %}
             <dialog class="cd-modal" id="cd-resumen" aria-labelledby="cd-resumen-titulo">
-                <div class="cd-modal-cuerpo">
+                <form method="post" class="cd-modal-cuerpo">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="preparar_evidencia">
+                    <input type="hidden" name="evaluacion_id" value="{{ evaluacion.evaluacion_id }}">
                     <header class="cd-modal-cab">
                         <span class="cd-modal-icono" aria-hidden="true">&#10003;</span>
                         <div>
                             <h2 id="cd-resumen-titulo">Resumen de la carga documental</h2>
-                            <p class="cd-sub">Revise qué se encontró antes de pasar a la revisión.</p>
+                            <p class="cd-sub">Al continuar, el sistema busca en sus documentos los pasajes relacionados con cada subfactor. Los revisará en el paso 4.</p>
                         </div>
                     </header>
                     <div class="cd-cifras">
                         <div class="cd-cifra"><strong>{{ cobertura.documentos }}</strong><span>documento{{ cobertura.documentos|pluralize }}</span></div>
                         <div class="cd-cifra"><strong>{{ cobertura.listos }}</strong><span>de {{ cobertura.fragmentos }} fragmentos listos</span></div>
-                        <div class="cd-cifra"><strong>{{ cobertura.con_evidencia }}/{{ cobertura.total_subfactores }}</strong><span>subfactores con evidencia</span></div>
+                        <div class="cd-cifra"><strong>{{ cobertura.total_subfactores }}</strong><span>subfactores por respaldar</span></div>
                     </div>
                     {% if cobertura.documentos == 0 %}
-                    <p class="cd-alerta">No hay documentos cargados: en el paso 4 no habrá evidencia que revisar.</p>
-                    {% elif cobertura.sin_evidencia %}
-                    <div class="cd-alerta">
-                        <p><strong>{{ cobertura.sin_evidencia }} subfactor{{ cobertura.sin_evidencia|pluralize:"es" }} sin evidencia.</strong> Se podrán evaluar, pero sin fuente que los respalde.</p>
-                        <ul>{% for n in cobertura.nombres_sin_evidencia %}<li>{{ n|truncatechars:90 }}</li>{% endfor %}{% if cobertura.mas_sin_evidencia %}<li>y {{ cobertura.mas_sin_evidencia }} más…</li>{% endif %}</ul>
-                    </div>
-                    {% else %}
-                    <p class="cd-ok">Todos los subfactores tienen evidencia vinculada.</p>
+                    <p class="cd-alerta">No hay documentos cargados: en el paso 4 los subfactores no tendrán fuente y deberá valorarlos manualmente.</p>
                     {% endif %}
                     <div class="cd-modal-acciones">
                         <button type="button" class="cd-btn-sec" data-cerrar-dialogo>Seguir cargando</button>
-                        <a class="cd-btn-prim" href="{{ siguiente_url }}">Continuar &rarr;</a>
+                        <button type="submit" class="cd-btn-prim">Continuar &rarr;</button>
                     </div>
-                </div>
+                </form>
             </dialog>
             {% endif %}
 
