@@ -1,0 +1,4 @@
+.historial-proveedor { display: block; color: #64748b; margin-top: 4px; }
+.historial-acciones { min-width: 190px; }
+.historial-acciones .res-boton { display: inline-block; margin: 3px 3px 3px 0; padding: 7px 10px; }
+.historial-pendiente, .historial-sin-informe { color: #64748b; font-size: 12px; }

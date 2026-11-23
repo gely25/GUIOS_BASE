@@ -9,6 +9,7 @@ from .administration import admin_home_view
 from .decisor import decisor_home_view
 from .pendiente import modulo_pendiente_view
 from .evaluacion import evaluacion_inicial_view
+from .historial import historial_evaluaciones_view
 
 __all__ = [
     'home_view',
@@ -16,4 +17,5 @@ __all__ = [
     'admin_home_view',
     'modulo_pendiente_view',
     'evaluacion_inicial_view',
+    'historial_evaluaciones_view',
 ]

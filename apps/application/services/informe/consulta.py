@@ -50,7 +50,11 @@ def cargar_informe(usuario, evaluacion_id: Optional[int] = None) -> InformeEvalu
     )
     if evaluacion_id is not None:
         consulta = consulta.filter(evaluacion_id=evaluacion_id)
-    evaluacion = consulta.order_by("-resultado__fecha_generacion", "-evaluacion_id").first()
+    evaluacion = None
+    for candidata in consulta.order_by("-resultado__fecha_generacion", "-evaluacion_id"):
+        if (candidata.resultado.recomendacion or "").strip():
+            evaluacion = candidata
+            break
     if evaluacion is None:
         raise InformeNoDisponible("No hay una evaluación con resultado para mostrar.")
 

@@ -56,6 +56,8 @@ class ResultadosEvaluacion:
     recomendacion: Optional[str] = None
     explicacion: Optional[str] = None
     version_regla: Optional[str] = None
+    conteos_foda: dict = field(default_factory=dict)
+    factores_criticos: list = field(default_factory=list)
 
     @property
     def codigo(self) -> str:
@@ -136,4 +138,6 @@ class ResultadosService:
                 valores=por_factor.get(ef.evaluacion_factor_id, [])) for ef in factores_bd],
             recomendacion=resultado.recomendacion if resultado else None,
             explicacion=resultado.explicacion if resultado else None,
-            version_regla=resultado.version_regla if resultado else None)
+            version_regla=resultado.version_regla if resultado else None,
+            conteos_foda=resultado.conteos_foda if resultado else {},
+            factores_criticos=resultado.factores_criticos if resultado else [])

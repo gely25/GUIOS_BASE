@@ -185,6 +185,7 @@ class RevisionHumanaService:
         anteriores = {'factores': list(factores.values('pk', 'ponderacion_media', 'clasificacion_foda')),
             'resultado': dict(id=resultado.pk, recomendacion=resultado.recomendacion,
                 explicacion=resultado.explicacion, version_regla=resultado.version_regla,
+                conteos_foda=resultado.conteos_foda, factores_criticos=resultado.factores_criticos,
                 fecha_generacion=resultado.fecha_generacion) if resultado else None}
         decision = dict(revision_id=previa.pk if previa else None, valor=v.valor_confirmado,
             estado=v.estado_validacion, justificacion=v.justificacion_decisor,
