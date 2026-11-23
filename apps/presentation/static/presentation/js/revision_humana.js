@@ -27,6 +27,21 @@
         buscar.addEventListener('input', filtrar);
         filtro.addEventListener('change', filtrar);
     }
+    // El tipo de decisión se deduce de la valoración elegida: igual a la propuesta de IA = confirmar; distinta = modificar.
+    const modo = document.querySelector('#hu11-modo');
+    const nota = document.querySelector('#hu11-modo-nota');
+    const radios = [...document.querySelectorAll('.hu11-form [name="valor"]')];
+    function sincronizarModo() {
+        if (!modo || !nota) return;
+        const elegido = radios.find(r => r.checked);
+        if (modo.dataset.manual === '1') { nota.textContent = elegido ? 'Valoración manual: se registra sin propuesta de IA.' : ''; return; }
+        if (!elegido) { modo.value = ''; nota.textContent = 'Elija una valoración. Si coincide con la propuesta de IA, la confirma; si no, la modifica.'; return; }
+        const igual = elegido.value === modo.dataset.ia;
+        modo.value = igual ? 'CONFIRMAR' : 'MODIFICAR';
+        nota.textContent = igual ? 'Confirma la propuesta de IA.' : 'Modifica la propuesta de IA (propuesta ' + modo.dataset.ia + ' → decisión ' + elegido.value + '). La propuesta original se conserva.';
+    }
+    radios.forEach(r => r.addEventListener('change', sincronizarModo));
+    sincronizarModo();
     const form = document.querySelector('.hu11-form');
     const lote = document.querySelector('#hu11-lote');
     let sucio = false, enviando = false, definitivo = false, timer;

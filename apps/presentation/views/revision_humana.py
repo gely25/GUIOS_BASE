@@ -1,4 +1,6 @@
 """Pantalla HU11 dentro de la ruta de trabajo del decisor."""
+from decimal import Decimal
+
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -9,7 +11,7 @@ from urllib.parse import urlencode
 
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
-from apps.data.models import BorradorRevisionHumana, Evaluacion, ReaperturaRevisionHumana, RevisionHumana
+from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, ReaperturaRevisionHumana, RevisionHumana
 from django.db.models import OuterRef, Subquery
 
 ESCALA = ((1, 'No cumple'), (2, 'Desconozco / No sé'), (3, 'Cumple parcialmente'), (4, 'Cumple'))
@@ -127,6 +129,12 @@ def revision_humana_view(request):
         seleccion['reaperturas'] = ReaperturaRevisionHumana.objects.filter(valoracion_id=vid).select_related('actor')
         seleccion['ultima_reapertura'] = seleccion['reaperturas'].first()
         seleccion['tiene_pendientes'] = any(p['estado_respuesta'] == 'PENDIENTE' for p in seleccion['preguntas'])
+        # Solo presentacion: nivel de relevancia con que el sistema asocio cada pasaje (no altera la version de las fuentes).
+        relevancias = dict(Evidencia.objects.filter(
+            pk__in=[f['evidencia_id'] for f in seleccion['fuentes'] if f.get('origen') == 'DOCUMENTO']).values_list('pk', 'relevancia'))
+        for f in seleccion['fuentes']:
+            r = relevancias.get(f.get('evidencia_id'))
+            f['nivel'] = None if r is None else ('alta' if r >= Decimal('0.40') else 'media' if r >= Decimal('0.20') else 'baja')
     actual = guardados.get(vid)
     if seleccion:
         seleccion['etiqueta_hu11'] = next(v.etiqueta_hu11 for v in valoraciones if v.pk == vid)

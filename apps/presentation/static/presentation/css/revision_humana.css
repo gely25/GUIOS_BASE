@@ -26,3 +26,47 @@
 .hu11-tabla th, .hu11-tabla td { padding: .65rem; border-bottom: 1px solid #d4dce6; }
 .hu11-reapertura { display: grid; gap: .75rem; margin-top: .75rem; }
 .hu11-reapertura textarea { width: 100%; box-sizing: border-box; font: inherit; padding: .65rem; border: 1px solid #c7d1df; border-radius: .4rem; background: transparent; color: inherit; }
+
+/* ---- Rediseño según Figma (solo presentación) ---- */
+.hu11-cab { align-items: flex-start; }
+.hu11-cab-der { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.hu11-chip { padding: 4px 12px; border-radius: 999px; background: #f6e8dc; color: #8a5424; font-size: 12px; font-weight: 700; }
+.hu11-aviso { margin: 0; padding: 12px 16px; border-radius: 10px; background: #f6e8dc; color: #8a5424; font-size: 14px; font-weight: 600; }
+.hu11-progreso { display: grid; gap: 6px; }
+.hu11-progreso p { margin: 0; font-size: 13px; color: #526779; }
+.hu11-progreso progress { width: 100%; height: 6px; border-radius: 6px; }
+.hu11 .hu09-nav .block-title { font-size: 18px; margin: 0; }
+.hu11 .hu09-nav a { border: 1px solid #e7dccf; border-left-width: 1px; border-radius: 10px; background: #faf6f1; margin: 6px 0; padding: 10px 12px; color: #20282c; }
+.hu11 .hu09-nav a:hover { background: #f6e8dc; }
+.hu11 .hu09-nav a[aria-current="page"] { background: #f6e8dc; border-color: #a8672f; }
+.hu11 .hu09-nav a small { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; background: #f1ede7; color: #8a5424; font-size: 11px; font-weight: 700; }
+.hu11 .hu09-nav a[data-estado="CONFIRMADA"] small { background: #e3f3e7; color: #1f6b3a; }
+.hu11 .hu09-nav a[data-estado="MODIFICADA"] small { background: #f6e8dc; color: #8a5424; }
+.hu11 .hu09-nav a[data-estado="MANUAL"] small { background: #e6eef8; color: #2f5d8f; }
+.hu11-filtros { margin: 6px 0 10px; }
+.hu11-filtros summary { cursor: pointer; font-size: 13px; font-weight: 600; color: #8a5424; }
+.hu11 .hu09-content { display: grid; gap: 16px; }
+.hu11 .hu09-panel .block-title { font-size: 20px; margin: 0 0 4px; }
+.hu11-comparacion>div { background: #faf6f1; border-color: #e7dccf; }
+.hu11-comparacion strong { font-size: 26px; color: #8a5424; }
+.hu11-tarjeta { background: #faf6f1; border-color: #e7dccf; }
+.hu11-tarjeta header { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hu11-tarjeta .hu09-evidence { background: transparent; padding: 0; font-style: italic; }
+.hu11-tarjeta small { color: #6b7b8a; }
+.hu11-relev { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #f1ede7; color: #8a5424; }
+.hu11-relev--alta { background: #e3f3e7; color: #1f6b3a; }
+.hu11-relev--baja { background: #eef0f2; color: #5a6672; }
+.hu11-alerta { padding: 12px 16px; border-radius: 10px; background: #fdf0e2; color: #8a5424; font-weight: 600; margin: 8px 0; }
+.hu11-form fieldset.hu11-escala { border: 0; padding: 0; margin: 10px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.hu11-escala legend { grid-column: 1 / -1; float: none; padding: 0; margin-bottom: 2px; font-weight: 600; }
+.hu11-opcion { position: relative; display: block; cursor: pointer; }
+.hu11-opcion input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.hu11-opcion span { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 64px; padding: 10px; border: 1px solid #e0d3c4; border-radius: 10px; background: #fff; font-size: 14px; }
+.hu11-opcion span small { color: #8a5424; font-size: 11px; font-weight: 700; margin-top: 4px; }
+.hu11-opcion:hover span { background: #faf3ec; }
+.hu11-opcion input:checked + span { background: #f6e8dc; border-color: #a8672f; box-shadow: 0 0 0 1px #a8672f inset; }
+.hu11-opcion input:focus-visible + span { outline: 2px solid #a8672f; outline-offset: 2px; }
+.hu11-acciones .btn-top-action { background: #a8672f; color: #fff; border-color: #a8672f; }
+.hu11-mas { padding: 14px 18px; }
+.hu11-mas > summary { cursor: pointer; font-weight: 700; color: #8a5424; }
+@media (max-width: 650px) { .hu11-form fieldset.hu11-escala { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
