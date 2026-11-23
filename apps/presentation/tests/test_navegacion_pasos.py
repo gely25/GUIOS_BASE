@@ -41,3 +41,10 @@ class NavegacionPasosTests(TestCase):
         r = self.cliente().get(url, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertContains(r, 'paso-nav')
         self.assertContains(r, 'Siguiente')
+    def test_carga_documental_tiene_pasos_con_la_evaluacion_y_navegacion(self):
+        r = self.cliente().get(reverse('presentation:decisor-carga-documental'), {'evaluacion_id': self.ev.pk})
+        self.assertContains(r, 'paso-nav')
+        self.assertContains(r, f"{reverse('presentation:decisor-importancia-factores')}?evaluacion_id={self.ev.pk}")
+        self.assertContains(r, f"{reverse('presentation:decisor-revision-valoraciones')}?evaluacion={self.ev.pk}")
+        self.assertContains(r, 'Documentos de la evaluación')
+        self.assertContains(r, 'Sin documentos')

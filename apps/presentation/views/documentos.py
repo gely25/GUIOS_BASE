@@ -2,11 +2,13 @@
 Vistas de Carga Documental (HU07), Recuperación Semántica con pgvector (HU08)
 y trazabilidad de evidencia para HU10 - Espacio del Decisor.
 """
+import os
+import re
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db.models import Count, ProtectedError
+from django.db.models import Count, Q, ProtectedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,6 +16,8 @@ from django.urls import reverse
 from apps.application.services.document import DocumentService
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.retrieval import RetrievalService
+from apps.presentation.views import evidencia_carga
+from apps.presentation.views.fragmentos_panel import contexto_panel
 from apps.data.models import Documento, Evaluacion, Evidencia, FragmentoDocumento, Subfactor
 
 
@@ -74,6 +78,21 @@ def carga_documental_view(request):
             raise Http404('El archivo físico no se encuentra en el servidor.')
         return FileResponse(open(ruta, 'rb'), as_attachment=True, filename=doc.nombre)
 
+    ver_id = request.GET.get('ver_id')
+    if evaluacion and ver_id:
+        doc = get_object_or_404(Documento, documento_id=ver_id, evaluacion=evaluacion)
+        if doc.tipo.upper() != 'PDF':
+            return redirect(
+                f"{reverse('presentation:decisor-carga-documental')}"
+                f"?evaluacion_id={evaluacion.evaluacion_id}&doc_id={doc.documento_id}&panel=1")
+        ruta = servicio.ruta_absoluta_documento(doc)
+        if not ruta.exists():
+            raise Http404('El archivo físico no se encuentra en el servidor.')
+        respuesta = FileResponse(open(ruta, 'rb'), content_type='application/pdf')
+        respuesta['Content-Disposition'] = 'inline'
+        respuesta['X-Frame-Options'] = 'SAMEORIGIN'  # solo el propio sitio puede incrustarlo en el visor
+        return respuesta
+
     if request.method == 'POST':
         if not evaluacion:
             messages.error(request, 'No existe una evaluación activa seleccionada.')
@@ -89,8 +108,21 @@ def carga_documental_view(request):
             )
             messages.success(
                 request,
-                f'Indexación vectorial actualizada en pgvector: {res["indexados"]} fragmento(s) de 1536D.'
+                f'Búsqueda actualizada: {res["indexados"]} fragmento(s) listos para buscar.'
             )
+            return redirect(url_destino)
+
+        if accion == 'vincular_sugeridas':
+            seleccion = request.POST.getlist('sel')
+            if not seleccion:
+                messages.info(request, 'No marcó ninguna sugerencia, así que no se vinculó nada.')
+                return redirect(url_destino)
+            creadas, existentes = evidencia_carga.vincular_en_lote(
+                retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)), seleccion)
+            texto = f'{creadas} evidencia{"" if creadas == 1 else "s"} vinculada{"" if creadas == 1 else "s"}'
+            if existentes:
+                texto += f' ({existentes} ya existía{"" if existentes == 1 else "n"})'
+            messages.success(request, texto + '. Puede revisarlas en el paso 4.')
             return redirect(url_destino)
 
         if accion == 'vincular_evidencia':
@@ -134,6 +166,23 @@ def carga_documental_view(request):
                 f'{url_destino}&doc_id={fragmento.documento_id}&fragmento_id={fragmento.fragmento_id}#fragmento-{fragmento.fragmento_id}'
             )
 
+        if accion == 'renombrar':
+            doc = get_object_or_404(Documento, documento_id=request.POST.get('documento_id'), evaluacion=evaluacion)
+            nuevo = ' '.join(re.split(r'[\\/]', request.POST.get('nombre') or '')[-1].split())  # sin rutas
+            extension = os.path.splitext(doc.nombre)[1]
+            if extension and not nuevo.lower().endswith(extension.lower()):
+                nuevo += extension
+            if not nuevo or nuevo.lower() == extension.lower():
+                messages.error(request, 'Escriba un nombre para el documento.')
+            elif len(nuevo) > 255:
+                messages.error(request, 'El nombre es demasiado largo (máximo 255 caracteres).')
+            else:
+                anterior = doc.nombre
+                doc.nombre = nuevo
+                doc.save(update_fields=['nombre'])
+                messages.success(request, f'Documento renombrado: «{anterior}» → «{nuevo}».')
+            return redirect(url_destino)
+
         if accion == 'eliminar':
             doc_id = request.POST.get('documento_id')
             doc = get_object_or_404(Documento, documento_id=doc_id, evaluacion=evaluacion)
@@ -170,7 +219,7 @@ def carga_documental_view(request):
 
     documentos = []
     documento_inspeccionado = None
-    fragmentos_inspeccionados = []
+    panel = None
     valoraciones_evaluacion = []
     estado_embeddings = {'total_fragmentos': 0, 'indexados': 0, 'pendientes': 0, 'porcentaje': 0}
     consulta_semantica = (request.GET.get('q') or '').strip()
@@ -212,7 +261,10 @@ def carga_documental_view(request):
 
         documentos = (
             Documento.objects.filter(evaluacion=evaluacion)
-            .annotate(total_fragmentos=Count('fragmentos'))
+            .annotate(
+                total_fragmentos=Count('fragmentos'),
+                indexados=Count('fragmentos', filter=Q(fragmentos__embedding__isnull=False)),
+            )
             .order_by('-fecha_carga')
         )
         doc_id = request.GET.get('doc_id')
@@ -226,25 +278,46 @@ def carga_documental_view(request):
 
         if doc_id:
             documento_inspeccionado = documentos.filter(documento_id=doc_id).first()
-        elif documentos:
-            documento_inspeccionado = documentos[0]
 
-        if documento_inspeccionado:
-            fragmentos_qs = FragmentoDocumento.objects.filter(
-                documento=documento_inspeccionado
-            ).order_by('fragmento_id')
-            for frag in fragmentos_qs:
-                frag.tabla = _parsear_fragmento_tabular(frag.contenido)
-                fragmentos_inspeccionados.append(frag)
+        if documento_inspeccionado and (request.GET.get('panel') or fragmento_destacado_id):
+            panel = contexto_panel(
+                request, evaluacion, documento_inspeccionado, retrieval_service,
+                valoraciones_evaluacion, _parsear_fragmento_tabular, fragmento_destacado_id)
+
+    cobertura = opciones = sugeridas = None
+    if evaluacion:
+        cobertura = evidencia_carga.cobertura(evaluacion, valoraciones_evaluacion, estado_embeddings)
+        opciones = evidencia_carga.opciones_subfactores(valoraciones_evaluacion)
+        if request.GET.get('sugerir') and cobertura['puede_sugerir']:
+            sugeridas = evidencia_carga.sugerencias(retrieval_service, evaluacion, valoraciones_evaluacion)
+
+    explorar_abierto = bool(consulta_semantica or subfactor_seleccionado_id)
+    anterior_url = siguiente_url = ''
+    nota_paso = ''
+    if evaluacion:
+        anterior_url = f"{reverse('presentation:decisor-importancia-factores')}?evaluacion_id={evaluacion.evaluacion_id}"
+        siguiente_url = f"{reverse('presentation:decisor-revision-valoraciones')}?evaluacion={evaluacion.evaluacion_id}"
+        total_docs = len(documentos)
+        nota_paso = (
+            f'{total_docs} documento{"" if total_docs == 1 else "s"} cargado{"" if total_docs == 1 else "s"}'
+            if total_docs else 'Sin documentos: no habrá evidencia que vincular en el paso 4.'
+        )
 
     context = {
         'active_tab': 'carga-documental',
+        'explorar_abierto': explorar_abierto,
+        'anterior_url': anterior_url,
+        'siguiente_url': siguiente_url,
+        'nota_paso': nota_paso,
         'current_step': 3,
         'evaluacion': evaluacion,
         'evaluaciones': evaluaciones,
         'documentos': documentos,
         'documento_inspeccionado': documento_inspeccionado,
-        'fragmentos_inspeccionados': fragmentos_inspeccionados,
+        'panel': panel,
+        'cobertura': cobertura,
+        'opciones': opciones,
+        'sugeridas': sugeridas,
         'fragmento_destacado_id': fragmento_destacado_id,
         'valoraciones_evaluacion': valoraciones_evaluacion,
         'estado_embeddings': estado_embeddings,

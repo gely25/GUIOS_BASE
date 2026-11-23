@@ -142,3 +142,84 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+// Panel lateral de fragmentos: "Ver más", cerrar con Esc y llevar al fragmento destacado.
+document.addEventListener('DOMContentLoaded', function () {
+    const panel = document.getElementById('panel-fragmentos');
+    if (!panel) return;
+
+    document.body.classList.add('cdp-abierto');
+
+    panel.querySelectorAll('.cdp-frag').forEach(function (frag) {
+        const texto = frag.querySelector('[data-texto]');
+        const boton = frag.querySelector('[data-mas]');
+        if (!texto || !boton) return;
+        texto.classList.add('recortado');
+        if (texto.scrollHeight > texto.clientHeight + 2) {
+            boton.hidden = false;
+        } else {
+            texto.classList.remove('recortado');
+        }
+        boton.addEventListener('click', function () {
+            const abierto = texto.classList.toggle('recortado');
+            boton.textContent = abierto ? 'Ver más' : 'Ver menos';
+        });
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && panel.dataset.cerrar) {
+            window.location.href = panel.dataset.cerrar;
+        }
+    });
+
+    const destacado = panel.querySelector('.cdp-frag.destacado');
+    if (destacado) destacado.scrollIntoView({ block: 'center' });
+});
+/* Resumen antes de «Siguiente» y apertura de sugerencias */
+(function () {
+    'use strict';
+    var enlace = document.querySelector('.paso-nav a[data-confirmar]');
+    var resumen = enlace && document.getElementById(enlace.getAttribute('data-confirmar'));
+    if (resumen && typeof resumen.showModal === 'function') {
+        enlace.addEventListener('click', function (e) { e.preventDefault(); resumen.showModal(); });
+    }
+    document.querySelectorAll('[data-cerrar-dialogo]').forEach(function (b) {
+        b.addEventListener('click', function () { b.closest('dialog').close(); });
+    });
+    var sug = document.querySelector('dialog[data-abrir]');
+    if (sug && typeof sug.showModal === 'function') {
+        sug.removeAttribute('open');
+        sug.showModal();
+    }
+})();
+
+/* Visor de documento y renombrar */
+(function () {
+    'use strict';
+    var visor = document.getElementById('cd-visor');
+    var marco = document.getElementById('cd-visor-frame');
+    if (visor && typeof visor.showModal === 'function') {
+        document.querySelectorAll('.js-ver-doc').forEach(function (b) {
+            b.addEventListener('click', function () {
+                document.getElementById('cd-visor-titulo').textContent = b.getAttribute('data-nombre');
+                document.getElementById('cd-visor-nueva').setAttribute('href', b.getAttribute('data-src'));
+                document.getElementById('cd-visor-texto').setAttribute('href', b.getAttribute('data-texto'));
+                marco.setAttribute('src', b.getAttribute('data-src'));
+                visor.showModal();
+            });
+        });
+        visor.addEventListener('close', function () { marco.setAttribute('src', 'about:blank'); });
+    }
+    var ren = document.getElementById('cd-renombrar');
+    if (ren && typeof ren.showModal === 'function') {
+        document.querySelectorAll('.js-renombrar').forEach(function (b) {
+            b.addEventListener('click', function () {
+                document.getElementById('cd-ren-id').value = b.getAttribute('data-id');
+                var campo = document.getElementById('cd-ren-nombre');
+                campo.value = b.getAttribute('data-nombre');
+                ren.showModal();
+                campo.focus();
+            });
+        });
+    }
+})();
