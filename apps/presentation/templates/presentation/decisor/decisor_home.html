@@ -71,6 +71,7 @@
                     <a href="{% url 'presentation:decisor-historial-evaluaciones' %}">Ver historial →</a>
                 </header>
                 {% if hay_evaluaciones %}
+                <div class="dh-tabla-caja">
                 <table class="dh-tabla" aria-label="Evaluaciones recientes del decisor">
                     <thead><tr>
                         <th scope="col">Software</th>
@@ -93,6 +94,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
                 <footer class="dh-pie">
                     <span>{{ pagina.start_index }}–{{ pagina.end_index }} de {{ total_evaluaciones }}</span>
                     {% if pagina.paginator.num_pages > 1 %}

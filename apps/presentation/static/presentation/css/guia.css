@@ -43,3 +43,17 @@
 .guia-glosario dt{font-weight:700;}
 .guia-glosario dd{margin:0;color:var(--sec);line-height:1.45;}
 @media(max-width:760px){.guia-pasos,.guia-dos,.guia-glosario{grid-template-columns:1fr;}.guia-ventana{height:92vh;}.guia-cab,.guia-tabs,.guia-cuerpo{padding-left:16px;padding-right:16px;}}
+
+/* Pie del menú lateral: guía y sesión de la persona usuaria */
+.app-sidebar .sidebar-footer{display:flex;flex-direction:column;gap:10px;padding:14px 14px 16px;}
+.app-sidebar button.sidebar-footer-link{background:none;border:0;font:inherit;font-size:13px;cursor:pointer;width:100%;text-align:left;color:#8b979e;}
+.app-sidebar button.sidebar-footer-link:hover{color:#fff;}
+.sidebar-usuario{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.04);}
+.sidebar-usuario-inicial{width:34px;height:34px;border-radius:50%;background:#a66e33;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex:none;}
+.sidebar-usuario-datos{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25;}
+.sidebar-usuario-nombre{color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-usuario-rol{color:#8b979e;font-size:11.5px;}
+.sidebar-usuario-salir{margin:0;}
+.sidebar-usuario-salir button{background:none;border:0;color:#8b979e;cursor:pointer;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;padding:0;}
+.sidebar-usuario-salir button:hover,.sidebar-usuario-salir button:focus-visible{color:#fff;background:rgba(255,255,255,.1);}
+.sidebar-usuario-salir button:focus-visible{outline:2px solid #a66e33;outline-offset:1px;}

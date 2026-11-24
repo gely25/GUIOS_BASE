@@ -57,7 +57,7 @@ def _progreso_evaluacion(evaluacion):
 
 
 PASOS = ('Ficha', 'Valoración', 'Documentos', 'Revisión', 'Resultados', 'Informe')
-POR_PAGINA = 5
+POR_PAGINA = 6
 
 
 def _pasos(paso):

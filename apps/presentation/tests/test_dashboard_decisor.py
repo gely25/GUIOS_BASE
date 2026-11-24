@@ -123,20 +123,20 @@ class DashboardDecisorFigmaTests(TestCase):
         self.assertContains(res, 'Ana')
         self.assertNotContains(res, 'Ana Martínez')
 
-    def test_la_tabla_se_pagina_de_cinco_en_cinco(self):
+    def test_la_tabla_se_pagina_de_seis_en_seis(self):
         for i in range(7):
             Evaluacion.objects.create(
                 organizacion=self.org, usuario=self.actor, catalogo=self.catalogo,
                 software=Software.objects.create(nombre=f'Software {i}'),
                 estado=Evaluacion.EN_PROCESO)
         res = self.client.get(self.url)
-        self.assertEqual(len(res.context['evaluaciones_recientes']), 5)
+        self.assertEqual(len(res.context['evaluaciones_recientes']), 6)
         self.assertEqual(res.context['pagina'].paginator.num_pages, 2)
-        self.assertContains(res, '1–5 de 9')
+        self.assertContains(res, '1–6 de 9')
         self.assertContains(res, '?pagina=2')
         res = self.client.get(self.url, {'pagina': 2})
-        self.assertEqual(len(res.context['evaluaciones_recientes']), 4)
-        self.assertContains(res, '6–9 de 9')
+        self.assertEqual(len(res.context['evaluaciones_recientes']), 3)
+        self.assertContains(res, '7–9 de 9')
         # Una página inexistente no rompe la pantalla.
         self.assertEqual(self.client.get(self.url, {'pagina': 99}).status_code, 200)
 
