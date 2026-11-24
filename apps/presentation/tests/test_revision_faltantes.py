@@ -205,8 +205,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
              mock.patch('apps.presentation.views.revision_humana.PreparacionHU10Service.obtener', side_effect=obtener), \
              mock.patch('apps.presentation.views.revision_humana.SuficienciaService.analizar', return_value=(None, 2)) as suf, \
              mock.patch('apps.presentation.views.revision_humana.AIService.generar_propuesta_preliminar', side_effect=propuesta) as ia, \
-             mock.patch('apps.presentation.views.revision_humana.OllamaSuficiencia'), \
-             mock.patch('apps.presentation.views.revision_humana.OllamaValoracion'):
+             mock.patch('apps.presentation.views.revision_humana.obtener_proveedor'):
             r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['valor_ia'], 3)

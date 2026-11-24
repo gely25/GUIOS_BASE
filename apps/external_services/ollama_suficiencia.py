@@ -1,5 +1,5 @@
 """Evaluación orientativa de suficiencia con identificadores de fuentes."""
-from .ollama_preguntas import MODELOS, AnalisisNoDisponible, consultar_json, modelo_admitido
+from .ollama_preguntas import MODELOS, AnalisisNoDisponible, consultar_json
 
 ESQUEMA = {
     'type': 'object', 'additionalProperties': False,
@@ -28,7 +28,7 @@ INSTRUCCION = (
 
 class OllamaSuficiencia:
     def __init__(self, modelo):
-        if not modelo_admitido(modelo):
+        if modelo not in MODELOS:
             raise AnalisisNoDisponible('Configure un modelo local HU09 admitido.')
         self.modelo = modelo
 

@@ -1,10 +1,7 @@
-"""Adaptador HU09. Local (Ollama) por defecto: no envía datos a endpoints configurables ni ejecuta herramientas.
-Con LLM_PROVIDER=groq (opcional) delega la consulta en groq_chat y el contexto sale hacia ese servicio."""
+"""Adaptador local HU09. No envía datos a endpoints configurables ni ejecuta herramientas."""
 from copy import deepcopy
 import http.client
 import json
-
-from django.conf import settings
 
 
 class AnalisisNoDisponible(Exception):
@@ -12,12 +9,6 @@ class AnalisisNoDisponible(Exception):
 
 
 MODELOS = ('qwen3:4b-instruct', 'qwen2.5:1.5b', 'qwen2.5:7b')
-
-
-def modelo_admitido(modelo):
-    """Modelos locales fijos; con Groq activo, también el modelo configurado en GROQ_MODEL."""
-    from . import groq_chat
-    return modelo in MODELOS or (groq_chat.activo() and modelo == settings.GROQ_MODEL)
 ESQUEMA = {
     'type': 'object', 'additionalProperties': False, 'required': ['preguntas'],
     'properties': {'preguntas': {'type': 'array', 'maxItems': 3,
@@ -43,7 +34,7 @@ INSTRUCCION = (
 
 class OllamaPreguntas:
     def __init__(self, modelo):
-        if not modelo_admitido(modelo):
+        if modelo not in MODELOS:
             raise AnalisisNoDisponible('Configure un modelo local HU09 admitido.')
         self.modelo = modelo
 
@@ -70,9 +61,6 @@ def consultar_json(modelo, entrada, esquema, instruccion):
     # No truncar evidencia silenciosamente. Límite conservador para el piloto.
     if len(datos.encode('utf-8')) > 16000:
         raise AnalisisNoDisponible('El contexto supera el límite del piloto. Reduzca los fragmentos vinculados antes de analizar.')
-    from . import groq_chat
-    if groq_chat.activo():
-        return groq_chat.consultar(modelo, datos, esquema, instruccion)
     cuerpo = json.dumps({
         'model': modelo, 'stream': False, 'format': esquema,
         'messages': [{'role': 'system', 'content': instruccion},

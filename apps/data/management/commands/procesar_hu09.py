@@ -8,6 +8,7 @@ from apps.data.models import LoteHU09
 from apps.external_services.ollama_suficiencia import OllamaSuficiencia
 from apps.external_services.ollama_embeddings import OllamaEmbeddings
 from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.proveedor_ia import obtener_proveedor, modelo_activo
 
 
 class Command(BaseCommand):
@@ -24,7 +25,7 @@ class Command(BaseCommand):
             self.stdout.write('Lote reencolado; conserva los resultados parciales.')
             return
         try:
-            proveedor = OllamaSuficiencia(settings.HU09_OLLAMA_MODEL)
+            proveedor = (obtener_proveedor('suficiencia') if settings.GUIOS_AI_BACKEND == 'api' else OllamaSuficiencia(settings.HU09_OLLAMA_MODEL))
             vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
         except AnalisisNoDisponible as exc:
             raise CommandError(str(exc)) from exc
@@ -35,7 +36,7 @@ class Command(BaseCommand):
                 lote = LotesHU09Service.tomar()
                 if lote:
                     self.stdout.write(f'Procesando lote #{lote.pk}')
-                    LotesHU09Service.procesar(lote, proveedor, settings.HU09_OLLAMA_MODEL, vectorizador)
+                    LotesHU09Service.procesar(lote, proveedor, modelo_activo(), vectorizador)
                     self.stdout.write(f'Lote #{lote.pk} finalizado.')
                 if options['once']:
                     return

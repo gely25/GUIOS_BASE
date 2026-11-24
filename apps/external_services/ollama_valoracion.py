@@ -1,5 +1,5 @@
 """Adaptador local HU10 para propuestas preliminares de valoración (escala 1 a 4)."""
-from .ollama_preguntas import MODELOS, AnalisisNoDisponible, consultar_json, modelo_admitido
+from .ollama_preguntas import MODELOS, AnalisisNoDisponible, consultar_json
 
 ESQUEMA = {
     'type': 'object',
@@ -35,7 +35,7 @@ INSTRUCCION = (
 
 class OllamaValoracion:
     def __init__(self, modelo):
-        if not modelo_admitido(modelo):
+        if modelo not in MODELOS:
             raise AnalisisNoDisponible('Configure un modelo local HU10 admitido.')
         self.modelo = modelo
 

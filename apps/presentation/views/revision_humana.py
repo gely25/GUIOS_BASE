@@ -18,8 +18,7 @@ from apps.application.services.preparacion_hu10 import PreparacionHU10Service
 from apps.application.services.suficiencia import SuficienciaService
 from apps.external_services.ollama_embeddings import OllamaEmbeddings
 from apps.external_services.ollama_preguntas import AnalisisNoDisponible
-from apps.external_services.ollama_suficiencia import OllamaSuficiencia
-from apps.external_services.ollama_valoracion import OllamaValoracion
+from apps.external_services.proveedor_ia import configurado, modelo_activo, obtener_proveedor
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
 from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, FragmentoDocumento, ReaperturaRevisionHumana, RevisionHumana, ValoracionSubfactor
 from django.db import transaction
@@ -127,10 +126,9 @@ def _guardar_respuestas(actor, eid, crudo):
 
 def _analizar_ia(actor, eid, vid):
     """Encadena los servicios existentes: suficiencia (HU09) y propuesta preliminar (HU10) de un subfactor."""
-    modelo = settings.HU09_OLLAMA_MODEL
-    if not modelo:
-        raise ValidationError('El análisis local con IA no está configurado (HU09_OLLAMA_MODEL).')
-    modelo10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or modelo
+    if not configurado():
+        raise ValidationError('El análisis con IA no está configurado (HU09_OLLAMA_MODEL o GUIOS_AI_*).')
+    modelo = modelo_activo()
 
     def fila():
         return next((f for f in PreparacionHU10Service.obtener(actor, eid)['subfactores'] if f['valoracion_id'] == vid), None)
@@ -142,11 +140,11 @@ def _analizar_ia(actor, eid, vid):
     try:
         if f['estado'] == 'ANALISIS_PENDIENTE':
             vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-            _, nuevas = SuficienciaService.analizar(actor, eid, vid, OllamaSuficiencia(modelo), modelo, vectorizador)
+            _, nuevas = SuficienciaService.analizar(actor, eid, vid, obtener_proveedor('suficiencia'), modelo, vectorizador)
             f = fila()
         valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
         if f and f['estado'] == 'PROPUESTA_HABILITADA' and valor is None:
-            AIService.generar_propuesta_preliminar(actor, eid, vid, OllamaValoracion(modelo10))
+            AIService.generar_propuesta_preliminar(actor, eid, vid, obtener_proveedor('valoracion'))
             valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
             f = fila()
     except AnalisisNoDisponible as exc:
@@ -352,7 +350,7 @@ def revision_humana_view(request):
     solo = _id(params.get('solo')) if params.get('solo') else None
     objetivos = [v for v in valoraciones if abierto and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None and v.valor_ia is None
                  and ((v.pk == solo) if solo else v.n_evidencia)]
-    ctx.update(ia_disponible=bool(settings.HU09_OLLAMA_MODEL), ia_pendientes=len(objetivos), ia_remota=getattr(settings, 'LLM_PROVIDER', 'ollama') == 'groq',
+    ctx.update(ia_disponible=configurado(), ia_pendientes=len(objetivos), ia_remota=settings.GUIOS_AI_BACKEND == 'api',
                ia_objetivos=[{'vid': v.pk, 'nombre': v.subfactor.descripcion[:140]} for v in objetivos],
                analizando=params.get('analizar') == '1' and request.method == 'GET',
                destino_revision=_destino(base, eid))
