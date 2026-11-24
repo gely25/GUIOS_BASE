@@ -117,9 +117,10 @@ html, body.login-page { margin: 0; padding: 0; background: #fff; }
 
 /* Registro: campos con error en línea y enlace entre login y registro */
 .login__campo-error { margin: -22px 0 22px; font-size: 12.5px; color: #8A1C1C; }
-.login__alterno { margin: 24px 0 0; font-size: 14px; color: #626B70; text-align: center; }
-.login__alterno a { color: #A06A30; font-weight: 600; text-decoration: none; }
-.login__alterno a:hover { text-decoration: underline; }
+.login__alterno { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 28px 0 0; padding-top: 22px; border-top: 1px solid #EFE7DB; font-size: 14px; color: #626B70; text-align: center; }
+.login__alterno a { color: #A06A30; font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; }
+.login__alterno a:hover { color: #7C5224; border-bottom-color: currentColor; }
+.login__alterno a:focus-visible { outline: 2px solid #C79A66; outline-offset: 3px; border-radius: 4px; }
 
 /* Registro: elección del tipo de cuenta (control en píldora) */
 .login__roles { border: 0; margin: 0 0 28px; padding: 0; min-width: 0; }
