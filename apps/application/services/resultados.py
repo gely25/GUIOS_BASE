@@ -77,6 +77,46 @@ class ResultadosEvaluacion:
         return [(clase, [f for f in self.factores if f.foda == clase]) for clase in CLASES_FODA]
 
     @property
+    def grupos(self):
+        """Los factores en las cuatro clases FODA, separando internos (F, D) y externos (O, A).
+
+        Solo reordena lo ya calculado (PM, IR y FODA). En lo que va bien se muestra primero lo más
+        importante y mejor cumplido; en lo que hay que atender, lo más importante y menos cumplido.
+        """
+        def a_favor(factores):
+            return sorted(factores, key=lambda f: (-(f.ir or 0), -f.pm))
+
+        def a_atender(factores):
+            return sorted(factores, key=lambda f: (-(f.ir or 0), f.pm))
+
+        def de(clase):
+            return [f for f in self.factores if f.foda == clase]
+
+        return [
+            {'clave': 'fortaleza', 'titulo': 'Fortalezas', 'ambito': 'interno', 'etiqueta': 'Interno · va bien',
+             'ayuda': 'Puntos fuertes de su organización frente a este software.',
+             'factores': a_favor(de('Fortaleza')), 'vacio': 'Ningún factor está en esta clase.'},
+            {'clave': 'debilidad', 'titulo': 'Debilidades', 'ambito': 'interno', 'etiqueta': 'Interno · reforzar',
+             'ayuda': 'Puntos internos de su organización que conviene fortalecer.',
+             'factores': a_atender(de('Debilidad')), 'vacio': 'No hay debilidades. Buena señal.'},
+            {'clave': 'oportunidad', 'titulo': 'Oportunidades', 'ambito': 'externo', 'etiqueta': 'Externo · va bien',
+             'ayuda': 'Condiciones externas que favorecen la adopción.',
+             'factores': a_favor(de('Oportunidad')), 'vacio': 'Ningún factor está en esta clase.'},
+            {'clave': 'amenaza', 'titulo': 'Amenazas', 'ambito': 'externo', 'etiqueta': 'Externo · vigilar',
+             'ayuda': 'Riesgos externos que pueden afectar la adopción.',
+             'factores': a_atender(de('Amenaza')), 'vacio': 'No hay amenazas. Buena señal.'},
+        ]
+
+    @property
+    def ayuda_recomendacion(self) -> str:
+        """Frase fija (sin IA) que acompaña a cada letra de la recomendación."""
+        return {
+            'A': 'Los factores importantes cumplen bien: los resultados respaldan la adopción.',
+            'B': 'Puede adoptarlo, pero atienda primero las amenazas y debilidades marcadas.',
+            'C': 'Hay riesgos importantes sin resolver: analice la adopción y considere posponerla.',
+        }.get(self.letra_recomendacion, '')
+
+    @property
     def tiene_recomendacion(self) -> bool:
         return bool((self.recomendacion or '').strip())
 
