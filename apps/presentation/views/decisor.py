@@ -4,10 +4,12 @@ Referencia visual: GUIOS_2, pantalla 'Decisor · Inicio'.
 Los datos se obtienen de la BD. No se reproducen números del mockup.
 """
 
+from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.application.services.informe.documento import letra_de
 from apps.data.models import Documento, Evaluacion, EvaluacionFactor, ValoracionSubfactor
 from apps.presentation.screens import get_decisor_dashboard_data
 
@@ -54,6 +56,25 @@ def _progreso_evaluacion(evaluacion):
     }
 
 
+PASOS = ('Ficha', 'Valoración', 'Documentos', 'Revisión', 'Resultados', 'Informe')
+POR_PAGINA = 5
+
+
+def _pasos(paso):
+    """Estado de cada uno de los 6 pasos: hecho, actual o pendiente."""
+    return [
+        {'numero': n, 'nombre': nombre,
+         'estado': 'hecho' if n < paso else ('actual' if n == paso else 'pendiente')}
+        for n, nombre in enumerate(PASOS, start=1)
+    ]
+
+
+def _actividad(fecha, hoy):
+    """'Hoy' o la fecha corta; el decisor no necesita la hora exacta en la tabla."""
+    local = timezone.localtime(fecha)
+    return {'es_hoy': local.date() == hoy, 'fecha': local}
+
+
 def decisor_home_view(request):
     """Página de inicio personal del decisor, basada en Figma."""
     usuario = request.user
@@ -76,8 +97,17 @@ def decisor_home_view(request):
 
     actual = en_curso[0] if en_curso else None
     progreso = _progreso_evaluacion(actual) if actual else None
+    hoy = timezone.localdate()
+    if actual:
+        progreso['pasos'] = _pasos(progreso['paso'])
+        progreso['anillo'] = round(100 * progreso['paso'] / len(PASOS))
+        progreso['documentos'] = Documento.objects.filter(evaluacion=actual).count()
+        progreso['actividad'] = _actividad(actual.fecha_actualizacion, hoy)
+
+    paginador = Paginator(evaluaciones, POR_PAGINA)
+    pagina = paginador.get_page(request.GET.get('pagina'))
     recientes = []
-    for ev in evaluaciones[:4]:
+    for ev in pagina.object_list:
         nombre = ev.software.nombre
         if ev.software.version:
             nombre = f'{nombre} {ev.software.version}'
@@ -91,11 +121,15 @@ def decisor_home_view(request):
         else:
             url = reverse('presentation:decisor-importancia-factores') + f'?evaluacion_id={ev.pk}'
             accion = 'Continuar'
+        paso = len(PASOS) if ev.estado == Evaluacion.CERRADA else _progreso_evaluacion(ev)['paso']
         recientes.append({
             'codigo': f'EV-{ev.pk:03d}',
             'software': nombre,
-            'proposito': ev.organizacion.objetivo_adopcion or 'Sin propósito registrado',
-            'actividad': ev.fecha_actualizacion,
+            'inicial': (ev.software.nombre or '?')[:1].upper(),
+            'paso': paso,
+            'segmentos': [n <= paso for n in range(1, len(PASOS) + 1)],
+            'letra': letra_de(recomendacion or ''),
+            'actividad': _actividad(ev.fecha_actualizacion, hoy),
             'estado': ev.get_estado_display(),
             'en_curso': ev.estado == Evaluacion.EN_PROCESO,
             'accion': accion,
@@ -119,6 +153,9 @@ def decisor_home_view(request):
         'evaluacion_actual': actual,
         'progreso': progreso,
         'evaluaciones_recientes': recientes,
+        'pagina': pagina,
+        'rango_paginas': list(paginador.get_elided_page_range(pagina.number, on_each_side=1, on_ends=1)),
+        'pasos_vacios': _pasos(0),
         'hay_evaluaciones': bool(evaluaciones),
         'total_evaluaciones': len(evaluaciones),
     })

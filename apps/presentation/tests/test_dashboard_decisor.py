@@ -56,10 +56,11 @@ class DashboardDecisorFigmaTests(TestCase):
         self.assertContains(res, 'Moodle 4.5')
         self.assertNotContains(res, 'Proyecto Confidencial')
 
-    def test_tabla_con_proposito_y_enlaces_personales(self):
+    def test_tabla_con_avance_y_enlaces_personales(self):
         res = self.client.get(self.url)
         self.assertContains(res, 'Evaluaciones recientes')
-        self.assertContains(res, 'Ofimática institucional')
+        self.assertContains(res, 'Sin resultado aún')
+        self.assertContains(res, 'title="Paso 6 de 6"')
         self.assertContains(res, 'LibreOffice 25.2')
         self.assertContains(res, f'evaluacion_id={self.abierta.pk}')
         self.assertNotContains(res, f'evaluacion_id={self.ajena.pk}')
@@ -121,3 +122,40 @@ class DashboardDecisorFigmaTests(TestCase):
         res = self.client.get(self.url)
         self.assertContains(res, 'Ana')
         self.assertNotContains(res, 'Ana Martínez')
+
+    def test_la_tabla_se_pagina_de_cinco_en_cinco(self):
+        for i in range(7):
+            Evaluacion.objects.create(
+                organizacion=self.org, usuario=self.actor, catalogo=self.catalogo,
+                software=Software.objects.create(nombre=f'Software {i}'),
+                estado=Evaluacion.EN_PROCESO)
+        res = self.client.get(self.url)
+        self.assertEqual(len(res.context['evaluaciones_recientes']), 5)
+        self.assertEqual(res.context['pagina'].paginator.num_pages, 2)
+        self.assertContains(res, '1–5 de 9')
+        self.assertContains(res, '?pagina=2')
+        res = self.client.get(self.url, {'pagina': 2})
+        self.assertEqual(len(res.context['evaluaciones_recientes']), 4)
+        self.assertContains(res, '6–9 de 9')
+        # Una página inexistente no rompe la pantalla.
+        self.assertEqual(self.client.get(self.url, {'pagina': 99}).status_code, 200)
+
+    def test_la_tabla_muestra_la_letra_de_la_recomendacion(self):
+        from apps.data.models import ResultadoEvaluacion
+        ResultadoEvaluacion.objects.create(
+            evaluacion=self.cerrada, recomendacion='Es posible adoptar, con matices',
+            explicacion='x', version_regla='1.0', conteos_foda={}, factores_criticos=[])
+        res = self.client.get(self.url)
+        fila = next(f for f in res.context['evaluaciones_recientes'] if f['software'] == 'LibreOffice 25.2')
+        self.assertEqual(fila['letra'], 'B')
+        self.assertEqual(fila['paso'], 6)
+        self.assertContains(res, 'Recomendación B')
+
+    def test_sin_evaluacion_en_curso_invita_a_iniciar_otra(self):
+        self.abierta.estado = Evaluacion.CERRADA
+        self.abierta.fecha_fin = timezone.now()
+        self.abierta.save()
+        res = self.client.get(self.url)
+        self.assertIsNone(res.context['evaluacion_actual'])
+        self.assertContains(res, 'Todo al día')
+        self.assertContains(res, 'Iniciar ficha de evaluación')
