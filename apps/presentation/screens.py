@@ -104,13 +104,6 @@ def get_admin_dashboard_data():
                 'description': 'Gestión de fuentes científicas y sincronización con literatura 2020–2025.',
                 'badge': 'Bibliografía',
             },
-            {
-                'name': 'Catálogo metodológico',
-                'url_name': 'presentation:admin-catalogo-metodologico',
-                'figma_ref': 'nodo 7:5516',
-                'description': 'Configuración de factores, subfactores, cuartiles y umbrales de decisión.',
-                'badge': 'Metodología',
-            },
         ],
     }
 
