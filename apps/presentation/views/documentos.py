@@ -237,7 +237,7 @@ def carga_documental_view(request):
                         retrieval_service, evaluacion, list(PreguntasService._valoraciones(evaluacion)))
                 except ValidationError as err:
                     messages.error(request, err.messages[0] if hasattr(err, 'messages') else str(err))
-            return redirect(f"{reverse('presentation:decisor-revision-valoraciones')}?etapa=validacion&evaluacion={evaluacion.evaluacion_id}")
+            return redirect(f"{reverse('presentation:decisor-revision-valoraciones')}?etapa=validacion&evaluacion={evaluacion.evaluacion_id}{'&analizar=1' if cargados else ''}")
         return redirect(url_destino)
 
     documentos = []

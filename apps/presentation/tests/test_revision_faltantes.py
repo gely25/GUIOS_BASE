@@ -53,8 +53,8 @@ class RevisionFaltantesTests(TestCase):
 
     def test_estado_vacio_nuevo_conserva_el_texto_y_ofrece_acciones(self):
         r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': self.v2.pk})
-        self.assertContains(r, 'Ningún pasaje de sus documentos se relacionó con este subfactor.')
-        self.assertContains(r, 'Sus documentos no respaldan este subfactor todavía')
+        self.assertContains(r, 'Sin pasajes vinculados a este subfactor.')
+        self.assertContains(r, 'Solicitar más información')
         self.assertContains(r, 'data-hu11-subir')
 
     def test_completar_crea_preguntas_solo_donde_no_hay_evidencia_y_abre_el_modal(self):
@@ -130,7 +130,7 @@ class RevisionFaltantesTests(TestCase):
                 'accion': 'subir', 'volver': 'validacion', 'version': 'v2',
                 'archivo': SimpleUploadedFile('n.pdf', b'%PDF-1.4', content_type='application/pdf')})
         self.assertEqual(r.status_code, 302)
-        self.assertEqual(r['Location'], f'{URL}?etapa=validacion&evaluacion={self.ev.pk}')
+        self.assertEqual(r['Location'], f'{URL}?etapa=validacion&evaluacion={self.ev.pk}&analizar=1')
         proc.assert_called_once()
         prep.assert_called_once()
 
@@ -161,3 +161,74 @@ class PrepararFaltantesTransaccionTests(TransactionTestCase):
         r = self.client.post(URL, {'etapa': 'validacion', 'evaluacion': ev.pk, 'accion': 'preparar_faltantes_hu11'})
         self.assertEqual(r.status_code, 302)
         self.assertEqual(PreguntaComplementaria.objects.filter(valoracion=v).count(), 2)
+
+
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+class AnalisisIAPaso4Tests(RevisionFaltantesTests):
+    """Pantalla «Análisis de IA en curso»: solo encadena HU09 y HU10 existentes."""
+
+    def test_la_pantalla_analiza_solo_los_subfactores_con_evidencia(self):
+        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'):
+            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1'})
+        self.assertContains(r, 'Análisis de IA en curso')
+        self.assertContains(r, 'id="hu11-ia-obj"')
+        self.assertEqual([o['vid'] for o in r.context['ia_objetivos']], [self.v1.pk])
+        self.assertContains(r, 'Continuar en modo manual')
+        self.assertNotContains(r, 'id="hu11-evstrip"')
+
+    def test_solo_un_subfactor_cuando_se_pide_expresamente(self):
+        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'):
+            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1', 'solo': self.v2.pk})
+        self.assertEqual([o['vid'] for o in r.context['ia_objetivos']], [self.v2.pk])
+
+    def test_sin_modelo_configurado_explica_y_deja_continuar_en_manual(self):
+        with override_settings(HU09_OLLAMA_MODEL=''):
+            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1'})
+        self.assertContains(r, 'HU09_OLLAMA_MODEL')
+        self.assertContains(r, 'Continuar en modo manual')
+        self.assertNotContains(r, 'id="hu11-ia-obj"')
+
+    def test_endpoint_encadena_suficiencia_y_propuesta(self):
+        fila = {'valoracion_id': self.v1.pk, 'estado': 'ANALISIS_PENDIENTE'}
+        habilitada = {'valoracion_id': self.v1.pk, 'estado': 'PROPUESTA_HABILITADA'}
+        estados = iter([fila, habilitada, habilitada])
+
+        def obtener(actor, eid):
+            return {'subfactores': [next(estados)]}
+
+        def propuesta(actor, eid, vid, proveedor):
+            ValoracionSubfactor_objs = type(self.v1).objects.filter(pk=vid)
+            ValoracionSubfactor_objs.update(valor_ia=3, justificacion_ia='Respuesta del modelo')
+            return {}
+
+        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct', HU09_EMBEDDING_MODEL=''), \
+             mock.patch('apps.presentation.views.revision_humana.PreparacionHU10Service.obtener', side_effect=obtener), \
+             mock.patch('apps.presentation.views.revision_humana.SuficienciaService.analizar', return_value=(None, 2)) as suf, \
+             mock.patch('apps.presentation.views.revision_humana.AIService.generar_propuesta_preliminar', side_effect=propuesta) as ia, \
+             mock.patch('apps.presentation.views.revision_humana.OllamaSuficiencia'), \
+             mock.patch('apps.presentation.views.revision_humana.OllamaValoracion'):
+            r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['valor_ia'], 3)
+        self.assertEqual(r.json()['preguntas'], 2)
+        suf.assert_called_once()
+        ia.assert_called_once()
+
+    def test_endpoint_no_valora_si_el_subfactor_pide_revision_manual(self):
+        fila = {'valoracion_id': self.v2.pk, 'estado': 'REVISION_MANUAL'}
+        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'), \
+             mock.patch('apps.presentation.views.revision_humana.PreparacionHU10Service.obtener', return_value={'subfactores': [fila]}), \
+             mock.patch('apps.presentation.views.revision_humana.SuficienciaService.analizar') as suf, \
+             mock.patch('apps.presentation.views.revision_humana.AIService.generar_propuesta_preliminar') as ia:
+            r = self.post('analizar_ia_hu11', valoracion=self.v2.pk)
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNone(r.json()['valor_ia'])
+        suf.assert_not_called()
+        ia.assert_not_called()
+
+    def test_endpoint_sin_modelo_devuelve_error_claro(self):
+        with override_settings(HU09_OLLAMA_MODEL=''):
+            r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('no está configurado', r.json()['error'])
+

@@ -1,4 +1,13 @@
 (() => {
+    document.querySelectorAll('[data-pasaje]').forEach(p => {
+        const boton = p.parentElement.querySelector('[data-vermas]');
+        if (!boton || p.scrollHeight <= p.clientHeight + 2) return;
+        boton.hidden = false;
+        boton.addEventListener('click', () => {
+            const abierto = p.classList.toggle('hu11-pasaje--abierto');
+            boton.textContent = abierto ? 'Ver menos' : 'Ver más';
+        });
+    });
     const lista = document.querySelector('#hu11-lista');
     const abrir = document.querySelector('#hu11-abrir-lista');
     if (lista && abrir && typeof lista.showModal === 'function') {
@@ -37,13 +46,17 @@
         filtro.addEventListener('change', filtrar);
         if (filtroEv) filtroEv.addEventListener('change', filtrar);
     }
+
     // El tipo de decisión se deduce de la valoración elegida: igual a la propuesta de IA = confirmar; distinta = modificar.
     const modo = document.querySelector('#hu11-modo');
     const nota = document.querySelector('#hu11-modo-nota');
     const radios = [...document.querySelectorAll('.hu11-form [name="valor"]')];
+    const enviar = document.querySelector('#hu11-enviar');
+    function rotular(t) { if (enviar) enviar.textContent = t; }
     function sincronizarModo() {
         if (!modo || !nota) return;
         const elegido = radios.find(r => r.checked);
+        rotular(modo.dataset.manual === '1' ? 'Registrar valoración manual' : !elegido ? 'Registrar decisión definitiva' : (elegido.value === modo.dataset.ia ? 'Confirmar propuesta de IA' : 'Modificar y registrar'));
         if (modo.dataset.manual === '1') { nota.textContent = elegido ? 'Valoración manual: se registra sin propuesta de IA.' : ''; return; }
         if (!elegido) { modo.value = ''; nota.textContent = 'Elija una valoración. Si coincide con la propuesta de IA, la confirma; si no, la modifica.'; return; }
         const igual = elegido.value === modo.dataset.ia;

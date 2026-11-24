@@ -13,6 +13,7 @@ Copia .env.example como .env y ajústalo en tu equipo.
 """
 
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -159,3 +160,14 @@ HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()
 
 # HU10: proveedor local para valoración preliminar (escala 1 a 4 con evidencia).
 HU10_OLLAMA_MODEL = os.getenv('HU10_OLLAMA_MODEL', '').strip() or HU09_OLLAMA_MODEL
+
+# Proveedor de IA para HU09/HU10: 'ollama' (local, por defecto) o 'groq' (servicio externo, opcional).
+# Con 'groq' el contexto de cada subfactor (fragmentos y respuestas) se envía a Groq. La clave va solo en .env.
+LLM_PROVIDER = (os.getenv('LLM_PROVIDER') or 'ollama').strip().lower()
+if 'test' in sys.argv:  # las pruebas no dependen del .env
+    LLM_PROVIDER = 'ollama'
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '').strip()
+GROQ_MODEL = os.getenv('GROQ_MODEL', '').strip() or 'openai/gpt-oss-20b'
+if LLM_PROVIDER == 'groq' and GROQ_API_KEY:
+    HU09_OLLAMA_MODEL = GROQ_MODEL
+    HU10_OLLAMA_MODEL = GROQ_MODEL

@@ -3,6 +3,7 @@ import json
 import re
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -11,13 +12,64 @@ from django.urls import reverse
 from django.views.decorators.cache import never_cache
 from urllib.parse import urlencode
 
+from apps.application.services.ai import AIService
 from apps.application.services.preguntas import PreguntasService
+from apps.application.services.preparacion_hu10 import PreparacionHU10Service
+from apps.application.services.suficiencia import SuficienciaService
+from apps.external_services.ollama_embeddings import OllamaEmbeddings
+from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ollama_suficiencia import OllamaSuficiencia
+from apps.external_services.ollama_valoracion import OllamaValoracion
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
-from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, FragmentoDocumento, ReaperturaRevisionHumana, RevisionHumana
+from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, FragmentoDocumento, ReaperturaRevisionHumana, RevisionHumana, ValoracionSubfactor
 from django.db import transaction
 from django.db.models import OuterRef, Subquery
 
 ESCALA = ((1, 'No cumple'), (2, 'Desconozco / No sé'), (3, 'Cumple parcialmente'), (4, 'Cumple'))
+
+_STOP = {'para', 'como', 'esta', 'este', 'estos', 'estas', 'entre', 'sobre', 'desde', 'hasta', 'cuando', 'donde',
+         'tiene', 'tienen', 'puede', 'pueden', 'cada', 'otros', 'otras', 'bien', 'sino', 'pero', 'aunque', 'según'}
+_CTX = 170
+
+
+def _raices(texto):
+    """Raíces (6 letras) de las palabras significativas del subfactor."""
+    vistas = []
+    for palabra in re.findall(r'[a-záéíóúñü]{5,}', (texto or '').lower()):
+        if palabra not in _STOP and palabra[:6] not in vistas:
+            vistas.append(palabra[:6])
+    return vistas
+
+
+def _cola(texto, n=_CTX):
+    texto = ' '.join((texto or '').split())
+    if len(texto) <= n:
+        return texto
+    corte = texto[-n:]
+    return '… ' + corte[corte.find(' ') + 1:] if ' ' in corte else '… ' + corte
+
+
+def _cabeza(texto, n=_CTX):
+    texto = ' '.join((texto or '').split())
+    if len(texto) <= n:
+        return texto
+    corte = texto[:n]
+    return (corte[:corte.rfind(' ')] if ' ' in corte else corte) + ' …'
+
+
+def _pasaje(contenido, subfactor, antes, despues):
+    """Solo presentación: la frase del pasaje que más se parece al subfactor va resaltada; el resto, en gris."""
+    texto = ' '.join((contenido or '').split())
+    raices = _raices(subfactor)
+    frases = re.split(r'(?<=[a-záéíóúñü][.!?])\s+(?=[A-ZÁÉÍÓÚÑ0-9¿¡])', texto) if texto else []
+    puntajes = [sum(r in fr.lower() for r in raices) for fr in frases]
+    ctx_a = (_cola(antes) + ' ') if antes else ''
+    ctx_d = (' ' + _cabeza(despues)) if despues else ''
+    if not frases or not max(puntajes) or len(frases) == 1 and not raices:
+        return {'ctx_antes': ctx_a, 'pre': '', 'hit': '', 'todo': texto, 'post': '', 'ctx_despues': ctx_d}
+    m = max(range(len(frases)), key=lambda i: (puntajes[i], -i))
+    return {'ctx_antes': ctx_a, 'pre': ' '.join(frases[:m]) + (' ' if m else ''), 'hit': frases[m], 'todo': '',
+            'post': (' ' if m + 1 < len(frases) else '') + ' '.join(frases[m + 1:]), 'ctx_despues': ctx_d}
 
 
 def _id(raw):
@@ -71,6 +123,35 @@ def _guardar_respuestas(actor, eid, crudo):
         except (ValidationError, PermissionDenied) as exc:
             errores.append(' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc))
     return guardadas, errores
+
+
+def _analizar_ia(actor, eid, vid):
+    """Encadena los servicios existentes: suficiencia (HU09) y propuesta preliminar (HU10) de un subfactor."""
+    modelo = settings.HU09_OLLAMA_MODEL
+    if not modelo:
+        raise ValidationError('El análisis local con IA no está configurado (HU09_OLLAMA_MODEL).')
+    modelo10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or modelo
+
+    def fila():
+        return next((f for f in PreparacionHU10Service.obtener(actor, eid)['subfactores'] if f['valoracion_id'] == vid), None)
+
+    f = fila()
+    if f is None:
+        raise ValidationError('Subfactor no disponible.')
+    nuevas = 0
+    try:
+        if f['estado'] == 'ANALISIS_PENDIENTE':
+            vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
+            _, nuevas = SuficienciaService.analizar(actor, eid, vid, OllamaSuficiencia(modelo), modelo, vectorizador)
+            f = fila()
+        valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
+        if f and f['estado'] == 'PROPUESTA_HABILITADA' and valor is None:
+            AIService.generar_propuesta_preliminar(actor, eid, vid, OllamaValoracion(modelo10))
+            valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
+            f = fila()
+    except AnalisisNoDisponible as exc:
+        raise ValidationError(str(exc))
+    return {'estado': f['estado'] if f else '', 'valor_ia': valor, 'preguntas': nuevas}
 
 
 @never_cache
@@ -141,6 +222,14 @@ def revision_humana_view(request):
         vid = next((v.pk for v in valoraciones if v.estado_validacion not in ESTADOS_VALIDOS), valoraciones[0].pk)
     if vid is not None and not any(v.pk == vid for v in valoraciones):
         raise PermissionDenied('Subfactor no disponible.')
+    if request.method == 'POST' and accion == 'analizar_ia_hu11':
+        try:
+            r = _analizar_ia(request.user, eid, vid)
+        except ValidationError as exc:
+            return JsonResponse({'error': ' '.join(exc.messages)}, status=400)
+        respuesta = JsonResponse(r)
+        respuesta['Cache-Control'] = 'no-store'
+        return respuesta
     if request.method == 'POST' and accion == 'guardar_borrador_hu11':
         raw_valor = params.get('valor', '')
         if raw_valor not in ('', '1', '2', '3', '4'):
@@ -204,7 +293,7 @@ def revision_humana_view(request):
         seleccion['reaperturas'] = ReaperturaRevisionHumana.objects.filter(valoracion_id=vid).select_related('actor')
         seleccion['ultima_reapertura'] = seleccion['reaperturas'].first()
         seleccion['tiene_pendientes'] = any(p['estado_respuesta'] == 'PENDIENTE' for p in seleccion['preguntas'])
-        # Solo presentacion: nivel de relevancia con que el sistema asocio cada pasaje (no altera la version de las fuentes).
+        # Solo presentación: nivel de relevancia con que el sistema asoció cada pasaje (no altera la versión de las fuentes).
         relevancias = dict(Evidencia.objects.filter(
             pk__in=[f['evidencia_id'] for f in seleccion['fuentes'] if f.get('origen') == 'DOCUMENTO']).values_list('pk', 'relevancia'))
         docs = dict(FragmentoDocumento.objects.filter(
@@ -216,8 +305,10 @@ def revision_humana_view(request):
             if f.get('origen') == 'DOCUMENTO' and f.get('fragmento_id') in docs:
                 doc_id, frag_id = docs[f['fragmento_id']], f['fragmento_id']
                 vecinos = FragmentoDocumento.objects.filter(documento_id=doc_id)
-                f['antes'] = vecinos.filter(pk__lt=frag_id).order_by('-pk').values_list('contenido', flat=True).first()
-                f['despues'] = vecinos.filter(pk__gt=frag_id).order_by('pk').values_list('contenido', flat=True).first()
+                antes = vecinos.filter(pk__lt=frag_id).order_by('-pk').values_list('contenido', flat=True).first()
+                despues = vecinos.filter(pk__gt=frag_id).order_by('pk').values_list('contenido', flat=True).first()
+                f['antes'], f['despues'] = antes, despues
+                f['pasaje'] = _pasaje(f.get('contenido'), seleccion['subfactor'], antes, despues)
                 f['url_documento'] = f'{base_carga}?{urlencode({"evaluacion_id": eid, "doc_id": doc_id, "panel": 1})}'
     actual = guardados.get(vid)
     if seleccion:
@@ -256,6 +347,43 @@ def revision_humana_view(request):
                completar=params.get('completar') == '1' and request.method == 'GET',
                puede_completar=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and any(
                    not v.n_evidencia and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None for v in valoraciones))
+    # Solo presentación: subfactores que la pantalla «Análisis de IA» puede procesar (con evidencia primero).
+    abierto = ev.estado == 'EN_PROCESO' and ev.fecha_fin is None
+    solo = _id(params.get('solo')) if params.get('solo') else None
+    objetivos = [v for v in valoraciones if abierto and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None and v.valor_ia is None
+                 and ((v.pk == solo) if solo else v.n_evidencia)]
+    ctx.update(ia_disponible=bool(settings.HU09_OLLAMA_MODEL), ia_pendientes=len(objetivos), ia_remota=getattr(settings, 'LLM_PROVIDER', 'ollama') == 'groq',
+               ia_objetivos=[{'vid': v.pk, 'nombre': v.subfactor.descripcion[:140]} for v in objetivos],
+               analizando=params.get('analizar') == '1' and request.method == 'GET',
+               destino_revision=_destino(base, eid))
+    # Solo presentación: árbol dimensión -> factor para la lista lateral y subfactores del factor activo.
+    arbol, por_factor = [], {}
+    for v in valoraciones:
+        ef = v.evaluacion_factor
+        dim = ef.factor.dimension.nombre
+        if not arbol or arbol[-1]['nombre'] != dim:
+            arbol.append({'nombre': dim, 'factores': []})
+        fs = arbol[-1]['factores']
+        if not fs or fs[-1]['id'] != ef.pk:
+            fs.append({'id': ef.pk, 'nombre': ef.factor.nombre, 'ir': ef.importancia_relativa, 'items': [], 'ok': 0, 'primero': v.pk, 'actual': False})
+        f = fs[-1]
+        hecho = v.estado_validacion in ESTADOS_VALIDOS and v.valor_confirmado in (1, 2, 3, 4)
+        f['items'].append({'pk': v.pk, 'n': len(f['items']) + 1, 'titulo': v.subfactor.descripcion, 'estado': v.etiqueta_hu11,
+                           'hecho': hecho, 'actual': v.pk == vid})
+        f['ok'] += 1 if hecho else 0
+        if v.pk == vid:
+            f['actual'] = True
+    for d in arbol:
+        d['ok'] = d['total'] = 0
+        d['actual'] = False
+        for f in d['factores']:
+            f['total'] = len(f['items'])
+            d['ok'] += f['ok']
+            d['total'] += f['total']
+            if f['actual']:
+                d['actual'] = True
+                ctx['hermanos'] = f
+    ctx['arbol'] = arbol
     # Una decisión pudo haber quedado obsoleta: nunca se sustituye su versión silenciosamente.
     if error and seleccion:
         seleccion['version'] = params.get('version', '')
