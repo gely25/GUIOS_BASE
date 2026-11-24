@@ -23,8 +23,8 @@ INICIO_POR_ROL = {
     DECISOR: 'decisor-inicio',
 }
 
-# Rutas que no exigen sesión: el login y el cierre de sesión.
-RUTAS_PUBLICAS = ('home', 'logout')
+# Rutas que no exigen sesión: el login, el registro y el cierre de sesión.
+RUTAS_PUBLICAS = ('home', 'registro', 'logout')
 
 # Resultados de decidir_acceso.
 PERMITIR = 'permitir'

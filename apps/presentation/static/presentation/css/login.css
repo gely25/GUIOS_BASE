@@ -114,3 +114,24 @@ html, body.login-page { margin: 0; padding: 0; background: #fff; }
   .login__headline { font-size: 30px; }
   .login__panel { padding: 40px 24px 64px; }
 }
+
+/* Registro: campos con error en línea y enlace entre login y registro */
+.login__campo-error { margin: -22px 0 22px; font-size: 12.5px; color: #8A1C1C; }
+.login__alterno { margin: 24px 0 0; font-size: 14px; color: #626B70; text-align: center; }
+.login__alterno a { color: #A06A30; font-weight: 600; text-decoration: none; }
+.login__alterno a:hover { text-decoration: underline; }
+
+/* Registro: elección del tipo de cuenta (control en píldora) */
+.login__roles { border: 0; margin: 0 0 28px; padding: 0; min-width: 0; }
+.login__roles .login__label { padding: 0; }
+.login__roles-pista { display: flex; gap: 4px; padding: 4px; background: #F3EDE4; border-radius: 999px; }
+.login__rol { flex: 1; display: block; cursor: pointer; }
+.login__rol input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.login__rol-caja { display: flex; align-items: center; justify-content: center; gap: 8px; height: 42px; box-sizing: border-box; border-radius: 999px; font-size: 14px; font-weight: 600; color: #626B70; transition: background .15s, color .15s, box-shadow .15s; }
+.login__rol:hover .login__rol-caja { color: #262B2D; }
+.login__rol input:checked + .login__rol-caja { background: #fff; color: #7C5224; box-shadow: 0 1px 4px rgba(38,43,45,.14); }
+.login__rol input:focus-visible + .login__rol-caja { outline: 2px solid #C79A66; outline-offset: 2px; }
+.login__rol-desc { display: none; margin: 10px 4px 0; font-size: 13px; color: #626B70; }
+.login__roles:has(input[value="DECISOR"]:checked) .login__rol-desc[data-rol="DECISOR"],
+.login__roles:has(input[value="ADMINISTRADOR"]:checked) .login__rol-desc[data-rol="ADMINISTRADOR"] { display: block; }
+.login__campo-error--roles { margin-top: -18px; }
