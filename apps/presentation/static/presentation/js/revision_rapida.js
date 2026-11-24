@@ -91,8 +91,10 @@
         if (r.fuentes.length) h += `<button class="rv-lnk" type="button" data-a="ev" data-id="${r.id}">Ver evidencia</button>`;
         return h + '</div>';
     }
+    const cambiada = r => r.v != null && r.v !== r.ia;
     function filaLista(r) {
-        return `<div class="rv-rw" style="${estilo(r)}">${editable ? `<input type="checkbox" data-a="sel" data-id="${r.id}"${r.sel ? ' checked' : ''} aria-label="Aceptar este subfactor">` : ''}<div class="rv-t">${dimTag(r)}<p>${esc(r.text)}</p></div><div class="rv-seg rv-seg--lock" role="group" aria-label="Valoración propuesta por la IA">${[1, 2, 3, 4].map(n => `<button type="button" tabindex="-1" title="${COMPLETO[n]}" aria-pressed="${r.ia === n}">${ESC[n]}</button>`).join('')}</div><button class="rv-lnk" type="button" data-a="ev" data-id="${r.id}">Ver evidencia</button>${editable ? `<button class="rv-btn rv-btn--primary" type="button" data-a="okia" data-id="${r.id}">Confirmar</button>` : ''}</div>`;
+        const sel = r.v != null ? r.v : r.ia;
+        return `<div class="rv-rw" style="${estilo(r)}">${editable ? `<input type="checkbox" data-a="sel" data-id="${r.id}"${r.sel && !cambiada(r) ? ' checked' : ''}${cambiada(r) ? ' disabled' : ''} aria-label="Aceptar este subfactor">` : ''}<div class="rv-t">${dimTag(r)}<p>${esc(r.text)}</p></div><div class="rv-seg" role="group" aria-label="Valoración (la IA propuso ${ESC[r.ia]})">${[1, 2, 3, 4].map(n => `<button type="button" title="${COMPLETO[n]}"${editable ? ` data-a="vali" data-id="${r.id}" data-n="${n}"` : ' disabled'} aria-pressed="${sel === n}">${ESC[n]}${r.ia === n ? '<span class="ia" aria-label="propuesta de IA"></span>' : ''}</button>`).join('')}</div><button class="rv-lnk" type="button" data-a="ev" data-id="${r.id}">Ver evidencia</button>${editable ? `<button class="rv-btn rv-btn--primary" type="button" data-a="okia" data-id="${r.id}">${cambiada(r) ? 'Confirmar cambio' : 'Confirmar'}</button>` : ''}</div>`;
     }
     function filaOk(r) {
         return `<div class="rv-rw" style="${estilo(r)}"><div class="rv-t">${dimTag(r)}<p>${esc(r.text)}</p></div><span class="rv-chip rv-chip--n">${ESC[r.val]}</span><button class="rv-lnk" type="button" data-a="ev" data-id="${r.id}">Ver decisión</button>${raiz.dataset.reabrir === '1' ? `<button class="rv-lnk" type="button" data-a="edit" data-id="${r.id}">Editar</button>` : ''}</div>`;
@@ -127,7 +129,7 @@
             }
             if (tab === 'li') {
                 const todas = lista.every(r => r.sel);
-                h += `<p class="rv-hint">La IA encontró evidencia y propuso una valoración. ${editable ? 'Todas vienen marcadas: desmarca las que no aceptes.' : ''}</p>${editable ? `<label class="rv-selall"><input type="checkbox" data-a="all"${todas ? ' checked' : ''} id="rv-selall"> Seleccionar las ${lista.length} listas</label>` : ''}`;
+                h += `<p class="rv-hint">La IA encontró evidencia y propuso una valoración. ${editable ? 'Acepta todas de una vez, o confirma una por una. Si no estás de acuerdo, cambia el valor en la fila y confirma el cambio.' : ''}</p>${editable ? `<label class="rv-selall"><input type="checkbox" data-a="all"${todas ? ' checked' : ''} id="rv-selall"> Seleccionar las ${lista.length} listas</label>` : ''}`;
             }
             const desde = (pag[tab] - 1) * TAM[tab], parte = lista.slice(desde, desde + TAM[tab]);
             parte.forEach(r => { h += tab === 'at' ? filaAtencion(r) : tab === 'li' ? filaLista(r) : filaOk(r); });
@@ -138,7 +140,7 @@
         if (enfocado) { const i = q('rv-panel').querySelector(`input[data-a="just"][data-id="${enfocado}"]`); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
         const sa = q('rv-selall');
         if (sa) { const n = lista.filter(r => r.sel).length; sa.indeterminate = n > 0 && n < lista.length; }
-        const nSel = filas.filter(r => tipo(r) === 'li' && r.sel && (dFilt === 'todas' || r.dim === dFilt)).length;
+        const nSel = filas.filter(r => tipo(r) === 'li' && r.sel && !cambiada(r) && (dFilt === 'todas' || r.dim === dFilt)).length;
         const acc = q('rv-acc');
         if (acc) { acc.textContent = `Aceptar propuestas de IA seleccionadas (${nSel})`; acc.disabled = nSel === 0; }
         q('rv-foot').textContent = c.at > 0 ? `${c.at} por revisar con tu criterio · ${c.li} listas para aceptar` : (c.li > 0 ? `${c.li} listas para aceptar` : 'Todo confirmado');
@@ -169,11 +171,17 @@
             const r = porId(id);
             b.disabled = true;
             try {
-                const res = await enviar([['accion', 'aceptar_propuestas_hu11'], ['seleccion', r.id + ':' + r.version]]);
-                r.ok = true; r.val = r.ia; r.just = 'Propuesta de la IA aceptada tras revisar la evidencia.'; r.version = res.versiones[r.id] || r.version; r.fecha = '';
+                if (cambiada(r)) {
+                    const res = await enviar([['accion', 'confirmar_rapida_hu11'], ['valoracion', r.id], ['valor', r.v], ['version', r.version]]);
+                    r.ok = true; r.val = r.v; r.just = res.justificacion || ''; r.version = res.version; r.fecha = '';
+                } else {
+                    const res = await enviar([['accion', 'aceptar_propuestas_hu11'], ['seleccion', r.id + ':' + r.version]]);
+                    r.ok = true; r.val = r.ia; r.just = 'Propuesta de la IA aceptada tras revisar la evidencia.'; r.version = res.versiones[r.id] || r.version; r.fecha = '';
+                }
                 aviso('');
             } catch (err) { aviso(err.message); b.disabled = false; return; }
         }
+        else if (a === 'vali') { const r = porId(id); r.v = Number(b.dataset.n); if (cambiada(r)) r.sel = false; }
         else if (a === 'sel') porId(id).sel = b.checked;
         else if (a === 'all') filas.forEach(r => { if (tipo(r) === 'li' && (dFilt === 'todas' || r.dim === dFilt)) r.sel = b.checked; });
         else if (a === 'd') { dFilt = b.dataset.d; pag.at = pag.li = pag.ok = 1; }
@@ -185,7 +193,7 @@
     document.querySelectorAll('.rv-tab').forEach(t => t.addEventListener('click', () => { tab = t.dataset.tab; pag[tab] = 1; pintar(); }));
     const acc = q('rv-acc');
     if (acc) acc.addEventListener('click', async () => {
-        const elegidas = filas.filter(r => tipo(r) === 'li' && r.sel && (dFilt === 'todas' || r.dim === dFilt));
+        const elegidas = filas.filter(r => tipo(r) === 'li' && r.sel && !cambiada(r) && (dFilt === 'todas' || r.dim === dFilt));
         if (!elegidas.length) return;
         acc.disabled = true;
         try {

@@ -101,7 +101,7 @@ def resultados_view(request):
         'active_tab': 'resultados', 'url_inicio': reverse('presentation:decisor-inicio'),
     }
     if evaluacion is not None:
-        contexto['url_anterior'] = f'{revision}?evaluacion={evaluacion.pk}'
+        contexto['url_anterior'] = f'{revision}?evaluacion={evaluacion.pk}&etapa=validacion'
         contexto['url_informe'] = f'{url_informe}?evaluacion={evaluacion.pk}'
     return render(request, 'presentation/decisor/resultados.html', contexto)
 

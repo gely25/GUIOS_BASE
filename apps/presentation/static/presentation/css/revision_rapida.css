@@ -82,3 +82,5 @@
 .rv .rv-seg button:disabled{cursor:default}
 .rv .rv-rw{transition:background-color .25s}
 .rv .rv-rw--hecho{background:#eaf5ec}
+.rv .rv-rw .rv-btn{white-space:nowrap}
+.rv .rv-rw .rv-t{flex:1 1 220px}
