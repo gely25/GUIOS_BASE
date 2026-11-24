@@ -1,0 +1,149 @@
+{% comment %}
+Las cuatro hojas del informe (HU14). Muestra el contenido que arma construir_documento(); el PDF
+dice lo mismo en el mismo orden. Contexto: doc (DocumentoVista).
+{% endcomment %}
+<section class="ih-hoja" data-hoja aria-label="Hoja 1: resumen">
+    <div class="ih-cab"><b>GUIOS PRO</b><span>Informe técnico · Evaluación n.º {{ doc.evaluacion_id }}</span></div>
+    <h2 class="ih-titulo">Evaluación de adopción FLOSS</h2>
+    <p class="ih-software">{{ doc.software }}</p>
+    <dl class="ih-meta">
+        <div><dt>Organización</dt><dd>{{ doc.organizacion }}</dd></div>
+        <div><dt>Decisor</dt><dd>{{ doc.decisor }}</dd></div>
+        <div><dt>Emitido</dt><dd>{{ doc.emitido|date:"d b Y" }}</dd></div>
+        <div><dt>Regla de recomendación</dt><dd>v{{ doc.version_regla }}</dd></div>
+    </dl>
+
+    <div class="ih-sec">
+        <h3><i>1</i>Recomendación</h3>
+        <div class="ih-reco">
+            <span class="ih-letra" aria-label="Recomendación {{ doc.letra }}">{{ doc.letra|default:"—" }}</span>
+            <div><h4>{{ doc.titulo_recomendacion }}</h4><p>{{ doc.sintesis }}</p></div>
+        </div>
+        <div class="ih-cifras">
+            <div><strong>{{ doc.a_favor }}</strong><span>factores a favor (fortalezas y oportunidades)</span></div>
+            <div><strong>{{ doc.en_contra }}</strong><span>factores por atender (debilidades y amenazas)</span></div>
+            <div><strong>{{ doc.total }}</strong><span>factores relevantes analizados</span></div>
+        </div>
+        <div class="ih-barra" role="img" aria-label="Distribución FODA">{% for clase, plural, cantidad, pct in doc.proporciones %}{% if cantidad %}<i class="ih-c-{{ clase }}" style="width:{{ pct|floatformat:"2u" }}%"></i>{% endif %}{% endfor %}</div>
+        <ul class="ih-leyenda">{% for clase, plural, cantidad, pct in doc.proporciones %}<li><i class="ih-pt ih-c-{{ clase }}"></i><b>{{ cantidad }}</b> {{ plural }}</li>{% endfor %}</ul>
+    </div>
+
+    <div class="ih-sec">
+        <h3><i>2</i>Qué atender primero</h3>
+        {% if doc.atender %}
+        <div class="ih-tabla"><table>
+            <thead><tr><th scope="col">Factor</th><th scope="col">Hallazgo</th><th scope="col" class="n">Importancia</th><th scope="col" class="n">PM</th><th scope="col">Por qué y qué hacer</th></tr></thead>
+            <tbody>
+            {% for f in doc.atender %}
+            <tr>
+                <td><b>{{ f.factor }}</b><span class="ih-sub">{{ f.dimension }}{% if f.ajustada %} · importancia ajustada por el decisor{% endif %}</span></td>
+                <td><span class="ih-chip ih-k-{{ f.clase }}">{{ f.nombre_clase }}</span>{% if f.etiqueta_tag %}<br><span class="ih-tag ih-tag--{{ f.tag }}">{{ f.etiqueta_tag }}</span>{% endif %}</td>
+                <td class="n">{{ f.ir }}/4</td>
+                <td class="n">{{ f.pm }}</td>
+                <td><span class="ih-motivo">{{ f.motivo }}</span><span class="ih-accion">{{ f.accion }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        <p class="ih-nota">Se muestran los factores en contra, ordenados por importancia{% if doc.atender_extra %}; {{ doc.atender_extra }} más aparecen en el detalle{% endif %}. «Falta de información» significa que el factor baja por respuestas «No sé», no porque el software incumpla. PM: puntuación media (más alta es mejor).</p>
+        {% else %}
+        <p class="ih-vacio">Ningún factor relevante quedó como debilidad o amenaza.</p>
+        {% endif %}
+    </div>
+    <div class="ih-pie"><span>GUIOS PRO · Informe de la evaluación n.º {{ doc.evaluacion_id }}</span><span>Hoja 1 de 4</span></div>
+</section>
+
+<section class="ih-hoja" data-hoja aria-label="Hoja 2: resultados">
+    <div class="ih-cab"><b>GUIOS PRO</b><span>Informe técnico · Evaluación n.º {{ doc.evaluacion_id }}</span></div>
+    <div class="ih-sec">
+        <h3><i>3</i>Resultados: dónde está bien y dónde no</h3>
+        <p class="ih-intro">Los factores se agrupan según dependan de su organización (internos) o de terceros (externos), y según vayan bien o requieran atención.</p>
+        <div class="ih-cuad">
+            {% for q in doc.cuadrantes %}
+            <div class="ih-q ih-q-{{ q.clave }}">
+                <h4>{{ q.titulo }}</h4><small>{{ q.etiqueta }}</small>
+                {% if q.factores %}<ul>{% for nombre, ir, pm in q.factores %}<li>{{ nombre }}<span>IR {{ ir }} · {{ pm }}</span></li>{% endfor %}</ul>{% else %}<p class="ih-vacio">Ninguno.</p>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="ih-leer">
+            <div><b>IR · importancia</b>Qué tanto pesa el factor para su organización, de 1 a 4. Los de IR 1 no se incluyen.</div>
+            <div><b>PM · puntuación media</b>Promedio de lo que usted confirmó, de 1 a 4. Una respuesta «No sé» baja la PM: cuenta como riesgo hasta comprobarse.</div>
+            <div><b>Regla A / B / C</b>A: sin factores en contra. B: hay alguno, pero no superan a los positivos. C: superan a los positivos.</div>
+        </div>
+    </div>
+    <div class="ih-sec">
+        <h3><i>4</i>Alcance y método</h3>
+        {% for parrafo in doc.metodo %}<p class="ih-parrafo">{{ parrafo }}</p>{% endfor %}
+    </div>
+    <div class="ih-pie"><span>GUIOS PRO · Informe de la evaluación n.º {{ doc.evaluacion_id }}</span><span>Hoja 2 de 4</span></div>
+</section>
+
+<section class="ih-hoja" data-hoja aria-label="Hoja 3: detalle por factor">
+    <div class="ih-cab"><b>GUIOS PRO</b><span>Informe técnico · Evaluación n.º {{ doc.evaluacion_id }}</span></div>
+    <div class="ih-sec">
+        <h3><i>5</i>Resultados por factor</h3>
+        <p class="ih-intro">Los {{ doc.total }} factores relevantes, de mayor a menor importancia. Dentro de cada nivel, de mayor a menor puntuación.</p>
+        <div class="ih-tabla"><table>
+            <thead><tr><th scope="col">Factor</th><th scope="col">Alcance</th><th scope="col" class="n">IR</th><th scope="col" colspan="2">PM (1 a 4)</th><th scope="col">Hallazgo</th></tr></thead>
+            <tbody>
+            {% for f in doc.filas %}
+            <tr>
+                <td>{{ f.factor }}{% if f.ajustada %} *{% endif %}</td><td>{{ f.alcance }}</td><td class="n">{{ f.ir }}</td><td class="n">{{ f.pm }}</td>
+                <td class="ih-pista-celda"><div class="ih-pista"><i class="ih-c-{{ f.clase }}" style="width:{{ f.porcentaje|floatformat:"1u" }}%"></i></div></td>
+                <td><span class="ih-chip ih-k-{{ f.clase }}">{{ f.nombre_clase }}</span>{% if f.etiqueta_tag %}<br><span class="ih-tag ih-tag--{{ f.tag }}">{{ f.etiqueta_tag }}</span>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">Sin factores relevantes registrados.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table></div>
+        {% if doc.hay_ajustes %}<p class="ih-nota">* El decisor cambió la importancia sugerida de este factor; la importancia relativa final es la que se muestra.</p>{% endif %}
+    </div>
+    <div class="ih-pie"><span>GUIOS PRO · Informe de la evaluación n.º {{ doc.evaluacion_id }}</span><span>Hoja 3 de 4</span></div>
+</section>
+
+<section class="ih-hoja" data-hoja aria-label="Hoja 4: respaldo">
+    <div class="ih-cab"><b>GUIOS PRO</b><span>Informe técnico · Evaluación n.º {{ doc.evaluacion_id }}</span></div>
+    <div class="ih-sec">
+        <h3><i>6</i>Evidencia que respalda los hallazgos críticos</h3>
+        <p class="ih-intro">Por cada factor en contra se muestran las respuestas más bajas y sus evidencias más relevantes. El expediente completo ({{ doc.total_valoraciones }} valoraciones y {{ doc.total_evidencias }} evidencias) queda guardado en el sistema.</p>
+        {% for f in doc.evidencia %}
+        <h4 class="ih-fh">{{ f.factor }} <span class="ih-chip ih-k-{{ f.clase }}">{{ f.nombre_clase }}</span></h4>
+        {% for r in f.respuestas %}
+        <div class="ih-ev">
+            <div class="ih-ev-t"><b>{{ r.subfactor }}</b><span class="ih-resp ih-resp--{{ r.clave }}">{{ r.respuesta }}</span></div>
+            <small>Su respuesta confirmada{% if r.clave == "nose" %} · baja la puntuación del factor{% endif %}{% if r.sin_evidencia %} · sin evidencia documental asociada{% endif %}</small>
+            {% if r.justificacion %}<p class="ih-just">{{ r.justificacion }}</p>{% endif %}
+            {% for e in r.evidencias %}<blockquote>«{{ e.fragmento }}»<br><small>{{ e.documento }}{% if e.ubicacion %} · {{ e.ubicacion }}{% endif %}{% if e.relevancia %} · relevancia {{ e.relevancia }}{% endif %}</small></blockquote>{% endfor %}
+        </div>
+        {% endfor %}
+        {% if f.omitidas %}<p class="ih-nota">Y {{ f.omitidas }} respuesta{{ f.omitidas|pluralize }} más de este factor en el expediente.</p>{% endif %}
+        {% empty %}
+        <p class="ih-vacio">No hay factores en contra que respaldar.</p>
+        {% endfor %}
+        <div class="ih-aviso"><b>Cómo leer esta sección.</b> Cuando una valoración no tiene evidencia asociada, el informe lo indica en lugar de omitirla: es una señal de que el dato depende solo del criterio del decisor. Las respuestas «No sé» no cuentan como incumplimiento: indican que falta comprobar.</div>
+    </div>
+    <div class="ih-sec">
+        <h3><i>7</i>Fuentes documentales</h3>
+        <div class="ih-tabla"><table>
+            <thead><tr><th scope="col">Documento</th><th scope="col">Tipo</th><th scope="col">Cargado</th><th scope="col">Huella SHA-256</th></tr></thead>
+            <tbody>
+            {% for d in doc.fuentes %}<tr><td>{{ d.nombre }}</td><td>{{ d.tipo }}</td><td>{{ d.fecha_carga|date:"d/m/Y H:i" }}</td><td class="ih-mono">{{ d.huella }}</td></tr>
+            {% empty %}<tr><td colspan="4">La evaluación no tiene documentos cargados.</td></tr>{% endfor %}
+            </tbody>
+        </table></div>
+    </div>
+    <div class="ih-sec">
+        <h3><i>8</i>Trazabilidad</h3>
+        <dl class="ih-trz">
+            <div><dt>Regla de recomendación</dt><dd>v{{ doc.version_regla }}</dd></div>
+            <div><dt>Resultado generado</dt><dd>{{ doc.fecha_resultado|date:"d/m/Y H:i" }}</dd></div>
+            <div><dt>Valoraciones incluidas</dt><dd>{{ doc.total_valoraciones }}</dd></div>
+            <div><dt>Evidencias incluidas</dt><dd>{{ doc.total_evidencias }}</dd></div>
+            <div><dt>Documentos fuente</dt><dd>{{ doc.fuentes|length }}</dd></div>
+            <div><dt>Informe emitido</dt><dd>{{ doc.emitido|date:"d/m/Y H:i" }}</dd></div>
+        </dl>
+    </div>
+    <div class="ih-pie"><span>GUIOS PRO · Informe de la evaluación n.º {{ doc.evaluacion_id }}</span><span>Hoja 4 de 4</span></div>
+</section>

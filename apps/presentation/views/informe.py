@@ -40,11 +40,14 @@ def _cargar(request):
 
 
 def _contexto(informe, pantalla):
+    servicio = ReportService()
     url_informe = reverse('presentation:decisor-informe')
     url_resultados = reverse('presentation:decisor-resultados')
     sufijo = f'?evaluacion={informe.evaluacion_id}' if informe else ''
     return {
         'informe': informe,
+        'doc': servicio.documento(informe) if informe else None,
+        'nombre_pdf': servicio.nombre_archivo(informe) if informe else None,
         'active_tab': pantalla,
         'url_resultados': url_resultados + sufijo,
         'url_informe': url_informe + sufijo,

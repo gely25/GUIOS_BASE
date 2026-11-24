@@ -7,12 +7,15 @@ Los detalles (datos, modelo del informe y PDF) están en el subpaquete `informe/
 
 from typing import Optional
 
+from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.application.services.informe import (
+    DocumentoVista,
     InformeEvaluacion,
     InformeNoDisponible,
     cargar_informe,
+    construir_documento,
     generar_pdf,
 )
 
@@ -28,6 +31,10 @@ class ReportService:
         Lanza InformeNoDisponible si no existe, no es suya o aún no tiene resultado.
         """
         return cargar_informe(usuario, evaluacion_id)
+
+    def documento(self, informe: InformeEvaluacion, emitido=None) -> DocumentoVista:
+        """Contenido del informe ya ordenado: lo usan la pantalla y el PDF, para que digan lo mismo."""
+        return construir_documento(informe, emitido or timezone.now())
 
     def generar_pdf(self, informe: InformeEvaluacion) -> bytes:
         """Bytes del informe PDF."""

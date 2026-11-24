@@ -52,15 +52,34 @@ class ResultadosInformeVistaTests(TestCase):
         self.assertEqual(self.client.get(f'{self.url_resultados}?evaluacion=abc').status_code, 404)
 
     # --- Informe -----------------------------------------------------------
-    def test_informe_muestra_evidencias_fuentes_y_trazabilidad(self):
+    def test_informe_muestra_el_documento_en_cuatro_hojas(self):
         self.client.force_login(self.decisor)
         respuesta = self.client.get(self.url_informe)
         self.assertEqual(respuesta.status_code, 200)
         self.assertTemplateUsed(respuesta, 'presentation/decisor/informe.html')
         self.assertContains(respuesta, 'Descargar informe PDF')
-        self.assertContains(respuesta, 'Abre y guarda formatos de Office')
+        self.assertContains(respuesta, 'Informe listo')
+        self.assertContains(respuesta, 'Registro preservado')
+        self.assertContains(respuesta, 'Recomendación')
+        self.assertContains(respuesta, 'Qué atender primero')
+        self.assertContains(respuesta, 'Resultados por factor')
+        self.assertContains(respuesta, 'Fuentes documentales')
         self.assertContains(respuesta, 'guia.pdf')
-        self.assertContains(respuesta, 'versión 1.0')
+        self.assertContains(respuesta, 'v1.0')
+        self.assertContains(respuesta, 'data-hoja', count=4)
+
+    def test_informe_explica_por_que_un_factor_esta_en_contra(self):
+        self.client.force_login(self.decisor)
+        respuesta = self.client.get(self.url_informe)
+        # Formación es una debilidad con PM 2,00 y sin respuestas «No sé»: se ve como factor en contra.
+        self.assertContains(respuesta, 'Formación')
+        self.assertContains(respuesta, 'Debilidad')
+
+    def test_informe_no_muestra_datos_tecnicos_de_estado_ni_catalogo(self):
+        self.client.force_login(self.decisor)
+        respuesta = self.client.get(self.url_informe)
+        self.assertNotContains(respuesta, 'EN_PROCESO')
+        self.assertNotContains(respuesta, 'Versión del catálogo')
 
     def test_el_boton_de_descarga_apunta_a_la_evaluacion(self):
         self.client.force_login(self.decisor)
