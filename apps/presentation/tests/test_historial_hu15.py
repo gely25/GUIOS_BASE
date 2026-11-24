@@ -98,3 +98,12 @@ class HistorialHU15Tests(TestCase):
             reverse("presentation:decisor-informe"),
             {"evaluacion": self.sin_recomendacion.pk})
         self.assertEqual(respuesta.status_code, 404)
+
+    def test_indicadores_y_filtros_del_historial(self):
+        respuesta = self.cliente().get(self.url)
+        self.assertEqual(respuesta.context["total"], 2)
+        self.assertEqual(respuesta.context["con_informe"], 1)
+        self.assertEqual(respuesta.context["en_curso"], 1)
+        self.assertContains(respuesta, 'id="historial-buscar"')
+        self.assertContains(respuesta, 'data-estado="en curso"')
+        self.assertContains(respuesta, 'data-estado="cerrada"')
