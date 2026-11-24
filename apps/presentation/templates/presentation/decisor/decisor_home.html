@@ -14,109 +14,107 @@
         {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
 
         <main class="workspace-inner-content decisor-dashboard--figma">
-            <header class="page-title-row decisor-dashboard-encabezado">
+            <header class="dh-top">
                 <div>
-                    <h1 class="page-main-heading">{{ saludo }}, {{ nombre_decisor }}</h1>
-                    <p class="page-main-subheading">Un panorama de sus evaluaciones y las decisiones que siguen pendientes.</p>
+                    <h1 class="dh-titulo">{{ saludo }}, {{ nombre_decisor }}</h1>
+                    <p class="dh-sub">Sus evaluaciones de un vistazo.</p>
                 </div>
-                <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-top-action">+ Nueva evaluación</a>
+                <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="dh-btn">+ Nueva evaluación</a>
             </header>
 
-            <section class="decisor-metricas" aria-label="Resumen de evaluaciones">
-                <article class="decisor-metrica">
-                    <div class="decisor-metrica-cab"><h2>En curso</h2><span class="decisor-metrica-icono" aria-hidden="true">◷</span></div>
-                    <strong class="decisor-metrica-valor">{{ indicadores.en_proceso|stringformat:"02d" }}</strong>
-                    <p>Evaluaciones pendientes de finalizar</p>
-                </article>
-                <article class="decisor-metrica">
-                    <div class="decisor-metrica-cab"><h2>Completadas</h2><span class="decisor-metrica-icono decisor-metrica-icono--verde" aria-hidden="true">✓</span></div>
-                    <strong class="decisor-metrica-valor">{{ indicadores.cerradas|stringformat:"02d" }}</strong>
-                    <p>Evaluaciones cerradas</p>
-                </article>
-                <article class="decisor-metrica">
-                    <div class="decisor-metrica-cab"><h2>Documentos revisados</h2><span class="decisor-metrica-icono" aria-hidden="true">▤</span></div>
-                    <strong class="decisor-metrica-valor">{{ indicadores.documentos_revisados|stringformat:"02d" }}</strong>
-                    <p>Con evidencia asociada a decisiones confirmadas</p>
-                </article>
-            </section>
-
-            <div class="decisor-dashboard-central">
-                <section class="decisor-panel decisor-continuar" aria-labelledby="titulo-continuar">
-                    <h2 id="titulo-continuar">Continúe su evaluación</h2>
-                    {% if evaluacion_actual %}
-                    <p class="decisor-panel-subtitulo">EV-{{ evaluacion_actual.pk|stringformat:"03d" }} · Creada el {{ evaluacion_actual.fecha_inicio|date:"d M Y" }}</p>
-                    <div class="decisor-software">
-                        <div class="decisor-avatar" aria-hidden="true">{{ evaluacion_actual.software.nombre|slice:":1"|upper }}</div>
-                        <div>
-                            <h3>{{ evaluacion_actual.software.nombre }}{% if evaluacion_actual.software.version %} {{ evaluacion_actual.software.version }}{% endif %}</h3>
-                            <p>{{ evaluacion_actual.organizacion.nombre }}</p>
-                            <span class="decisor-estado decisor-estado--curso">En curso</span>
+            <div class="dh-fila">
+                {% if evaluacion_actual %}
+                <section class="dh-card dh-hero" aria-labelledby="titulo-continuar">
+                    <div class="dh-anillo" style="--p: {{ progreso.anillo }}%" role="img" aria-label="Paso {{ progreso.paso }} de 6 · {{ progreso.nombre_paso }}">
+                        <div><span><b>{{ progreso.paso }}</b><small>de 6 pasos</small></span></div>
+                    </div>
+                    <div class="dh-hero-cuerpo">
+                        <div class="dh-et" id="titulo-continuar">Continúe su evaluación · EV-{{ evaluacion_actual.pk|stringformat:"03d" }}</div>
+                        <h2>{{ evaluacion_actual.software.nombre }}{% if evaluacion_actual.software.version %} {{ evaluacion_actual.software.version }}{% endif %}</h2>
+                        <p class="dh-org">{{ evaluacion_actual.organizacion.nombre }}</p>
+                        <div class="dh-chips">
+                            <span>{% if progreso.total %}{{ progreso.confirmadas }} de {{ progreso.total }} valoraciones confirmadas{% else %}Sin valoraciones aún{% endif %}</span>
+                            <span>{{ progreso.documentos }} documento{{ progreso.documentos|pluralize }}</span>
+                            <span>Actividad {% if progreso.actividad.es_hoy %}hoy {{ progreso.actividad.fecha|date:"H:i" }}{% else %}{{ progreso.actividad.fecha|date:"d M H:i" }}{% endif %}</span>
                         </div>
+                        <ol class="dh-pasos">
+                            {% for p in progreso.pasos %}<li class="{{ p.estado }}">{{ p.nombre }}</li>{% endfor %}
+                        </ol>
                     </div>
-                    <p class="decisor-paso">Paso {{ progreso.paso }} de 6 · {{ progreso.nombre_paso }}</p>
-                    <div class="decisor-barra" role="progressbar" aria-valuenow="{{ progreso.confirmadas }}" aria-valuemin="0" aria-valuemax="{% if progreso.total %}{{ progreso.total }}{% else %}1{% endif %}" aria-label="Valoraciones humanas confirmadas">
-                        <span style="width: {{ progreso.porcentaje }}%"></span>
-                    </div>
-                    <div class="decisor-progreso-pie">
-                        <span>{% if progreso.total %}{{ progreso.confirmadas }} de {{ progreso.total }} valoraciones confirmadas{% else %}Aún no hay valoraciones disponibles{% endif %}</span>
-                        <a class="decisor-boton-continuar" href="{{ progreso.enlace }}">Continuar →</a>
-                    </div>
-                    {% else %}
-                    <div class="decisor-estado-vacio">
-                        <h3>No hay evaluaciones en curso</h3>
-                        <p>Inicie una evaluación para revisar factores, incorporar documentos y confirmar valoraciones.</p>
-                        <a class="decisor-boton-continuar" href="{% url 'presentation:decisor-ficha-inicial' %}">Nueva evaluación →</a>
-                    </div>
-                    {% endif %}
+                    <a class="dh-cta" href="{{ progreso.enlace }}">Continuar →</a>
                 </section>
-                <aside class="decisor-panel decisor-criterio" aria-labelledby="titulo-criterio">
-                    <h2 id="titulo-criterio">Su criterio es esencial</h2>
-                    <div class="decisor-criterio-texto">
-                        <p>La IA propone valoraciones y localiza evidencia. La decisión y la confirmación le pertenecen.</p>
-                        <p>Solo las valoraciones confirmadas participan en el cálculo.</p>
+                {% else %}
+                <section class="dh-card dh-hero dh-hero--vacio" aria-labelledby="titulo-continuar">
+                    <div class="dh-anillo" style="--p: 0%" aria-hidden="true"><div><span><b>0</b><small>de 6 pasos</small></span></div></div>
+                    <div class="dh-hero-cuerpo">
+                        <div class="dh-et" id="titulo-continuar">{% if hay_evaluaciones %}Sin evaluaciones en curso{% else %}Bienvenido{% endif %}</div>
+                        <h2>{% if hay_evaluaciones %}Todo al día{% else %}Empiece su primera evaluación{% endif %}</h2>
+                        <p class="dh-org">Cada evaluación recorre seis pasos, desde la ficha hasta el informe.</p>
+                        <ol class="dh-pasos">
+                            {% for p in pasos_vacios %}<li class="{{ p.estado }}">{{ p.nombre }}</li>{% endfor %}
+                        </ol>
                     </div>
-                </aside>
+                    <a class="dh-cta" href="{% url 'presentation:decisor-ficha-inicial' %}">Iniciar ficha de evaluación</a>
+                </section>
+                {% endif %}
+
+                <section class="dh-card dh-kpis" aria-label="Resumen de evaluaciones">
+                    <div><span>En curso</span><strong>{{ indicadores.en_proceso }}</strong></div>
+                    <div><span>Completadas</span><strong>{{ indicadores.cerradas }}</strong></div>
+                    <div><span>Documentos revisados</span><strong>{{ indicadores.documentos_revisados }}</strong></div>
+                </section>
             </div>
 
-            <section class="decisor-panel decisor-recientes" aria-labelledby="titulo-recientes">
-                <header class="decisor-recientes-cab">
-                    <div>
-                        <h2 id="titulo-recientes">Evaluaciones recientes</h2>
-                        <p class="decisor-panel-subtitulo">Su actividad registrada en GUIOS PRO</p>
-                    </div>
+            <section class="dh-card dh-recientes" aria-labelledby="titulo-recientes">
+                <header class="dh-recientes-cab">
+                    <h2 id="titulo-recientes">Evaluaciones recientes</h2>
+                    <a href="{% url 'presentation:decisor-historial-evaluaciones' %}">Ver historial →</a>
                 </header>
                 {% if hay_evaluaciones %}
-                <div class="decisor-tabla-contenedor">
-                    <table class="decisor-tabla" aria-label="Evaluaciones recientes del decisor">
-                        <thead><tr>
-                            <th scope="col">Software / Evaluación</th>
-                            <th scope="col">Propósito</th>
-                            <th scope="col">Última actividad</th>
-                            <th scope="col">Estado</th>
-                            <th scope="col">Acción</th>
-                        </tr></thead>
-                        <tbody>
-                            {% for ev in evaluaciones_recientes %}
-                            <tr>
-                                <td>{{ ev.software }} · {{ ev.codigo }}</td>
-                                <td class="decisor-proposito" title="{{ ev.proposito }}">{{ ev.proposito|truncatechars:90 }}</td>
-                                <td>{{ ev.actividad|date:"d M Y" }}</td>
-                                <td><span class="decisor-estado {% if ev.en_curso %}decisor-estado--curso{% else %}decisor-estado--cerrada{% endif %}">{{ ev.estado }}</span></td>
-                                <td><a class="decisor-enlace-fila" href="{{ ev.url }}">{{ ev.accion }} →</a></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="dh-tabla-caja">
+                <table class="dh-tabla" aria-label="Evaluaciones recientes del decisor">
+                    <thead><tr>
+                        <th scope="col">Software</th>
+                        <th scope="col">Avance</th>
+                        <th scope="col">Resultado</th>
+                        <th scope="col">Actividad</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col"><span class="dh-solo-lectores">Acción</span></th>
+                    </tr></thead>
+                    <tbody>
+                        {% for ev in evaluaciones_recientes %}
+                        <tr>
+                            <td class="dh-nombre"><span class="dh-inicial" aria-hidden="true">{{ ev.inicial }}</span>{{ ev.software }}<small>{{ ev.codigo }}</small></td>
+                            <td><div class="dh-avance" title="Paso {{ ev.paso }} de 6" role="img" aria-label="Paso {{ ev.paso }} de 6">{% for lleno in ev.segmentos %}<i{% if lleno %} class="on"{% endif %}></i>{% endfor %}</div></td>
+                            <td>{% if ev.letra %}<span class="dh-res"><i>{{ ev.letra }}</i>Recomendación {{ ev.letra }}</span>{% else %}<span class="dh-res dh-res--nd">Sin resultado aún</span>{% endif %}</td>
+                            <td>{% if ev.actividad.es_hoy %}Hoy{% else %}{{ ev.actividad.fecha|date:"d M" }}{% endif %}</td>
+                            <td><span class="dh-estado {% if ev.en_curso %}dh-estado--curso{% else %}dh-estado--cerrada{% endif %}">{{ ev.estado }}</span></td>
+                            <td><a class="dh-enlace" href="{{ ev.url }}">{{ ev.accion }} →</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
                 </div>
-                <div class="decisor-tabla-pie">
-                    <span>Mostrando {{ evaluaciones_recientes|length }} de {{ total_evaluaciones }} evaluaciones</span>
-                    <a href="{% url 'presentation:decisor-historial-evaluaciones' %}">Ver historial completo →</a>
-                </div>
+                <footer class="dh-pie">
+                    <span>{{ pagina.start_index }}–{{ pagina.end_index }} de {{ total_evaluaciones }}</span>
+                    {% if pagina.paginator.num_pages > 1 %}
+                    <nav class="dh-pag" aria-label="Páginas de evaluaciones">
+                        {% if pagina.has_previous %}<a href="?pagina={{ pagina.previous_page_number }}" aria-label="Página anterior">‹</a>{% else %}<span class="off" aria-hidden="true">‹</span>{% endif %}
+                        {% for n in rango_paginas %}
+                            {% if n == pagina.number %}<span class="on" aria-current="page">{{ n }}</span>
+                            {% elif n == pagina.paginator.ELLIPSIS %}<span class="off">…</span>
+                            {% else %}<a href="?pagina={{ n }}">{{ n }}</a>{% endif %}
+                        {% endfor %}
+                        {% if pagina.has_next %}<a href="?pagina={{ pagina.next_page_number }}" aria-label="Página siguiente">›</a>{% else %}<span class="off" aria-hidden="true">›</span>{% endif %}
+                    </nav>
+                    {% endif %}
+                </footer>
                 {% else %}
-                <div class="decisor-estado-vacio decisor-estado-vacio--tabla">
-                    <h3>{{ dashboard.empty_state_title }}</h3>
-                    <p>{{ dashboard.empty_state_description }}</p>
-                    <a class="decisor-boton-continuar" href="{% url 'presentation:decisor-ficha-inicial' %}">Iniciar ficha de evaluación</a>
+                <div class="dh-vacio">
+                    <div>
+                        <b>{{ dashboard.empty_state_title }}</b>
+                        <p>{{ dashboard.empty_state_description }}</p>
+                    </div>
                 </div>
                 {% endif %}
             </section>

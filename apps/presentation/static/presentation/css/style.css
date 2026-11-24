@@ -1260,8 +1260,9 @@ html, body {
     }
 
     .sidebar-footer {
-        display: none;
+        padding: 10px 16px;
     }
+
 
     .app-topbar {
         padding: 0 20px;
@@ -1271,11 +1272,6 @@ html, body {
         padding-top: 12px;
         padding-bottom: 12px;
         gap: 8px;
-    }
-
-    .topbar-right {
-        width: 100%;
-        justify-content: space-between;
     }
 
     .workspace-inner-content {
