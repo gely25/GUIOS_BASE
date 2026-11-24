@@ -10,6 +10,9 @@ import uuid
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
+from django.db import transaction
+
+from apps.data.models import BusquedaPublicacion, PublicacionFactor
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -54,6 +57,7 @@ def panel_view(request):
         'vinculos': servicio.resumen_vinculos(),
         'version_activa': comparacion.activa,
         'version_borrador': comparacion.borrador,
+        'filas_indicadores': comparacion.filas[:8] if comparacion.filas else [],
     })
 
 
@@ -76,6 +80,47 @@ def busquedas_view(request):
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
+        if accion == 'revisar_lote':
+            # Permite revisar varios vínculos explícitamente seleccionados sin
+            # aprobar en silencio todas las sugerencias recuperadas.
+            decision = request.POST.get('decision')
+            valores = request.POST.getlist('vinculos')
+            if decision not in ('aprobar', 'rechazar') or request.POST.get('confirmar') != 'si':
+                return HttpResponseBadRequest('Confirme la acción y su decisión.')
+            if not valores or len(valores) > 200:
+                messages.error(request, 'Seleccione entre 1 y 200 vínculos para revisar.')
+            else:
+                ids = [_entero_positivo(valor) for valor in valores]
+                if any(pk is None for pk in ids) or len(ids) != len(set(ids)):
+                    messages.error(request, 'La selección contiene identificadores inválidos o duplicados.')
+                else:
+                    try:
+                        with transaction.atomic():
+                            # Todos deben pertenecer a ESTA búsqueda y estar sin revisar.
+                            # Subconsulta de publicaciones de esta búsqueda: evita
+                            # SELECT FOR UPDATE + DISTINCT, no permitido en PostgreSQL.
+                            # El bloqueo afecta solo a filas de PublicacionFactor.
+                            publicaciones = BusquedaPublicacion.objects.filter(
+                                busqueda_id=busqueda.pk,
+                            ).values_list('publicacion_id', flat=True)
+                            elegidos = list(PublicacionFactor.objects.select_for_update().filter(
+                                pk__in=ids,
+                                publicacion_id__in=publicaciones,
+                            ))
+                            if len(elegidos) != len(ids) or any(
+                                v.estado != PublicacionFactor.SUGERIDA for v in elegidos
+                            ):
+                                raise ValidationError(
+                                    'Solo puede revisar sugerencias pendientes de esta búsqueda.')
+                            for vinculo in elegidos:
+                                servicio.revisar_vinculo(
+                                    request.user.pk, busqueda.pk, vinculo.pk,
+                                    aprobar=(decision == 'aprobar'))
+                    except (ValidationError, ObjectDoesNotExist) as error:
+                        messages.error(request, _errores(error))
+                    else:
+                        messages.success(request, f'{len(elegidos)} vínculos revisados correctamente.')
+            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}#bib-lote')
         if accion == 'revisar':
             formulario = RevisionVinculoForm(request.POST)
         elif accion == 'vincular':
@@ -109,6 +154,10 @@ def busquedas_view(request):
         'busqueda': busqueda,
         'resultados': resultados,
         'factores': factores,
+        'cantidad_sugeridas': sum(
+            v.estado == PublicacionFactor.SUGERIDA
+            for resultado in resultados for v in resultado.publicacion.factores.all()
+        ),
     })
 
 

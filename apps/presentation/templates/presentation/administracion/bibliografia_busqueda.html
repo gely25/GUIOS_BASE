@@ -1,10 +1,4 @@
 {% extends "presentation/layouts/base.html" %}
-
-{% comment %}
-Resultados de una búsqueda bibliográfica (HU02): el administrador aprueba o rechaza
-los factores sugeridos por palabras clave o vincula a mano. Solo lo aprobado cuenta para el TC.
-{% endcomment %}
-
 {% load static %}
 {% block title %}Búsqueda bibliográfica | GUIOS PRO{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/bibliografia.css' %}">{% endblock %}
@@ -12,112 +6,103 @@ los factores sugeridos por palabras clave o vincula a mano. Solo lo aprobado cue
 {% block content %}
 <div class="workspace-screen-layout">
     {% include "presentation/includes/app_sidebar.html" with current_area="administracion" active_item="actualizacion-bibliografica" %}
-
     <div class="workspace-body-container">
         {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
-
-        <main class="workspace-inner-content">
-            <div class="page-title-row">
+        <main class="workspace-inner-content bib-figma">
+            <header class="page-title-row">
                 <div>
                     <a class="bib-enlace" href="{% url 'presentation:admin-actualizacion-bibliografica' %}">← Actualización bibliográfica</a>
                     <h1 class="page-main-heading">Búsqueda: {{ busqueda.factor.nombre|default:"sin factor" }}</h1>
-                    <p class="page-main-subheading">
-                        {{ busqueda.fuente }} · {{ busqueda.anio_inicio }}–{{ busqueda.anio_fin }} ·
-                        <span class="bib-estado bib-estado-{{ busqueda.estado|lower }}">{{ busqueda.get_estado_display }}</span>
-                        · {{ busqueda.fecha_ejecucion|date:"d/m/Y H:i" }}
-                    </p>
+                    <p class="page-main-subheading">{{ busqueda.fuente }} · {{ busqueda.anio_inicio }}–{{ busqueda.anio_fin }} · <span class="bib-estado bib-estado-{{ busqueda.estado|lower }}">{{ busqueda.get_estado_display }}</span> · {{ busqueda.fecha_ejecucion|date:"d/m/Y H:i" }}</p>
                 </div>
-            </div>
-
+            </header>
             {% include "presentation/includes/bibliografia_mensajes.html" %}
-
-            <section class="dashboard-block">
-                <div class="admin-panel-card">
-                    <h2 class="admin-panel-title">Consulta</h2>
-                    <p class="bib-consulta"><code>{{ busqueda.consulta }}</code></p>
-                    {% if busqueda.mensaje_error %}<p class="bib-aviso bib-aviso-error" role="alert">{{ busqueda.mensaje_error }}</p>{% endif %}
-                    <p class="bib-nota">
-                        Las sugerencias salen de coincidencias de palabras clave en el título y el resumen; no cuentan
-                        para el TC hasta que las apruebas. Solo cuentan publicaciones de 2020 a 2025.
-                    </p>
-                </div>
+            <section class="dashboard-block bib-tarjeta">
+                <h2 class="admin-panel-title">Consulta</h2>
+                <p class="bib-consulta"><code>{{ busqueda.consulta }}</code></p>
+                {% if busqueda.mensaje_error %}<p class="bib-aviso bib-aviso-error" role="alert">{{ busqueda.mensaje_error }}</p>{% endif %}
+                <p class="bib-nota">Las sugerencias proceden de coincidencias de palabras clave. Solo los vínculos aprobados cuentan para el TC. Compruebe la pertinencia y los datos bibliográficos antes de aceptarlos.</p>
             </section>
-
-            <section class="dashboard-block">
-                <div class="admin-panel-card">
-                    <h2 class="admin-panel-title">Publicaciones recuperadas ({{ resultados|length }})</h2>
-                    {% for r in resultados %}
-                    {% with p=r.publicacion %}
-                    <article class="bib-publicacion{% if r.seleccionada %} bib-publicacion-seleccionada{% endif %}" id="pub-{{ p.pk }}">
-                        <header class="bib-pub-cabecera">
+            <section class="dashboard-block bib-tarjeta" aria-labelledby="bib-resultados-titulo">
+                <div class="bib-titulo-flex">
+                    <div>
+                        <h2 class="admin-panel-title" id="bib-resultados-titulo">Publicaciones recuperadas ({{ resultados|length }})</h2>
+                        <p class="bib-nota">{{ cantidad_sugeridas }} vínculos sugeridos por revisar · Seleccione únicamente los que haya comprobado.</p>
+                    </div>
+                    {% if cantidad_sugeridas %}
+                    <button type="button" class="bib-boton-chico" id="bib-seleccionar-todas" aria-controls="bib-form-lote">Seleccionar sugeridas</button>
+                    {% endif %}
+                </div>
+                {% if cantidad_sugeridas %}
+                <form id="bib-form-lote" method="post" class="bib-form-lote" action="{% url 'presentation:admin-bibliografia-busquedas' %}?id={{ busqueda.pk }}#bib-lote">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="revisar_lote">
+                    <span class="bib-lote-texto" id="bib-lote" aria-live="polite">0 sugerencias seleccionadas</span>
+                    <label class="bib-confirmar"><input type="checkbox" name="confirmar" value="si" required> He revisado los vínculos seleccionados y confirmo esta decisión.</label>
+                    <div class="bib-lote-botones">
+                        <button class="btn-top-action" type="submit" name="decision" value="aprobar">Aprobar seleccionadas</button>
+                        <button class="bib-boton-chico bib-boton-baja" type="submit" name="decision" value="rechazar">Rechazar seleccionadas</button>
+                    </div>
+                </form>
+                {% endif %}
+                <div class="bib-tabla-resultados" role="region" aria-label="Publicaciones y vínculos recuperados" tabindex="0">
+                <table class="admin-table bib-tabla-compacta">
+                    <thead><tr><th scope="col">Seleccionar</th><th scope="col">Título / Referencia</th><th scope="col">Año</th><th scope="col">DOI</th><th scope="col">Factor / Pertinencia</th><th scope="col">Decisión</th></tr></thead>
+                    <tbody>
+                    {% for r in resultados %}{% with p=r.publicacion %}
+                    <tr id="pub-{{ p.pk }}">
+                        <td class="bib-celda-seleccion">
+                            {% for v in p.factores.all %}{% if v.estado == 'SUGERIDA' %}
+                            <label class="bib-seleccionar-label"><input type="checkbox" class="bib-check-vinculo" form="bib-form-lote" name="vinculos" value="{{ v.pk }}" aria-label="Seleccionar sugerencia {{ v.factor.nombre }} de {{ p.titulo|truncatechars:80 }}"> {{ v.factor.nombre|truncatechars:25 }}</label>
+                            {% endif %}{% endfor %}
+                        </td>
+                        <td class="bib-celda-titulo">
                             <span class="bib-posicion">#{{ r.posicion }}</span>
-                            <h3 class="bib-pub-titulo">
-                                {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener noreferrer">{{ p.titulo }}</a>{% else %}{{ p.titulo }}{% endif %}
-                            </h3>
-                        </header>
-                        <p class="bib-pub-meta">
-                            {{ p.anio|default:"Año desconocido" }}
-                            {% if p.doi %} · DOI {{ p.doi }}{% endif %}
-                            {% if p.anio is None or p.anio < 2020 or p.anio > 2025 %} · <strong>Fuera del periodo: no cuenta para el TC</strong>{% endif %}
-                        </p>
-                        {% if p.resumen %}
-                        <details class="bib-resumen"><summary>Resumen</summary><p>{{ p.resumen }}</p></details>
-                        {% endif %}
-
-                        <ul class="bib-vinculos" aria-label="Factores vinculados">
+                            {% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener noreferrer">{{ p.titulo }}</a>{% else %}<strong>{{ p.titulo }}</strong>{% endif %}
+                            {% if p.resumen %}<details class="bib-resumen"><summary>Leer resumen</summary><p>{{ p.resumen }}</p></details>{% endif %}
+                            {% if p.anio is None or p.anio < 2020 or p.anio > 2025 %}<p class="bib-aviso-periodo">Fuera del periodo: no cuenta para el TC</p>{% endif %}
+                        </td>
+                        <td>{{ p.anio|default:"—" }}</td>
+                        <td class="bib-doi">{{ p.doi|default:"Sin verificar" }}</td>
+                        <td>
                             {% for v in p.factores.all %}
-                            <li class="bib-vinculo">
-                                <span class="bib-factor">{{ v.factor.nombre }}</span>
-                                <span class="bib-estado bib-estado-{{ v.estado|lower }}">{{ v.get_estado_display }}</span>
-                                <span class="bib-origen">{{ v.get_origen_display }}{% if v.pertinencia is not None %} · pertinencia {{ v.pertinencia|floatformat:0 }}{% endif %}</span>
-                                {% if v.justificacion %}<span class="bib-justificacion">{{ v.justificacion }}</span>{% endif %}
-                                <span class="bib-acciones">
-                                    {% if v.estado != 'APROBADA' %}
-                                    <form method="post">{% csrf_token %}
-                                        <input type="hidden" name="accion" value="revisar">
-                                        <input type="hidden" name="vinculo" value="{{ v.pk }}">
-                                        <input type="hidden" name="publicacion_ancla" value="{{ p.pk }}">
-                                        <button type="submit" name="decision" value="aprobar" class="bib-boton-chico">Aprobar</button>
-                                    </form>
-                                    {% endif %}
-                                    {% if v.estado != 'RECHAZADA' %}
-                                    <form method="post">{% csrf_token %}
-                                        <input type="hidden" name="accion" value="revisar">
-                                        <input type="hidden" name="vinculo" value="{{ v.pk }}">
-                                        <input type="hidden" name="publicacion_ancla" value="{{ p.pk }}">
-                                        <button type="submit" name="decision" value="rechazar" class="bib-boton-chico bib-boton-baja">Rechazar</button>
-                                    </form>
-                                    {% endif %}
-                                </span>
-                            </li>
-                            {% empty %}
-                            <li class="bib-nota">Sin factores sugeridos.</li>
+                            <div class="bib-factor-fila"><span>{{ v.factor.nombre }}</span> <span class="bib-estado bib-estado-{{ v.estado|lower }}">{{ v.get_estado_display }}</span></div>
+                            <small class="bib-nota">{{ v.get_origen_display }}{% if v.pertinencia is not None %} · pertinencia {{ v.pertinencia|floatformat:0 }}{% endif %}</small>
+                            {% if v.justificacion %}<details class="bib-resumen"><summary>Justificación</summary><p>{{ v.justificacion }}</p></details>{% endif %}
+                            {% empty %}<span class="bib-nota">Sin factores sugeridos</span>{% endfor %}
+                        </td>
+                        <td class="bib-celda-acciones">
+                            {% for v in p.factores.all %}
+                            <div class="bib-acciones-fila">
+                            {% if v.estado != 'APROBADA' %}
+                            <form method="post" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="aprobar" class="bib-boton-chico">Aprobar</button></form>
+                            {% endif %}
+                            {% if v.estado != 'RECHAZADA' %}
+                            <form method="post" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="rechazar" class="bib-boton-chico bib-boton-baja">Rechazar</button></form>
+                            {% endif %}
+                            </div>
                             {% endfor %}
-                        </ul>
-
-                        <form method="post" class="bib-vincular">
-                            {% csrf_token %}
-                            <input type="hidden" name="accion" value="vincular">
-                            <input type="hidden" name="publicacion" value="{{ p.pk }}">
-                            <input type="hidden" name="publicacion_ancla" value="{{ p.pk }}">
-                            <label class="filter-label" for="factor-{{ p.pk }}">Vincular a mano</label>
-                            <select id="factor-{{ p.pk }}" name="factor" class="filter-select" required>
-                                {% for f in factores %}<option value="{{ f.pk }}">{{ f.nombre }}</option>{% endfor %}
-                            </select>
-                            <input type="text" name="justificacion" maxlength="2000" class="filter-input"
-                                   placeholder="Justificación (opcional)" aria-label="Justificación">
+                        </td>
+                    </tr>
+                    <tr class="bib-fila-manual"><td colspan="6"><details class="bib-detalle-manual"><summary>Vincular esta publicación a otro factor (manualmente)</summary>
+                        <form method="post" class="bib-vincular" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">
+                            {% csrf_token %}<input type="hidden" name="accion" value="vincular"><input type="hidden" name="publicacion" value="{{ p.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}">
+                            <label class="filter-label" for="factor-{{ p.pk }}">Factor</label>
+                            <select id="factor-{{ p.pk }}" name="factor" class="filter-select" required>{% for f in factores %}<option value="{{ f.pk }}">{{ f.nombre }}</option>{% endfor %}</select>
+                            <input type="text" name="justificacion" maxlength="2000" class="filter-input" placeholder="Justificación (opcional)" aria-label="Justificación">
                             <button type="submit" class="bib-boton-chico">Vincular</button>
                         </form>
-                    </article>
-                    {% endwith %}
-                    {% empty %}
-                    <p class="bib-nota">
-                        {% if busqueda.estado == 'COMPLETADA' %}La fuente no devolvió publicaciones para esta consulta.{% else %}Todavía no hay resultados.{% endif %}
-                    </p>
+                    </details></td></tr>
+                    {% endwith %}{% empty %}
+                    <tr><td colspan="6" class="table-empty-cell">{% if busqueda.estado == 'COMPLETADA' %}La fuente no devolvió publicaciones para esta consulta.{% else %}Todavía no hay resultados.{% endif %}</td></tr>
                     {% endfor %}
+                    </tbody>
+                </table>
                 </div>
+                {% if resultados %}<p class="bib-nota">Los registros se muestran con sus estados reales. Los datos sin DOI deben verificarse antes de aceptar su vinculación.</p>{% endif %}
             </section>
         </main>
     </div>
 </div>
 {% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/bibliografia_revision.js' %}" defer></script>{% endblock %}

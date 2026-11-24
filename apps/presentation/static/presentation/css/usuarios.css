@@ -26,3 +26,69 @@
 .usuarios-boton-baja { color: #a32727; border-color: #e5bebe; }
 .usuarios-boton-secundario:hover { background: #f4f6f8; }
 .admin-filters-bar .btn-top-action { justify-content: center; }
+
+/* Ajustes visuales de Usuarios y roles: referencia Figma Administración. */
+.usuarios-figma .page-title-row { margin-bottom: 26px; }
+.usuarios-figma .kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 20px; }
+.usuarios-figma .kpi-card { min-height: 152px; border-color: #e5d8c8; padding: 24px; box-shadow: 0 6px 20px rgba(38, 42, 43, .025); }
+.usuarios-figma .kpi-label { color: #282e31; font-size: 16px; font-weight: 700; }
+.usuarios-figma .kpi-value { font-size: 36px; margin: 20px 0 0; }
+.usuarios-figma .kpi-subtext { margin-top: auto; padding-top: 16px; line-height: 1.4; }
+.usuarios-figma .admin-panel-card { border-color: #e5d8c8; }
+.usuarios-figma .admin-panel-title { margin-bottom: 24px; }
+.usuarios-figma .admin-filters-bar { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(155px, 1fr) minmax(155px, 1fr) auto; gap: 14px; align-items: end; }
+.usuarios-figma .filter-input, .usuarios-figma .filter-select { background: #fff; border-color: #ded7cd; }
+.usuarios-figma .usuarios-filtro-acciones { display:flex; flex-direction: column; align-items: center; gap: 4px; }
+.usuarios-figma .usuarios-filtro-acciones .btn-top-action { padding: 10px 16px; min-height: 42px; }
+.usuarios-figma .usuarios-filtro-acciones .usuarios-enlace { font-size: 11px; }
+.usuarios-figma .admin-table-container { border-color:#e8dfd5; }
+.usuarios-figma .admin-table { font-size: 13px; }
+.usuarios-figma .admin-table thead { background:#faf7f2; border-color:#e8dfd5; }
+.usuarios-figma .admin-table th { text-transform: none; font-size: 12px; letter-spacing:0; color:#59636a; }
+.usuarios-figma .admin-table tbody tr + tr { border-top:1px solid #e8dfd5; }
+.usuarios-figma .admin-table td { padding:16px; }
+.usuarios-rol { display:inline-block; border-radius:6px; padding:4px 9px; font-size:12px; font-weight:600; background:#f4f5f6; color:#55616a; }
+.usuarios-rol--decisor { background:#f5e9da; color:#a76c32; }
+.usuarios-toggle-estado { display:inline-flex;align-items:center;gap:8px;white-space:nowrap;color:#6b7176;font-size:12px; }
+.usuarios-switch { width:34px;height:20px;background:#dedbd7;border-radius:99px;padding:3px;display:inline-flex;align-items:center;box-sizing:border-box; }
+.usuarios-switch span { display:block;width:14px;height:14px;background:#fff;border-radius:50%;box-shadow:0 1px 2px #aaa; }
+.usuarios-toggle-estado--activo .usuarios-switch { background:#282d2f;justify-content:flex-end; }
+.usuarios-accion-editar { display:inline-block;text-decoration:none;color:#30383c;font-weight:500;font-size:12px; }
+.usuarios-figma .usuarios-acciones { white-space:normal;min-width:120px; }
+.usuarios-figma .usuarios-boton-secundario { padding:4px 5px; font-size:11px; }
+.usuarios-pie { margin-top:18px;color:#68737b;font-size:12px; }
+.usuarios-figma .usuarios-dialog .usuarios-form { gap:12px; }
+@media(max-width:1050px) { .usuarios-figma .admin-filters-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:750px) { .usuarios-figma .kpi-grid { grid-template-columns:1fr; } .usuarios-figma .kpi-card { min-height:115px; } .usuarios-figma .admin-filters-bar { grid-template-columns:1fr; } .usuarios-figma .usuarios-filtro-acciones { align-items:stretch; } .usuarios-figma .admin-table { min-width:720px; } }
+.usuarios-figma .usuarios-toggle-estado.usuarios-estado { background:transparent;color:#68737b;padding:0;border-radius:0;font-weight:400; }
+
+/* Compatibilidad con pruebas anteriores: conservar las clases semánticas de estado
+   sin aplicar el fondo de las antiguas etiquetas sobre el interruptor de Figma. */
+.usuarios-figma .usuarios-toggle-estado.usuarios-activo,
+.usuarios-figma .usuarios-toggle-estado.usuarios-inactivo {
+    background: transparent;
+    color: #68737b;
+}
+
+/* El interruptor es la única acción para cambiar el estado de una cuenta.
+   Abre el formulario existente que solicita motivo y confirmación. */
+.usuarios-figma .usuarios-toggle-estado--interactivo {
+    padding: 4px 6px;
+    margin: -4px -6px;
+    border-radius: 7px;
+    color: #68737b;
+    text-decoration: none;
+    cursor: pointer;
+}
+.usuarios-figma .usuarios-toggle-estado--interactivo:hover {
+    background: #f5eee7;
+    color: #272d30;
+}
+.usuarios-figma .usuarios-toggle-estado--interactivo:focus-visible {
+    outline: 2px solid #9b622b;
+    outline-offset: 3px;
+}
+.usuarios-figma .usuarios-toggle-estado--bloqueado {
+    opacity: .62;
+    cursor: not-allowed;
+}

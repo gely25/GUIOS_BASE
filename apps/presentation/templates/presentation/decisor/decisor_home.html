@@ -1,60 +1,125 @@
 {% extends "presentation/layouts/base.html" %}
+{% load static %}
 
-{% block title %}Decisor · Inicio | GUIOS PRO{% endblock %}
+{% block title %}Inicio · Decisor | GUIOS PRO{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/decisor_dashboard.css' %}">
+{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
-    <!-- Menú Lateral Izquierdo Fiel a Figma -->
     {% include "presentation/includes/app_sidebar.html" with current_area="decisor" active_item="inicio" %}
 
-    <!-- Área Principal de Contenido -->
     <div class="workspace-body-container">
-        <!-- Barra Superior (FLOSS + Usuario + Cerrar sesión) -->
         {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
 
-        <!-- Contenido de la Pantalla «Decisor · Inicio» -->
-        <main class="workspace-inner-content">
-            <div class="page-title-row">
+        <main class="workspace-inner-content decisor-dashboard--figma">
+            <header class="page-title-row decisor-dashboard-encabezado">
                 <div>
-                    <h1 class="page-main-heading">Bienvenido a GUIOS PRO</h1>
-                    <p class="page-main-subheading">
-                        Gestione sus procesos de toma de decisión, consulte evidencias y analice los factores organizacionales y económicos.
-                    </p>
+                    <h1 class="page-main-heading">{{ saludo }}, {{ nombre_decisor }}</h1>
+                    <p class="page-main-subheading">Un panorama de sus evaluaciones y las decisiones que siguen pendientes.</p>
                 </div>
-                <div>
-                    <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-top-action">
-                        + Nueva evaluación
-                    </a>
-                </div>
-            </div>
+                <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-top-action">+ Nueva evaluación</a>
+            </header>
 
-            <!-- Sección de Estado de Evaluaciones (Estado Vacío Inicial) -->
-            <section class="dashboard-block evaluation-status-block">
-                <div class="block-header">
-                    <h2 class="block-title">Estado de la Evaluación</h2>
-                    <span class="badge-neutral">Fase Inicial</span>
-                </div>
-
-                <!-- Estado Vacío Requerido -->
-                <div class="empty-state-box" role="region" aria-label="Sin evaluaciones registradas">
-                    <div class="empty-state-icon-circle" aria-hidden="true">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <line x1="16" y1="13" x2="8" y2="13"></line>
-                            <line x1="16" y1="17" x2="8" y2="17"></line>
-                        </svg>
-                    </div>
-                    <h3 class="empty-state-title">{{ dashboard.empty_state_title }}</h3>
-                    <p class="empty-state-description">{{ dashboard.empty_state_description }}</p>
-                    <div class="empty-state-action-wrap">
-                        <a href="{% url 'presentation:decisor-ficha-inicial' %}" class="btn-empty-state">
-                            Iniciar ficha de evaluación
-                        </a>
-                    </div>
-                </div>
+            <section class="decisor-metricas" aria-label="Resumen de evaluaciones">
+                <article class="decisor-metrica">
+                    <div class="decisor-metrica-cab"><h2>En curso</h2><span class="decisor-metrica-icono" aria-hidden="true">◷</span></div>
+                    <strong class="decisor-metrica-valor">{{ indicadores.en_proceso|stringformat:"02d" }}</strong>
+                    <p>Evaluaciones pendientes de finalizar</p>
+                </article>
+                <article class="decisor-metrica">
+                    <div class="decisor-metrica-cab"><h2>Completadas</h2><span class="decisor-metrica-icono decisor-metrica-icono--verde" aria-hidden="true">✓</span></div>
+                    <strong class="decisor-metrica-valor">{{ indicadores.cerradas|stringformat:"02d" }}</strong>
+                    <p>Evaluaciones cerradas</p>
+                </article>
+                <article class="decisor-metrica">
+                    <div class="decisor-metrica-cab"><h2>Documentos revisados</h2><span class="decisor-metrica-icono" aria-hidden="true">▤</span></div>
+                    <strong class="decisor-metrica-valor">{{ indicadores.documentos_revisados|stringformat:"02d" }}</strong>
+                    <p>Con evidencia asociada a decisiones confirmadas</p>
+                </article>
             </section>
 
+            <div class="decisor-dashboard-central">
+                <section class="decisor-panel decisor-continuar" aria-labelledby="titulo-continuar">
+                    <h2 id="titulo-continuar">Continúe su evaluación</h2>
+                    {% if evaluacion_actual %}
+                    <p class="decisor-panel-subtitulo">EV-{{ evaluacion_actual.pk|stringformat:"03d" }} · Creada el {{ evaluacion_actual.fecha_inicio|date:"d M Y" }}</p>
+                    <div class="decisor-software">
+                        <div class="decisor-avatar" aria-hidden="true">{{ evaluacion_actual.software.nombre|slice:":1"|upper }}</div>
+                        <div>
+                            <h3>{{ evaluacion_actual.software.nombre }}{% if evaluacion_actual.software.version %} {{ evaluacion_actual.software.version }}{% endif %}</h3>
+                            <p>{{ evaluacion_actual.organizacion.nombre }}</p>
+                            <span class="decisor-estado decisor-estado--curso">En curso</span>
+                        </div>
+                    </div>
+                    <p class="decisor-paso">Paso {{ progreso.paso }} de 6 · {{ progreso.nombre_paso }}</p>
+                    <div class="decisor-barra" role="progressbar" aria-valuenow="{{ progreso.confirmadas }}" aria-valuemin="0" aria-valuemax="{% if progreso.total %}{{ progreso.total }}{% else %}1{% endif %}" aria-label="Valoraciones humanas confirmadas">
+                        <span style="width: {{ progreso.porcentaje }}%"></span>
+                    </div>
+                    <div class="decisor-progreso-pie">
+                        <span>{% if progreso.total %}{{ progreso.confirmadas }} de {{ progreso.total }} valoraciones confirmadas{% else %}Aún no hay valoraciones disponibles{% endif %}</span>
+                        <a class="decisor-boton-continuar" href="{{ progreso.enlace }}">Continuar →</a>
+                    </div>
+                    {% else %}
+                    <div class="decisor-estado-vacio">
+                        <h3>No hay evaluaciones en curso</h3>
+                        <p>Inicie una evaluación para revisar factores, incorporar documentos y confirmar valoraciones.</p>
+                        <a class="decisor-boton-continuar" href="{% url 'presentation:decisor-ficha-inicial' %}">Nueva evaluación →</a>
+                    </div>
+                    {% endif %}
+                </section>
+                <aside class="decisor-panel decisor-criterio" aria-labelledby="titulo-criterio">
+                    <h2 id="titulo-criterio">Su criterio es esencial</h2>
+                    <div class="decisor-criterio-texto">
+                        <p>La IA propone valoraciones y localiza evidencia. La decisión y la confirmación le pertenecen.</p>
+                        <p>Solo las valoraciones confirmadas participan en el cálculo.</p>
+                    </div>
+                </aside>
+            </div>
+
+            <section class="decisor-panel decisor-recientes" aria-labelledby="titulo-recientes">
+                <header class="decisor-recientes-cab">
+                    <div>
+                        <h2 id="titulo-recientes">Evaluaciones recientes</h2>
+                        <p class="decisor-panel-subtitulo">Su actividad registrada en GUIOS PRO</p>
+                    </div>
+                </header>
+                {% if hay_evaluaciones %}
+                <div class="decisor-tabla-contenedor">
+                    <table class="decisor-tabla" aria-label="Evaluaciones recientes del decisor">
+                        <thead><tr>
+                            <th scope="col">Software / Evaluación</th>
+                            <th scope="col">Propósito</th>
+                            <th scope="col">Última actividad</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Acción</th>
+                        </tr></thead>
+                        <tbody>
+                            {% for ev in evaluaciones_recientes %}
+                            <tr>
+                                <td>{{ ev.software }} · {{ ev.codigo }}</td>
+                                <td class="decisor-proposito" title="{{ ev.proposito }}">{{ ev.proposito|truncatechars:90 }}</td>
+                                <td>{{ ev.actividad|date:"d M Y" }}</td>
+                                <td><span class="decisor-estado {% if ev.en_curso %}decisor-estado--curso{% else %}decisor-estado--cerrada{% endif %}">{{ ev.estado }}</span></td>
+                                <td><a class="decisor-enlace-fila" href="{{ ev.url }}">{{ ev.accion }} →</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="decisor-tabla-pie">
+                    <span>Mostrando {{ evaluaciones_recientes|length }} de {{ total_evaluaciones }} evaluaciones</span>
+                    <a href="{% url 'presentation:decisor-historial-evaluaciones' %}">Ver historial completo →</a>
+                </div>
+                {% else %}
+                <div class="decisor-estado-vacio decisor-estado-vacio--tabla">
+                    <h3>{{ dashboard.empty_state_title }}</h3>
+                    <p>{{ dashboard.empty_state_description }}</p>
+                    <a class="decisor-boton-continuar" href="{% url 'presentation:decisor-ficha-inicial' %}">Iniciar ficha de evaluación</a>
+                </div>
+                {% endif %}
+            </section>
         </main>
     </div>
 </div>

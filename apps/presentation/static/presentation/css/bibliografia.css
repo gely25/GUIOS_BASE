@@ -62,3 +62,56 @@
     .bib-acciones { margin-left: 0; }
     .bib-vincular { flex-direction: column; align-items: stretch; }
 }
+
+/* GUIOS_2 / Figma: actualización bibliográfica y revisión de publicaciones. */
+.bib-figma { --bib-border:#e8ded3; --bib-paper:#fff; --bib-muted:#68727a; --bib-tint:#faf7f2; }
+.bib-tarjeta { background:var(--bib-paper); border:1px solid var(--bib-border);border-radius:12px;padding:24px;box-shadow:0 3px 16px rgba(30,36,40,.02); }
+.bib-tarjeta .admin-panel-title { margin-bottom:10px; }
+.bib-tarjeta .bib-nota { color:var(--bib-muted); }
+.bib-figma .admin-table-container {border-color:var(--bib-border);}
+.bib-figma .admin-table thead { background:var(--bib-tint);border-color:var(--bib-border); }
+.bib-figma .admin-table th {font-size:12px;text-transform:none;letter-spacing:0;color:#53616a;}
+.bib-figma .admin-table tbody tr + tr {border-top:1px solid var(--bib-border);}
+.bib-figma .admin-table td {font-size:13px;padding:13px;}
+.bib-titulo-flex {display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:20px;}
+.bib-titulo-flex .admin-panel-title {margin-bottom:4px;}
+.bib-tabla-resultados {overflow:auto;border:1px solid var(--bib-border);border-radius:8px;}
+.bib-tabla-compacta {min-width:880px;}
+.bib-celda-seleccion {min-width:140px;}
+.bib-seleccionar-label {display:flex;align-items:center;gap:6px;font-size:12px;padding:3px 0;max-width:160px;}
+.bib-seleccionar-label input {width:16px;height:16px;accent-color:#ae753d;cursor:pointer;}
+.bib-celda-titulo {min-width:240px;max-width:370px;}
+.bib-celda-titulo strong,.bib-celda-titulo a {color:#252e33;font-weight:600;line-height:1.4;text-decoration:none;}
+.bib-celda-titulo a:hover {color:#98632f;text-decoration:underline;}
+.bib-celda-titulo .bib-posicion {margin-right:7px;}
+.bib-doi {max-width:135px;overflow-wrap:anywhere;}
+.bib-factor-fila {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:3px 0;}
+.bib-factor-fila>span:first-child{font-weight:600;}
+.bib-acciones-fila {display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap;}
+.bib-acciones-fila form {margin:0;}
+.bib-fila-manual td {background:#fcfbf8;padding:8px 14px!important;}
+.bib-detalle-manual summary {cursor:pointer;font-size:12px;color:#865d36;font-weight:600;}
+.bib-detalle-manual .bib-vincular {padding:12px 4px;}
+.bib-aviso-periodo {font-size:12px;color:#a35320;margin:6px 0;}
+.bib-form-lote {background:#faf7f2;border:1px solid #eddfce;border-radius:9px;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 20px;}
+.bib-lote-texto {font-size:13px;font-weight:650;min-width:155px;}
+.bib-confirmar {display:flex;align-items:center;gap:8px;font-size:12px;flex:1 1 220px;}
+.bib-confirmar input {accent-color:#a66e33;}
+.bib-lote-botones {display:flex;gap:8px;flex-wrap:wrap;}
+.bib-lote-botones button {font-size:12px;cursor:pointer;border-radius:6px;}
+.bib-panel-aviso {background:#fff2e4;color:#985f2c;border:1px solid #f2dfc7;}
+.bib-parametros-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 18px;}
+.bib-parametros-grid>div {display:flex;flex-direction:column;gap:5px;}
+.bib-campo-lectura {min-height:44px;border:1px solid var(--bib-border);border-radius:6px;padding:11px 12px;box-sizing:border-box;background:#fff;color:#31383c;font-size:13px;}
+.bib-consulta-lectura {display:block;resize:vertical;width:100%;min-height:60px;padding:12px;font:inherit;font-size:13px;line-height:1.5;color:#424a4e;background:#fdfcfb;border:1px solid var(--bib-border);border-radius:6px;box-sizing:border-box;}
+.bib-panel-comandos {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap;}
+.bib-panel-comandos form {margin:0;}
+.bib-panel-figma .kpi-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+.bib-panel-figma .kpi-card {border-color:var(--bib-border);min-height:90px;}
+.bib-panel-figma .kpi-value {font-size:28px;}
+.bib-panel-figma .bib-indicadores-figma .admin-table {min-width:620px;}
+.bib-informacion-pie {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin-bottom:24px;}
+.bib-informacion-pie h2 {font-size:17px;margin:0 0 16px;}
+.bib-informacion-pie p {font-size:13px;line-height:1.6;color:#58636b;}
+@media(max-width:850px){.bib-panel-figma .kpi-grid,.bib-parametros-grid,.bib-informacion-pie{grid-template-columns:1fr;}.bib-titulo-flex{flex-direction:column;}.bib-form-lote{align-items:stretch;}}
+@media(max-width:620px){.bib-tarjeta{padding:16px;}.bib-panel-comandos>.btn-top-action{white-space:normal;}}
