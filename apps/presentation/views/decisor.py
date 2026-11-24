@@ -77,7 +77,7 @@ def decisor_home_view(request):
     actual = en_curso[0] if en_curso else None
     progreso = _progreso_evaluacion(actual) if actual else None
     recientes = []
-    for ev in evaluaciones[:4]:
+    for ev in evaluaciones[:3]:
         nombre = ev.software.nombre
         if ev.software.version:
             nombre = f'{nombre} {ev.software.version}'
