@@ -128,10 +128,10 @@
     --pas-ref: #f7ebcc; --pas-ref-ac: #cfa84a; --pas-ref-tx: #78591a;
     --pas-op: #e6edf3; --pas-op-ac: #7f9db6; --pas-op-tx: #3f5d78; }
 .res-banner-ayuda { margin: 2px 0 0 !important; font-size: 14px; color: #e6d9c2 !important; }
-.res-ambito { display: flex; align-items: center; gap: 12px; margin: 22px 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a7f6c; }
+.res-ambito { display: flex; align-items: center; gap: 12px; margin: 18px 0 10px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a7f6c; }
 .res-ambito::after { content: ""; flex: 1; height: 1px; background: var(--res-borde); }
 .res-grupos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 8px; }
-.res-grupo { position: relative; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--res-borde); border-radius: 18px; padding: 22px 22px 14px; }
+.res-grupo { position: relative; overflow: hidden; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--res-borde); border-radius: 18px; padding: 18px 20px 10px; }
 .res-grupo::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 5px; background: var(--g-ac); }
 .res-grupo--fortaleza { --g-ac: var(--pas-bien-ac); --g-bg: var(--pas-bien); --g-tx: var(--pas-bien-tx); }
 .res-grupo--debilidad { --g-ac: var(--pas-ref-ac); --g-bg: var(--pas-ref); --g-tx: var(--pas-ref-tx); }
@@ -141,18 +141,20 @@
 .res-grupo h3 { margin: 0; font-size: 17px; font-weight: 650; color: var(--res-tinta); display: flex; align-items: center; gap: 9px; }
 .res-grupo-n { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 8px; border-radius: 999px; background: var(--g-bg); color: var(--g-tx); font-size: 12.5px; font-weight: 700; }
 .res-grupo-etiqueta { font-size: 11px; font-weight: 700; color: var(--g-tx); background: var(--g-bg); padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
-.res-grupo-ayuda { margin: 6px 0 14px; font-size: 12.5px; line-height: 1.45; color: #64748b; }
+.res-grupo-ayuda { margin: 4px 0 10px; font-size: 12.5px; line-height: 1.45; color: #64748b; }
 .res-items { list-style: none; margin: 0; padding: 0; }
 .res-item[hidden] { display: none; }
-.res-item { padding: 10px 0; border-top: 1px solid #f0e8da; }
+.res-item { padding: 7px 0; border-top: 1px solid #f0e8da; }
 .res-item:first-child { border-top: 0; padding-top: 0; }
-.res-item-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 14px; color: var(--res-tinta); }
-.res-item-valor { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--g-tx); }
+.res-item-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; color: var(--res-tinta); }
+.res-item-nombre { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; min-width: 0; }
+.res-item-imp { font-size: 11px; font-weight: 500; color: #7a828a; white-space: nowrap; }
+.res-item-valor { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--g-tx); }
 .res-item-valor small { font-weight: 500; font-size: 11px; opacity: .7; margin-left: 1px; }
-.res-pista--grupo { height: 6px; margin: 6px 0 5px; background: var(--g-bg); }
+.res-pista--grupo { height: 5px; margin: 5px 0 0; background: var(--g-bg); }
 .res-pista--grupo span { background: var(--g-ac); }
 .res-item-meta { color: #7a828a; font-size: 11.5px; }
-.res-grupo-pie { margin-top: auto; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #f0e8da; min-height: 48px; }
+.res-grupo-pie { margin-top: auto; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid #f0e8da; min-height: 40px; }
 .res-grupo-cuenta { font-size: 11.5px; color: #7a828a; }
 .res-pg { display: flex; align-items: center; gap: 6px; }
 .res-pg button { min-width: 28px; height: 28px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #6b6a64; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; line-height: 1; }
