@@ -58,7 +58,10 @@ def admin_home_view(request):
             messages.success(request, mensaje)
             return redirect('presentation:admin-usuarios-roles')
 
+    activos = Usuario.objects.filter(activo=True).count()
     context = {
+        'usuarios_activos': activos,
+        'usuarios_inactivos': Usuario.objects.count() - activos,
         'dashboard': get_admin_dashboard_data(),
         'active_tab': 'usuarios-roles',
         'accion_usuario': accion,

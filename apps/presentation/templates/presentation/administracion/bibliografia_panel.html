@@ -16,26 +16,34 @@ y entrar a revisar resultados o recalcular el catálogo.
     <div class="workspace-body-container">
         {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
 
-        <main class="workspace-inner-content">
+        <main class="workspace-inner-content bib-figma bib-panel-figma">
             <div class="page-title-row">
                 <div>
                     <h1 class="page-main-heading">Actualización bibliográfica</h1>
                     <p class="page-main-subheading">
-                        Busca literatura científica 2020–2025 por factor,
-                        revisa los vínculos y publica una nueva versión del catálogo con TC, IL e IS recalculados.
+                        Revise publicaciones y prepare una actualización del catálogo sin alterar evaluaciones cerradas.
                     </p>
                 </div>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="accion" value="lanzar">
-                    <button type="submit" class="btn-top-action bib-boton"
-                            {% if estado.total and not estado.terminado %}disabled{% endif %}>
-                        Buscar literatura 2020–2025
-                    </button>
-                </form>
             </div>
 
             {% include "presentation/includes/bibliografia_mensajes.html" %}
+            <p class="bib-aviso bib-panel-aviso" role="note">Los resultados bibliográficos deben verificarse antes de aprobarse. Las sugerencias automáticas no son evidencia confirmada.</p>
+
+            <section class="dashboard-block bib-tarjeta bib-panel-parametros" aria-labelledby="bib-parametros-titulo">
+                <h2 class="admin-panel-title" id="bib-parametros-titulo">Parámetros de búsqueda</h2>
+                <p class="bib-nota">Consulta bibliográfica del periodo 2020–2025 · Lote por factores del catálogo activo</p>
+                <div class="bib-parametros-grid">
+                    <div><span class="filter-label">Año inicial</span><span class="bib-campo-lectura">2020</span></div>
+                    <div><span class="filter-label">Año final</span><span class="bib-campo-lectura">2025</span></div>
+                    <div><span class="filter-label">Fuente</span><span class="bib-campo-lectura">{% if busquedas %}{{ busquedas.0.fuente }}{% else %}Según configuración del servidor{% endif %}</span></div>
+                </div>
+                <label class="filter-label" for="bib-consulta-previa">Consulta</label>
+                <textarea id="bib-consulta-previa" class="bib-consulta-lectura" rows="2" readonly>{% if busquedas %}{{ busquedas.0.consulta }}{% else %}Se genera una consulta para cada factor al ejecutar la búsqueda.{% endif %}</textarea>
+                <div class="bib-panel-comandos">
+                    <p class="bib-nota">Fuente y consultas reales determinadas por el proceso de búsqueda. No se utilizan referencias ficticias del diseño.</p>
+                    <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="lanzar"><button type="submit" class="btn-top-action bib-boton" {% if estado.total and not estado.terminado %}disabled{% endif %}>Ejecutar búsqueda 2020–2025</button></form>
+                </div>
+            </section>
 
             <section class="dashboard-block kpi-cards-section">
                 <div class="kpi-grid">
@@ -90,7 +98,7 @@ y entrar a revisar resultados o recalcular el catálogo.
             <section class="dashboard-block">
                 <div class="admin-panel-card">
                     <div class="block-header">
-                        <h2 class="admin-panel-title">Búsquedas recientes</h2>
+                        <div><h2 class="admin-panel-title">Búsquedas recientes</h2><p class="bib-nota">Revise publicaciones recuperadas y sus vínculos sugeridos, sin aprobarlos automáticamente.</p></div>
                         <div class="bib-enlaces">
                             <a class="bib-enlace" href="{% url 'presentation:admin-bibliografia-busquedas' %}">Ver historial</a>
                             <a class="bib-enlace" href="{% url 'presentation:admin-indicadores-literatura' %}">Indicadores de literatura</a>
@@ -102,6 +110,21 @@ y entrar a revisar resultados o recalcular el catálogo.
                     {% include "presentation/includes/bibliografia_tabla_busquedas.html" %}
                 </div>
             </section>
+            <section class="dashboard-block bib-tarjeta bib-indicadores-figma">
+                <div class="bib-titulo-flex">
+                    <div><h2 class="admin-panel-title">Indicadores bibliográficos por factor</h2><p class="bib-nota">Valores de la versión activa. Una actualización requiere revisión y publicación del nuevo catálogo.</p></div>
+                    <a class="bib-enlace" href="{% url 'presentation:admin-indicadores-literatura' %}">Ver todos los indicadores</a>
+                </div>
+                <div class="admin-table-container"><table class="admin-table" aria-label="Indicadores bibliográficos por factor"><thead><tr><th>Factor</th><th>TC</th><th>NS</th><th>r = TC/NS</th><th>IL</th><th>IE</th><th>IS</th></tr></thead><tbody>
+                {% for fila in filas_indicadores %}<tr><td>{{ fila.factor }}</td><td>{{ fila.tc_activa }}</td><td>{{ fila.ns }}</td><td>{{ fila.ri_activa|floatformat:2 }}</td><td>{{ fila.il_activa }}</td><td>{{ fila.ie }}</td><td>{{ fila.is_activa }}</td></tr>
+                {% empty %}<tr><td colspan="7" class="table-empty-cell">Aún no hay indicadores bibliográficos disponibles para esta versión.</td></tr>{% endfor %}
+                </tbody></table></div>
+                <div class="bib-panel-comandos"><p class="bib-nota">Los valores TC, IL e IS se calculan con las reglas metodológicas del proyecto.</p><a class="btn-top-action" href="{% url 'presentation:admin-bibliografia-version' %}">Recalcular IL e IS</a></div>
+            </section>
+            <div class="bib-informacion-pie">
+                <section class="bib-tarjeta"><h2>Cómo leer los indicadores</h2><p>TC: total de citas. NS: número de estudios. El cociente r = TC/NS únicamente se calcula cuando NS es mayor que cero.</p></section>
+                <section class="bib-tarjeta"><h2>Valores metodológicos</h2><p>IE, IL e IS corresponden a parámetros del catálogo GUIOS. La versión actual permanece disponible hasta que se publique otra.</p></section>
+            </div>
         </main>
     </div>
 </div>

@@ -16,7 +16,7 @@
         {% include "presentation/includes/app_topbar.html" with current_area="administracion" %}
 
         <!-- Contenido de Administración · Usuarios y roles -->
-        <main class="workspace-inner-content">
+        <main class="workspace-inner-content usuarios-figma">
             <div class="page-title-row">
                 <div>
                     <h1 class="page-main-heading">Usuarios y roles</h1>
@@ -67,26 +67,29 @@
             {% endif %}
 
             <!-- Métricas / KPI Cards del diseño -->
-            <section class="dashboard-block kpi-cards-section">
+            <section class="dashboard-block kpi-cards-section usuarios-kpis" aria-label="Resumen de usuarios">
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <span class="kpi-label">Usuarios registrados</span>
                         <div class="kpi-value">{{ conteos.total }}</div>
+                        <p class="kpi-subtext">{{ usuarios_activos }} activo{{ usuarios_activos|pluralize }} · {{ usuarios_inactivos }} inactivo{{ usuarios_inactivos|pluralize }}</p>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-label">Decisores</span>
                         <div class="kpi-value">{{ conteos.decisores }}</div>
+                        <p class="kpi-subtext">Creación y confirmación de evaluaciones</p>
                     </div>
                     <div class="kpi-card">
                         <span class="kpi-label">Administradores</span>
                         <div class="kpi-value">{{ conteos.administradores }}</div>
+                        <p class="kpi-subtext">Usuarios, bibliografía y metodología</p>
                     </div>
                 </div>
             </section>
 
             <!-- Panel «Usuarios institucionales» -->
             <section class="dashboard-block admin-panel-section">
-                <div class="admin-panel-card">
+                <div class="admin-panel-card usuarios-institucionales">
                     <h2 class="admin-panel-title">Usuarios institucionales</h2>
 
                     <!-- Barra de filtros -->
@@ -112,7 +115,7 @@
                                 <option value="inactivo" {% if filtros.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
                             </select>
                         </div>
-                        <div class="filter-group">
+                        <div class="filter-group usuarios-filtro-acciones">
                             <button type="submit" class="btn-top-action">Filtrar</button>
                             <a class="usuarios-enlace" href="{% url 'presentation:admin-usuarios-roles' %}">Limpiar filtros</a>
                         </div>
@@ -136,12 +139,28 @@
                                 <tr>
                                     <td>{{ usuario.nombre }}</td>
                                     <td>{{ usuario.correo }}</td>
-                                    <td>{{ usuario.get_rol_display }}</td>
+                                    <td><span class="usuarios-rol {% if usuario.rol == 'DECISOR' %}usuarios-rol--decisor{% else %}usuarios-rol--admin{% endif %}">{{ usuario.get_rol_display }}</span></td>
                                     <td>{{ usuario.last_login|date:"d/m/Y H:i"|default:"Sin acceso" }}</td>
-                                    <td><span class="usuarios-estado {% if usuario.activo %}usuarios-activo{% else %}usuarios-inactivo{% endif %}">{% if usuario.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+                                    <td>
+                                        {% if usuario.pk != request.user.pk %}
+                                        <a class="usuarios-toggle-estado usuarios-toggle-estado--interactivo {% if usuario.activo %}usuarios-activo usuarios-toggle-estado--activo{% else %}usuarios-inactivo{% endif %}"
+                                           href="{% url 'presentation:admin-usuarios-roles' %}?accion=estado&amp;usuario={{ usuario.pk }}#formulario-usuario"
+                                           aria-label="{% if usuario.activo %}Desactivar{% else %}Activar{% endif %} a {{ usuario.nombre }} (requiere confirmación y motivo)"
+                                           title="{% if usuario.activo %}Desactivar{% else %}Activar{% endif %} usuario · Requiere confirmación y motivo">
+                                            <span class="usuarios-switch" aria-hidden="true"><span></span></span>
+                                            <span>{% if usuario.activo %}Activo{% else %}Inactivo{% endif %}</span>
+                                        </a>
+                                        {% else %}
+                                        <span class="usuarios-toggle-estado usuarios-toggle-estado--bloqueado {% if usuario.activo %}usuarios-activo usuarios-toggle-estado--activo{% else %}usuarios-inactivo{% endif %}"
+                                              title="No puedes cambiar el estado de tu propia cuenta"
+                                              aria-label="{% if usuario.activo %}Cuenta activa{% else %}Cuenta inactiva{% endif %}; no puedes cambiar el estado de tu propia cuenta">
+                                            <span class="usuarios-switch" aria-hidden="true"><span></span></span>
+                                            <span>{% if usuario.activo %}Activo{% else %}Inactivo{% endif %}</span>
+                                        </span>
+                                        {% endif %}
+                                    </td>
                                     <td class="usuarios-acciones">
-                                        <a class="usuarios-enlace usuarios-boton-secundario" href="{% url 'presentation:admin-usuarios-roles' %}?accion=editar&amp;usuario={{ usuario.pk }}#formulario-usuario">Editar</a>
-                                        {% if usuario.pk != request.user.pk %}<a class="usuarios-enlace usuarios-boton-secundario {% if usuario.activo %}usuarios-boton-baja{% endif %}" href="{% url 'presentation:admin-usuarios-roles' %}?accion=estado&amp;usuario={{ usuario.pk }}#formulario-usuario">{% if usuario.activo %}Desactivar{% else %}Activar{% endif %}</a>{% endif %}
+                                        <a class="usuarios-enlace usuarios-accion-editar" href="{% url 'presentation:admin-usuarios-roles' %}?accion=editar&amp;usuario={{ usuario.pk }}#formulario-usuario">Editar →</a>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -152,6 +171,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <p class="usuarios-pie">{{ conteos.total }} usuarios · La desactivación conserva el historial y requiere confirmación.</p>
                 </div>
             </section>
         </main>
