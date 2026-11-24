@@ -32,6 +32,7 @@ from apps.external_services.ollama_preguntas import AnalisisNoDisponible
     HU09_OLLAMA_MODEL='qwen2.5:1.5b',
     HU10_OLLAMA_MODEL='qwen2.5:1.5b',
     HU09_EMBEDDING_MODEL='',
+    GUIOS_AI_BACKEND='ollama',  # Los mocks de esta clase reemplazan a Ollama, no a Gemini.
 )
 class HU10ValoracionTests(TestCase):
     @classmethod
@@ -140,6 +141,7 @@ class HU10ValoracionTests(TestCase):
             }
             resp = self.client.post(url, {'evaluacion': self.ev.pk, 'valoracion': self.val.pk, 'accion': 'valorar_hu10'})
             self.assertEqual(resp.status_code, 302)
+            mock_ollama.assert_called_once_with('qwen2.5:1.5b')
 
         pagina = self.client.get(url, {'evaluacion': self.ev.pk})
         self.assertContains(pagina, 'Propuesta preliminar IA (HU10): 3/4')

@@ -19,6 +19,7 @@ from apps.application.services.suficiencia import SuficienciaService
 from apps.application.services.preparacion_hu10 import PreparacionHU10Service
 from apps.application.services.lotes_hu09 import LotesHU09Service, ACTIVOS
 from apps.external_services.ollama_suficiencia import OllamaSuficiencia
+from apps.external_services.proveedor_ia import obtener_proveedor, modelo_activo, configurado
 
 
 def _id(valor):
@@ -78,8 +79,8 @@ def preguntas_view(request):
         accion = request.POST.get('accion')
         try:
             if accion == 'lote':
-                if not settings.HU09_OLLAMA_MODEL:
-                    raise ValidationError('El análisis local con IA no está configurado.')
+                if not configurado():
+                    raise ValidationError('El servicio de IA no está configurado. Puede continuar manualmente.')
                 lote = LotesHU09Service.encolar(request.user, eid)
                 messages.success(request, f'Lote #{lote.pk} en cola o en curso. El trabajador HU09 procesará los subfactores disponibles.')
             elif accion in ('suficiencia', 'analizar') and (LotesHU09Service.estado(request.user, eid) or {}).get('estado') in ACTIVOS:
@@ -91,19 +92,19 @@ def preguntas_view(request):
                 vid = _id(request.POST.get('valoracion'))
                 if vid is None:
                     return HttpResponseBadRequest('Subfactor inválido.')
-                if not settings.HU09_OLLAMA_MODEL:
-                    raise ValidationError('El análisis local con IA no está configurado.')
-                proveedor = OllamaSuficiencia(settings.HU09_OLLAMA_MODEL)
+                if not configurado():
+                    raise ValidationError('El servicio de IA no está configurado. Puede continuar manualmente.')
+                proveedor = (obtener_proveedor('suficiencia') if settings.GUIOS_AI_BACKEND == 'api' else OllamaSuficiencia(settings.HU09_OLLAMA_MODEL))
                 vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-                registro, cantidad = SuficienciaService.analizar(request.user, eid, vid, proveedor, settings.HU09_OLLAMA_MODEL, vectorizador)
+                registro, cantidad = SuficienciaService.analizar(request.user, eid, vid, proveedor, modelo_activo(), vectorizador)
                 messages.success(request, f'Revisión de suficiencia: {cantidad} preguntas nuevas. Consulte el resultado orientativo del subfactor.')
             elif accion == 'analizar':
                 vid = _id(request.POST.get('valoracion'))
                 if vid is None:
                     return HttpResponseBadRequest('Subfactor inválido.')
-                if not settings.HU09_OLLAMA_MODEL:
-                    raise ValidationError('El análisis local con IA no está configurado.')
-                analizador = OllamaPreguntas(settings.HU09_OLLAMA_MODEL)
+                if not configurado():
+                    raise ValidationError('El servicio de IA no está configurado. Puede continuar manualmente.')
+                analizador = (obtener_proveedor('preguntas') if settings.GUIOS_AI_BACKEND == 'api' else OllamaPreguntas(settings.HU09_OLLAMA_MODEL))
                 vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
                 nuevas = AnalisisPreguntasService.analizar(request.user, eid, analizador, valoracion_id=vid, vectorizador=vectorizador)
                 messages.success(request, f'Análisis IA del subfactor: {len(nuevas)} preguntas nuevas. El resultado no certifica suficiencia.')
@@ -112,9 +113,9 @@ def preguntas_view(request):
                 if vid is None:
                     return HttpResponseBadRequest('Subfactor inválido.')
                 modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
-                if not modelo_hu10:
-                    raise ValidationError('Configure un modelo local HU10 admitido.')
-                proveedor_hu10 = OllamaValoracion(modelo_hu10)
+                if not (modelo_activo(hu10=True) if settings.GUIOS_AI_BACKEND == 'api' else modelo_hu10):
+                    raise ValidationError('Configure el servicio de IA para HU10 o continúe manualmente.')
+                proveedor_hu10 = (obtener_proveedor('valoracion') if settings.GUIOS_AI_BACKEND == 'api' else OllamaValoracion(modelo_hu10))
                 propuesta = AIService.generar_propuesta_preliminar(request.user, eid, vid, proveedor_hu10)
                 messages.success(
                     request,
@@ -122,9 +123,9 @@ def preguntas_view(request):
                 )
             elif accion == 'valorar_hu10_lote':
                 modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
-                if not modelo_hu10:
-                    raise ValidationError('Configure un modelo local HU10 admitido.')
-                proveedor_hu10 = OllamaValoracion(modelo_hu10)
+                if not (modelo_activo(hu10=True) if settings.GUIOS_AI_BACKEND == 'api' else modelo_hu10):
+                    raise ValidationError('Configure el servicio de IA para HU10 o continúe manualmente.')
+                proveedor_hu10 = (obtener_proveedor('valoracion') if settings.GUIOS_AI_BACKEND == 'api' else OllamaValoracion(modelo_hu10))
                 resumen_lote = AIService.generar_propuestas_pendientes(request.user, eid, proveedor_hu10)
                 if resumen_lote['generadas']:
                     messages.success(
@@ -203,8 +204,8 @@ def preguntas_view(request):
         'desconocidas': desconocidas, 'descartadas': sum(len(f['preguntas_descartadas']) for f in filas),
         'habilitados_hu10': habilitados_hu10,
         'propuestas_hu10_listas': propuestas_hu10_listas,
-        'modelo_ia': settings.HU09_OLLAMA_MODEL,
-        'modelo_hu10': modelo_hu10,
+        'modelo_ia': modelo_activo(),
+        'modelo_hu10': modelo_activo(hu10=True),
         'modelo_embeddings': settings.HU09_EMBEDDING_MODEL, 'error': error,
         'editable': evaluacion.estado == 'EN_PROCESO' and evaluacion.fecha_fin is None,
     }, status=400 if error else 200)

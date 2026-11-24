@@ -20,7 +20,7 @@
             </a>
         </li>
         <li class="stepper-step {% if current_step == 4 %}active{% elif current_step > 4 %}completed{% endif %}">
-            <a href="{% url 'presentation:decisor-revision-valoraciones' %}{% if eval_id %}?evaluacion={{ eval_id }}{% endif %}" class="stepper-link">
+            <a href="{% url 'presentation:decisor-revision-valoraciones' %}{% if eval_id %}?evaluacion={{ eval_id }}&amp;etapa=validacion{% else %}?etapa=validacion{% endif %}" class="stepper-link">
                 <span class="step-indicator">{% if current_step > 4 %}&#10003;{% else %}4{% endif %}</span>
                 <span class="step-label">Revisión de evidencia</span>
             </a>

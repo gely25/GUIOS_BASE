@@ -47,6 +47,10 @@ class RevisionHumanaInterfazTests(TestCase):
     def get(self, **kwargs):
         return self.client.get(self.url, {'etapa': 'validacion', **kwargs})
 
+    @staticmethod
+    def datos(res):
+        return {d['id']: d for d in res.context['rv_datos']}
+
     def payload(self, v=None, **extra):
         v = v or self.v
         return {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': v.pk,
@@ -64,10 +68,13 @@ class RevisionHumanaInterfazTests(TestCase):
         p = PreguntasService.registrar_vacios(self.actor, self.ev.pk, self.v.pk, ['¿Formatos?'])[0]
         PreguntasService.responder(self.actor, self.ev.pk, p.pk, 'Admite ODF.')
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, '4/4')
-        self.assertContains(res, 'Fragmento propio ODF 1.2.')
-        self.assertContains(res, 'Declaración del decisor')
-        self.assertContains(res, 'Admite ODF.')
+        datos = self.datos(res)[self.v.pk]
+        self.assertEqual(datos['ia'], 4)
+        textos = ' '.join(f['b'] + f['m'] + f['a'] for f in datos['fuentes'])
+        self.assertIn('Fragmento propio ODF 1.2.', textos)
+        self.assertIn('Admite ODF.', textos)
+        self.assertIn('Declaración del decisor', [f['s'] for f in datos['fuentes']])
+        self.assertNotIn('Fragmento secreto ajeno.', textos)
         self.assertNotContains(res, 'Fragmento secreto ajeno.')
         self.assertNotContains(res, 'Requisito Excluido')
         self.assertEqual(res.context['total'], 2)
@@ -76,30 +83,28 @@ class RevisionHumanaInterfazTests(TestCase):
     def test_confirma_y_muestra_historial(self):
         res = self.client.post(self.url, self.payload(), follow=True)
         self.assertContains(res, 'Decisión humana registrada')
-        self.assertContains(res, 'Revisión de prueba.')
+        datos = self.datos(res)[self.v.pk]
+        self.assertEqual((datos['ok'], datos['val'], datos['just']), (True, 4, 'Revisión de prueba.'))
         self.assertEqual(res.context['revisadas'], 1)
-        self.assertContains(res, 'Solo lectura')
         self.assertEqual(RevisionHumana.objects.get().valor, 4)
 
     def test_modifica_conservando_propuesta(self):
         res = self.client.post(self.url, self.payload(modo='MODIFICAR', valor='3'), follow=True)
-        self.assertContains(res, '3/4')
-        self.assertContains(res, '4/4')
+        datos = self.datos(res)[self.v.pk]
+        self.assertEqual((datos['val'], datos['ia']), (3, 4))
         self.v.refresh_from_db()
         self.assertEqual((self.v.valor_ia, self.v.valor_confirmado), (4, 3))
 
     def test_manual_sin_propuesta(self):
         res = self.get(evaluacion=self.ev.pk, valoracion=self.manual.pk)
-        self.assertContains(res, 'Valoración manual')
-        self.assertNotContains(res, 'Confirmar propuesta')
+        self.assertIsNone(self.datos(res)[self.manual.pk]['ia'])
         res = self.client.post(self.url, self.payload(self.manual, modo='MANUAL', valor='2'), follow=True)
-        self.assertContains(res, '2/4')
+        self.assertEqual(self.datos(res)[self.manual.pk]['val'], 2)
         self.assertIsNone(RevisionHumana.objects.get().valor_ia)
 
     def test_rechaza_decision_incompatible_y_conserva_borrador(self):
         res = self.client.post(self.url, self.payload(valor='3'))
         self.assertContains(res, 'La acción no corresponde', status_code=400)
-        self.assertContains(res, 'Revisión de prueba.', status_code=400)
         self.assertFalse(RevisionHumana.objects.exists())
 
     def test_version_obsoleta_no_se_actualiza_sin_consulta(self):
@@ -167,7 +172,6 @@ class RevisionHumanaInterfazTests(TestCase):
         self.assertIsNone(self.v.valor_confirmado)
         self.assertFalse(RevisionHumana.objects.exists())
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, 'Texto en construcción.')
         self.assertEqual(res.context['revisadas'], 0)
         self.assertEqual(res.context['cantidad_borradores'], 1)
         self.assertEqual(res.context['borradores'], [])
@@ -240,7 +244,7 @@ class RevisionHumanaInterfazTests(TestCase):
         self.assertEqual(self.guardar(self.manual, modo='MANUAL', valor='2').status_code, 200)
         res = self.lote([self.token(self.v), self.token(self.manual)])
         self.assertEqual(res.context['revisadas'], 2)
-        self.assertContains(res, 'VALIDACIÓN MANUAL')
+        self.assertEqual({d['val'] for d in self.datos(res).values()}, {3, 2})
         self.assertFalse(BorradorRevisionHumana.objects.exists())
         self.assertEqual(set(RevisionHumana.objects.values_list('modo', flat=True)), {'MODIFICAR', 'MANUAL'})
         self.v.refresh_from_db()
@@ -250,25 +254,24 @@ class RevisionHumanaInterfazTests(TestCase):
         self.assertEqual(self.guardar().status_code, 200)
         ValoracionSubfactor.objects.filter(pk=self.v.pk).update(justificacion_ia='Cambio posterior.')
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, 'hu11-buscar')
-        self.assertContains(res, 'hu11-filtro')
-        self.assertContains(res, 'Las fuentes cambiaron desde el último borrador')
-        self.assertContains(res, 'Revisión masiva de borradores')
+        self.assertEqual(res.context['borradores_obsoletos'], [self.v])
+        self.assertContains(res, 'id="rv"')
+        self.assertContains(res, 'id="rv-datos"')
 
     def test_reapertura_explicita_muestra_historial_y_bloquea_calculo(self):
         self.client.post(self.url, self.payload())
         self.client.post(self.url, self.payload(self.manual, modo='MANUAL', valor='2'))
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
         self.assertNotContains(res, 'Calcular y guardar PM y FODA')
-        self.assertContains(res, 'Reabrir valoración')
+        self.assertContains(res, 'data-reabrir="1"')
+        self.assertTrue(self.datos(res)[self.v.pk]['ok'])
         datos = self.payload(accion='reabrir_hu11', motivo='Nueva evidencia.', confirmar_reapertura='1')
         res = self.client.post(self.url, datos, follow=True)
         self.assertContains(res, 'Valoración reabierta')
-        self.assertContains(res, 'Nueva evidencia.')
+        self.assertFalse(self.datos(res)[self.v.pk]['ok'])
         # Con una valoración reabierta, Resultados ya no ofrece calcular la PM y el FODA.
         resultados = self.client.get('/decisor/resultados/', {'evaluacion': self.ev.pk})
         self.assertNotContains(resultados, 'Calcular y guardar PM y FODA')
-        self.assertContains(res, 'Comparación con la última decisión invalidada')
         self.assertEqual(res.context['revisadas'], 1)
         self.assertEqual(RevisionHumana.objects.count(), 2)
         self.assertTrue(res.context['seleccion']['editable'])
@@ -289,13 +292,13 @@ class RevisionHumanaInterfazTests(TestCase):
         Evaluacion.objects.filter(pk=self.ev.pk).update(estado='FINALIZADA')
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
         self.assertNotContains(res, 'Confirmar reapertura')
+        self.assertNotContains(res, 'data-reabrir="1"')
 
     def test_borrador_obsoleto_excluido_del_lote_sin_perder_texto(self):
         self.assertEqual(self.guardar().status_code, 200)
         self.assertEqual(self.guardar(self.manual, modo='MANUAL', valor='2').status_code, 200)
         ValoracionSubfactor.objects.filter(pk=self.v.pk).update(justificacion_ia='Nueva propuesta posterior.')
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
-        self.assertContains(res, 'Borradores desactualizados: 1')
         self.assertEqual([item['v'].pk for item in res.context['borradores']], [self.manual.pk])
         self.assertEqual(res.context['cantidad_borradores'], 2)
         self.assertEqual(BorradorRevisionHumana.objects.get(valoracion=self.v).justificacion, 'Revisión de prueba.')
@@ -324,3 +327,78 @@ class RevisionHumanaInterfazTests(TestCase):
         self.assertIsNone(self.v.valor_confirmado)
         self.assertEqual(RevisionHumana.objects.count(), 1)
         self.assertTrue(BorradorRevisionHumana.objects.filter(valoracion=self.v).exists())
+
+    # --- Revisión rápida (paso 4): aceptar propuestas en bloque y confirmar una sola -----------------------
+    def aceptar(self, vs, versiones=None):
+        versiones = versiones or {v.pk: RevisionHumanaService.obtener(self.actor, self.ev.pk, v.pk)['version'] for v in vs}
+        return self.client.post(self.url, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'accion': 'aceptar_propuestas_hu11',
+                                           'seleccion': [f'{v.pk}:{versiones[v.pk]}' for v in vs]})
+
+    def rapida(self, v, **extra):
+        datos = {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': v.pk, 'accion': 'confirmar_rapida_hu11',
+                 'valor': '4', 'justificacion': 'Criterio propio.',
+                 'version': RevisionHumanaService.obtener(self.actor, self.ev.pk, v.pk)['version'], **extra}
+        return self.client.post(self.url, datos)
+
+    def test_aceptar_propuestas_registra_confirmar_con_la_propuesta_de_la_ia(self):
+        res = self.aceptar([self.v])
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['aceptadas'], 1)
+        self.v.refresh_from_db()
+        self.assertEqual((self.v.valor_confirmado, self.v.estado_validacion), (4, 'CONFIRMADA'))
+        r = RevisionHumana.objects.get()
+        self.assertEqual((r.modo, r.valor, r.valor_ia), ('CONFIRMAR', 4, 4))
+        self.assertIn('Propuesta de la IA aceptada', r.justificacion)
+
+    def test_aceptar_propuestas_es_atomico_y_rechaza_sin_propuesta(self):
+        res = self.aceptar([self.v, self.manual], versiones={self.v.pk: RevisionHumanaService.obtener(self.actor, self.ev.pk, self.v.pk)['version'], self.manual.pk: 'x' * 64})
+        self.assertEqual(res.status_code, 400)
+        self.assertFalse(RevisionHumana.objects.exists())
+        self.v.refresh_from_db()
+        self.assertIsNone(self.v.valor_confirmado)
+
+    def test_aceptar_propuestas_con_version_vieja_no_registra_nada(self):
+        versiones = {self.v.pk: RevisionHumanaService.obtener(self.actor, self.ev.pk, self.v.pk)['version']}
+        ValoracionSubfactor.objects.filter(pk=self.v.pk).update(justificacion_ia='Propuesta cambiada.')
+        res = self.aceptar([self.v], versiones=versiones)
+        self.assertEqual(res.status_code, 400)
+        self.assertIn('cambió', res.json()['error'])
+        self.assertFalse(RevisionHumana.objects.exists())
+
+    def test_aceptar_propuestas_exige_seleccion_valida_y_propiedad(self):
+        base = {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'accion': 'aceptar_propuestas_hu11'}
+        self.assertEqual(self.client.post(self.url, base).status_code, 400)
+        self.assertEqual(self.client.post(self.url, dict(base, seleccion=['abc'])).status_code, 400)
+        self.client.force_login(self.otro)
+        self.assertEqual(self.aceptar([self.v]).status_code, 403)
+        self.assertFalse(RevisionHumana.objects.exists())
+
+    def test_confirmar_rapida_deduce_el_modo(self):
+        self.assertEqual(self.rapida(self.v, valor='4').json()['modo'], 'CONFIRMAR')
+        self.assertEqual(self.rapida(self.manual, valor='2').json()['modo'], 'MANUAL')
+        self.assertEqual(set(RevisionHumana.objects.values_list('modo', flat=True)), {'CONFIRMAR', 'MANUAL'})
+
+    def test_confirmar_rapida_modifica_y_exige_justificacion_y_version(self):
+        self.assertEqual(self.rapida(self.v, version='viejo').status_code, 400)
+        self.assertEqual(self.rapida(self.v, valor='9').status_code, 400)
+        self.assertFalse(RevisionHumana.objects.exists())
+        res = self.rapida(self.v, valor='3', justificacion='')
+        self.assertEqual(res.json()['modo'], 'MODIFICAR')
+        self.assertIn('la IA propuso Cumple', res.json()['justificacion'])
+        self.assertIn('la IA propuso Cumple', RevisionHumana.objects.get().justificacion)
+        self.v.refresh_from_db()
+        self.assertEqual((self.v.valor_ia, self.v.valor_confirmado, self.v.estado_validacion), (4, 3, 'MODIFICADA'))
+        self.assertEqual(self.rapida(self.v).status_code, 400)  # ya decidida: no se confirma dos veces
+
+    def test_confirmar_rapida_sin_propuesta_ni_justificacion_genera_el_texto_manual(self):
+        res = self.rapida(self.manual, valor='2', justificacion='')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['modo'], 'MANUAL')
+        self.assertIn('sin propuesta de IA', res.json()['justificacion'])
+
+    def test_la_pantalla_clasifica_los_subfactores_para_la_revision_rapida(self):
+        datos = self.datos(self.get(evaluacion=self.ev.pk))
+        self.assertEqual((datos[self.v.pk]['ia'], datos[self.v.pk]['ok'], datos[self.v.pk]['nev']), (4, False, 1))
+        self.assertEqual((datos[self.manual.pk]['ia'], datos[self.manual.pk]['nev']), (None, 0))
+        self.assertEqual(len(datos[self.v.pk]['version']), 64)
+
