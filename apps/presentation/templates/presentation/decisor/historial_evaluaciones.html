@@ -3,8 +3,7 @@
 
 {% block title %}Historial de evaluaciones | GUIOS PRO{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}">
-<link rel="stylesheet" href="{% static 'presentation/css/historial.css' %}">
+<link rel="stylesheet" href="{% static 'presentation/css/historial.css' %}?v=3">
 {% endblock %}
 
 {% block content %}
@@ -14,85 +13,138 @@
     <div class="workspace-body-container">
         {% include "presentation/includes/app_topbar.html" with current_area="decisor" %}
 
-        <main class="workspace-inner-content informe-pagina">
-            <div class="page-title-row">
+        <main class="workspace-inner-content historial-pagina">
+            <header class="page-title-row historial-encabezado">
                 <div>
                     <h1 class="page-main-heading">Historial de evaluaciones</h1>
-                    <p class="page-main-subheading">Consulte las evaluaciones registradas a su nombre y vuelva a sus resultados o informes disponibles.</p>
+                    <p class="page-main-subheading">Consulte expedientes, resultados y la evidencia que sustenta cada decisión.</p>
                 </div>
                 <a class="btn-top-action" href="{{ url_nueva }}">+ Nueva evaluación</a>
-            </div>
+            </header>
 
             {% if not evaluaciones %}
-            <section class="dashboard-block">
-                <div class="admin-panel-card informe-vacio" role="region" aria-label="Historial vacío">
-                    <h2>Aún no hay evaluaciones registradas</h2>
-                    <p>Las evaluaciones que cree aparecerán aquí sin modificar ni eliminar el historial anterior.</p>
-                    <a class="btn-top-action" href="{{ url_nueva }}">Iniciar ficha de evaluación</a>
-                </div>
+            <section class="historial-panel historial-vacio" role="region" aria-label="Historial vacío">
+                <h2>Aún no hay evaluaciones registradas</h2>
+                <p>Las evaluaciones que cree aparecerán aquí sin modificar ni eliminar el historial anterior.</p>
+                <a class="btn-top-action" href="{{ url_nueva }}">Iniciar ficha de evaluación</a>
             </section>
             {% else %}
-            <section class="dashboard-block">
-                <div class="admin-panel-card">
-                    <div class="admin-table-container">
-                        <table class="res-tabla" aria-label="Historial de evaluaciones">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Código</th>
-                                    <th scope="col">Software</th>
-                                    <th scope="col">Organización</th>
-                                    <th scope="col">Fechas</th>
-                                    <th scope="col">Estado</th>
-                                    <th scope="col">PM / FODA</th>
-                                    <th scope="col">Recomendación</th>
-                                    <th scope="col">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for evaluacion in evaluaciones %}
-                                <tr>
-                                    <td><strong>{{ evaluacion.codigo }}</strong></td>
-                                    <td>
-                                        {{ evaluacion.software_completo }}
-                                        {% if evaluacion.proveedor %}<small class="historial-proveedor">{{ evaluacion.proveedor }}</small>{% endif %}
-                                    </td>
-                                    <td>{{ evaluacion.organizacion }}</td>
-                                    <td>
-                                        <span>Inicio: {{ evaluacion.fecha_inicio|date:"d/m/Y H:i" }}</span>
-                                        {% if evaluacion.fecha_fin %}<br><span>Fin: {{ evaluacion.fecha_fin|date:"d/m/Y H:i" }}</span>{% endif %}
-                                    </td>
-                                    <td>{{ evaluacion.estado }}</td>
-                                    <td>
-                                        {% if evaluacion.tiene_pm_foda %}
-                                        <span class="res-etiqueta">Calculada</span>
-                                        {% else %}
-                                        <span class="res-etiqueta res-etiqueta--pendiente">Pendiente</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if evaluacion.tiene_recomendacion %}
-                                        {{ evaluacion.recomendacion|truncatechars:90 }}
-                                        {% else %}
-                                        <span class="historial-pendiente">Pendiente</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="historial-acciones">
-                                        <a class="res-boton res-boton--claro" href="{% url 'presentation:decisor-resultados' %}?evaluacion={{ evaluacion.evaluacion_id }}">Ver resultados</a>
-                                        {% if evaluacion.tiene_recomendacion %}
-                                        <a class="res-boton res-boton--principal" href="{% url 'presentation:decisor-informe' %}?evaluacion={{ evaluacion.evaluacion_id }}">Abrir informe</a>
-                                        {% else %}
-                                        <span class="historial-sin-informe" aria-disabled="true">Informe no disponible</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+
+            <svg class="historial-sprite" aria-hidden="true" focusable="false">
+                <symbol id="hi-grafico" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+                <symbol id="hi-documento" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+            </svg>
+
+            <section class="historial-metricas" aria-label="Resumen del historial">
+                <article class="historial-metrica">
+                    <h2>Evaluaciones registradas</h2>
+                    <strong>{{ total }}</strong>
+                    <p>A su nombre</p>
+                </article>
+                <article class="historial-metrica">
+                    <h2>Informes disponibles</h2>
+                    <strong>{{ con_informe }}</strong>
+                    <p>Con recomendación calculada</p>
+                </article>
+                <article class="historial-metrica">
+                    <h2>En curso</h2>
+                    <strong>{{ en_curso }}</strong>
+                    <p>Revisión o carga documental</p>
+                </article>
+            </section>
+
+            <section class="historial-panel" id="historial-expedientes" data-por-pagina="6">
+                <h2>Expedientes</h2>
+
+                <div class="historial-filtros">
+                    <label class="historial-campo historial-campo--buscar">
+                        <span>Buscar evaluación</span>
+                        <input type="search" id="historial-buscar" placeholder="Buscar por software, expediente u organización" autocomplete="off">
+                    </label>
+                    <label class="historial-campo">
+                        <span>Estado</span>
+                        <select id="historial-estado">
+                            <option value="">Todos los estados</option>
+                            <option value="en curso">En curso</option>
+                            <option value="cerrada">Cerrada</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="historial-tabla-contenedor">
+                    <table class="historial-tabla" aria-label="Historial de evaluaciones">
+                        <thead>
+                            <tr>
+                                <th scope="col">Software / Expediente</th>
+                                <th scope="col">Organización</th>
+                                <th scope="col">Fecha</th>
+                                <th scope="col">Estado</th>
+                                <th scope="col">PM / FODA</th>
+                                <th scope="col">Recomendación</th>
+                                <th scope="col">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for evaluacion in evaluaciones %}
+                            <tr data-fila
+                                data-estado="{{ evaluacion.estado|lower }}"
+                                data-buscar="{{ evaluacion.codigo }} {{ evaluacion.software_completo }} {{ evaluacion.proveedor|default:'' }} {{ evaluacion.organizacion }}">
+                                <td>
+                                    <span class="historial-software">{{ evaluacion.software_completo }}</span>
+                                    <span class="historial-meta">{{ evaluacion.codigo }}{% if evaluacion.proveedor %} · {{ evaluacion.proveedor }}{% endif %}</span>
+                                </td>
+                                <td>{{ evaluacion.organizacion }}</td>
+                                <td class="historial-fecha">
+                                    <span>{{ evaluacion.fecha_inicio|date:"d b Y" }}</span>
+                                    <span class="historial-meta">{{ evaluacion.fecha_inicio|date:"H:i" }}{% if evaluacion.fecha_fin %} · cierre {{ evaluacion.fecha_fin|date:"d/m/Y" }}{% endif %}</span>
+                                </td>
+                                <td>
+                                    <span class="historial-estado {% if evaluacion.estado == 'Cerrada' %}historial-estado--cerrada{% else %}historial-estado--curso{% endif %}">{{ evaluacion.estado }}</span>
+                                </td>
+                                <td>
+                                    {% if evaluacion.tiene_pm_foda %}
+                                    <span class="historial-estado historial-estado--ok">Calculada</span>
+                                    {% else %}
+                                    <span class="historial-estado historial-estado--pendiente">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="historial-recomendacion">
+                                    {% if evaluacion.tiene_recomendacion %}
+                                    <span title="{{ evaluacion.recomendacion }}">{{ evaluacion.recomendacion|truncatechars:70 }}</span>
+                                    {% else %}
+                                    <span class="historial-pendiente">Pendiente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="historial-acciones">
+                                    <a class="historial-accion" href="{% url 'presentation:decisor-resultados' %}?evaluacion={{ evaluacion.evaluacion_id }}"><svg aria-hidden="true"><use href="#hi-grafico"></use></svg>Resultados</a>
+                                    {% if evaluacion.tiene_recomendacion %}
+                                    <a class="historial-accion historial-accion--informe" href="{% url 'presentation:decisor-informe' %}?evaluacion={{ evaluacion.evaluacion_id }}"><svg aria-hidden="true"><use href="#hi-documento"></use></svg>Informe</a>
+                                    {% else %}
+                                    <span class="historial-accion historial-accion--off" aria-disabled="true" title="El informe estará disponible cuando exista una recomendación"><svg aria-hidden="true"><use href="#hi-documento"></use></svg>Informe</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p class="historial-sin-coincidencias" id="historial-sin-coincidencias" hidden>Ninguna evaluación coincide con la búsqueda.</p>
+                </div>
+
+                <div class="historial-pie">
+                    <span id="historial-contador">Mostrando {{ total }} evaluaciones</span>
+                    <nav class="historial-paginador" id="historial-paginador" aria-label="Paginación del historial" hidden>
+                        <button type="button" data-pag="anterior">Anterior</button>
+                        <span id="historial-pagina">Página 1 de 1</span>
+                        <button type="button" data-pag="siguiente">Siguiente</button>
+                    </nav>
                 </div>
             </section>
             {% endif %}
         </main>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'presentation/js/historial.js' %}?v=1"></script>
 {% endblock %}
