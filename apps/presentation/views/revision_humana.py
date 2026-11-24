@@ -124,6 +124,28 @@ def _guardar_respuestas(actor, eid, crudo):
     return guardadas, errores
 
 
+def _fuentes_rv(contexto, subfactor, con_documentos, referencias=None, razon=''):
+    """Fuentes para el modal. Los pasajes solo se muestran cuando la IA ya propuso un valor; antes son candidatos sin evaluar."""
+    fuentes = []
+    if con_documentos:
+        citadas = [e for e in contexto.get('evidencias', []) if f"E:{e['evidencia_id']}" in (referencias or [])]
+        for e in (citadas or contexto.get('evidencias', [])):
+            consulta = subfactor + ' ' + re.sub(r'E:\d+', ' ', razon or '')
+            p = _pasaje(e['contenido'], consulta, None, None)
+            fuentes.append({'b': p['pre'], 'm': p['hit'] or p['todo'], 'a': p['post'],
+                            's': e['documento'] + (f" · pág. {e['pagina']}" if e.get('pagina') else '')})
+    for q in contexto.get('preguntas', []):
+        if q['estado_respuesta'] == 'APORTADA':
+            fuentes.append({'b': '', 'm': q['respuesta'], 'a': '', 's': 'Declaración del decisor'})
+    return fuentes
+
+
+def _version_borrador_actual(v):
+    """La decisión rápida no usa borradores; si quedó uno antiguo, su versión se informa para no chocar con él."""
+    b = BorradorRevisionHumana.objects.filter(valoracion=v).first()
+    return str(b.version if b else 0)
+
+
 def _analizar_ia(actor, eid, vid):
     """Encadena los servicios existentes: suficiencia (HU09) y propuesta preliminar (HU10) de un subfactor."""
     if not configurado():
@@ -140,7 +162,7 @@ def _analizar_ia(actor, eid, vid):
     try:
         if f['estado'] == 'ANALISIS_PENDIENTE':
             vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-            _, nuevas = SuficienciaService.analizar(actor, eid, vid, obtener_proveedor('suficiencia'), modelo, vectorizador)
+            _, nuevas = SuficienciaService.analizar(actor, eid, vid, obtener_proveedor('suficiencia'), modelo, vectorizador, generar_preguntas=False)
             f = fila()
         valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
         if f and f['estado'] == 'PROPUESTA_HABILITADA' and valor is None:
@@ -149,7 +171,11 @@ def _analizar_ia(actor, eid, vid):
             f = fila()
     except AnalisisNoDisponible as exc:
         raise ValidationError(str(exc))
-    return {'estado': f['estado'] if f else '', 'valor_ia': valor, 'preguntas': nuevas}
+    actual = RevisionHumanaService.obtener(actor, eid, vid)
+    propuesta = valor in (1, 2, 3, 4) and bool((actual['justificacion_ia'] or '').strip())
+    return {'estado': f['estado'] if f else '', 'valor_ia': valor, 'preguntas': nuevas,
+            'jia': actual['justificacion_ia'] or '', 'version': actual['version'],
+            'fuentes': _fuentes_rv(actual, actual['subfactor'], propuesta, (f.get('suficiencia') or {}).get('referencias') if f else None, actual['justificacion_ia'])}
 
 
 @never_cache
@@ -187,6 +213,36 @@ def revision_humana_view(request):
         except ValidationError as exc:
             messages.error(request, ' '.join(exc.messages))
         return redirect(base + '?' + urlencode({'etapa': 'validacion', 'evaluacion': eid}))
+    if request.method == 'POST' and accion == 'aceptar_propuestas_hu11':
+        try:
+            items = params.getlist('seleccion')
+            if not items or len(items) > 61:
+                raise ValidationError('Seleccione entre 1 y 61 subfactores.')
+            pares = []
+            for item in items:
+                partes = item.split(':')
+                if len(partes) != 2 or _id(partes[0]) is None or len(partes[1]) != 64:
+                    raise ValidationError('Selección inválida.')
+                pares.append((_id(partes[0]), partes[1]))
+            if len({p[0] for p in pares}) != len(pares):
+                raise ValidationError('Selección repetida.')
+            propias = {v.pk: v for v in PreguntasService._valoraciones(ev).filter(pk__in=[p[0] for p in pares])}
+            versiones = {}
+            with transaction.atomic():
+                for vid_, version in pares:
+                    v = propias.get(vid_)
+                    if v is None:
+                        raise PermissionDenied('Subfactor no disponible.')
+                    if v.valor_ia not in (1, 2, 3, 4) or not (v.justificacion_ia or '').strip():
+                        raise ValidationError('Un subfactor seleccionado no tiene propuesta de IA válida. No se registró ninguna decisión.')
+                    texto = ('Propuesta de la IA aceptada tras revisar la evidencia. ' + v.justificacion_ia.strip())[:4000]
+                    RevisionHumanaService.resolver(request.user, eid, vid_, 'CONFIRMAR', v.valor_ia, texto, version, _version_borrador_actual(v))
+                    versiones[vid_] = RevisionHumanaService.obtener(request.user, eid, vid_)['version']
+        except (ValidationError, PermissionDenied) as exc:
+            return JsonResponse({'error': ' '.join(exc.messages) if isinstance(exc, ValidationError) else (str(exc) or 'Subfactor no disponible.') + ' Recargue la página.'}, status=400)
+        respuesta = JsonResponse({'aceptadas': len(versiones), 'versiones': versiones})
+        respuesta['Cache-Control'] = 'no-store'
+        return respuesta
     if request.method == 'POST' and accion == 'preparar_faltantes_hu11':
         try:
             atendidos = _preparar_faltantes(request.user, eid)
@@ -226,6 +282,32 @@ def revision_humana_view(request):
         except ValidationError as exc:
             return JsonResponse({'error': ' '.join(exc.messages)}, status=400)
         respuesta = JsonResponse(r)
+        respuesta['Cache-Control'] = 'no-store'
+        return respuesta
+    if request.method == 'POST' and accion == 'confirmar_rapida_hu11':
+        v = next(v for v in valoraciones if v.pk == vid)
+        raw_valor = params.get('valor', '')
+        if raw_valor not in ('1', '2', '3', '4'):
+            return JsonResponse({'error': 'Seleccione una valoración entre 1 y 4.'}, status=400)
+        valor = int(raw_valor)
+        propuesta = v.valor_ia in (1, 2, 3, 4) and bool((v.justificacion_ia or '').strip())
+        modo = 'MANUAL' if not propuesta else ('CONFIRMAR' if valor == v.valor_ia else 'MODIFICAR')
+        etiquetas = dict(ESCALA)
+        texto = (params.get('justificacion') or '').strip()
+        if not texto:
+            if modo == 'MANUAL':
+                texto = f'Valoración manual del decisor: {etiquetas[valor]} (sin propuesta de IA).'
+            elif modo == 'CONFIRMAR':
+                texto = f'Propuesta de la IA confirmada por el decisor: {etiquetas[valor]}.'
+            else:
+                texto = f'Valoración modificada por el decisor: {etiquetas[valor]} (la IA propuso {etiquetas[v.valor_ia]}).'
+        try:
+            RevisionHumanaService.resolver(request.user, eid, vid, modo, valor, texto,
+                                           params.get('version'), _version_borrador_actual(v))
+            version = RevisionHumanaService.obtener(request.user, eid, vid)['version']
+        except (ValidationError, PermissionDenied) as exc:
+            return JsonResponse({'error': ' '.join(exc.messages) if isinstance(exc, ValidationError) else (str(exc) or 'Subfactor no disponible.') + ' Recargue la página.'}, status=400)
+        respuesta = JsonResponse({'version': version, 'modo': modo, 'justificacion': texto})
         respuesta['Cache-Control'] = 'no-store'
         return respuesta
     if request.method == 'POST' and accion == 'guardar_borrador_hu11':
@@ -347,13 +429,29 @@ def revision_humana_view(request):
                    not v.n_evidencia and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None for v in valoraciones))
     # Solo presentación: subfactores que la pantalla «Análisis de IA» puede procesar (con evidencia primero).
     abierto = ev.estado == 'EN_PROCESO' and ev.fecha_fin is None
-    solo = _id(params.get('solo')) if params.get('solo') else None
+    filas_ia = {f['valoracion_id']: f for f in PreparacionHU10Service.obtener(request.user, eid)['subfactores']}
+    estados_ia = {k: f['estado'] for k, f in filas_ia.items()}
     objetivos = [v for v in valoraciones if abierto and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None and v.valor_ia is None
-                 and ((v.pk == solo) if solo else v.n_evidencia)]
+                 and v.n_evidencia and estados_ia.get(v.pk) in ('ANALISIS_PENDIENTE', 'PROPUESTA_HABILITADA')]
     ctx.update(ia_disponible=configurado(), ia_pendientes=len(objetivos), ia_remota=settings.GUIOS_AI_BACKEND == 'api',
-               ia_objetivos=[{'vid': v.pk, 'nombre': v.subfactor.descripcion[:140]} for v in objetivos],
-               analizando=params.get('analizar') == '1' and request.method == 'GET',
-               destino_revision=_destino(base, eid))
+               ia_objetivos=[{'vid': v.pk, 'nombre': v.subfactor.descripcion[:140]} for v in objetivos])
+    # Solo presentación: datos de la revisión rápida (un registro por subfactor; la evidencia se abre en un modal).
+    rv_datos = []
+    for v in valoraciones:
+        c = contextos.get(v.pk) or {}
+        propuesta = v.valor_ia in (1, 2, 3, 4) and bool((v.justificacion_ia or '').strip())
+        hecho = v.estado_validacion in ESTADOS_VALIDOS and v.valor_confirmado in (1, 2, 3, 4)
+        fuentes = _fuentes_rv(c, v.subfactor.descripcion, propuesta, ((filas_ia.get(v.pk) or {}).get('suficiencia') or {}).get('referencias'), v.justificacion_ia)
+        rv_datos.append({
+            'id': v.pk, 'dim': v.evaluacion_factor.factor.dimension.nombre, 'fac': v.evaluacion_factor.factor.nombre,
+            'text': v.subfactor.descripcion, 'ia': v.valor_ia if propuesta else None, 'jia': v.justificacion_ia or '',
+            'est': estados_ia.get(v.pk, ''),
+            'val': v.valor_confirmado if hecho else None, 'ok': hecho, 'nev': v.n_evidencia, 'fuentes': fuentes,
+            'version': _version(v, c, v.ultima_reapertura_id) if c else '',
+            'just': (v.justificacion_decisor or '') if hecho else '',
+            'fecha': v.fecha_validacion.strftime('%d/%m/%Y %H:%M') if hecho and v.fecha_validacion else '',
+        })
+    ctx.update(rv_datos=rv_datos, rv_editable=abierto and not _lote_activo(ev))
     # Solo presentación: árbol dimensión -> factor para la lista lateral y subfactores del factor activo.
     arbol, por_factor = [], {}
     for v in valoraciones:

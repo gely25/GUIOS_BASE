@@ -44,18 +44,19 @@ class RevisionFaltantesTests(TestCase):
 
     def test_la_tira_y_los_chips_muestran_la_cobertura(self):
         r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': self.v1.pk})
-        self.assertContains(r, 'id="hu11-evstrip"')
+        self.assertContains(r, 'id="rv"')
         self.assertEqual((r.context['n_con_evidencia'], r.context['n_sin_evidencia']), (1, 1))
-        self.assertContains(r, 'Evidencia (1)')
-        self.assertContains(r, 'hu11-evc--no')
+        datos = {d['id']: d for d in r.context['rv_datos']}
+        self.assertEqual((datos[self.v1.pk]['nev'], datos[self.v2.pk]['nev']), (1, 0))
         self.assertContains(r, 'value="preparar_faltantes_hu11"')
-        self.assertContains(r, 'id="hu11-filtro-ev"')
+        self.assertContains(r, 'id="hu11-prep"')
 
     def test_estado_vacio_nuevo_conserva_el_texto_y_ofrece_acciones(self):
         r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': self.v2.pk})
-        self.assertContains(r, 'Sin pasajes vinculados a este subfactor.')
-        self.assertContains(r, 'Solicitar más información')
-        self.assertContains(r, 'data-hu11-subir')
+        datos = {d['id']: d for d in r.context['rv_datos']}
+        self.assertEqual(datos[self.v2.pk]['fuentes'], [])
+        self.assertContains(r, 'id="hu11-prep"')
+        self.assertContains(r, 'id="hu11-subir"')
 
     def test_completar_crea_preguntas_solo_donde_no_hay_evidencia_y_abre_el_modal(self):
         r = self.post('preparar_faltantes_hu11')
@@ -94,7 +95,8 @@ class RevisionFaltantesTests(TestCase):
         self.assertEqual(p1.respondido_por_id, self.actor.pk)
         r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'valoracion': self.v2.pk})
         self.assertEqual(r.context['n_sin_evidencia_resp'], 1)
-        self.assertContains(r, 'Solo declaración')
+        datos = {d['id']: d for d in r.context['rv_datos']}
+        self.assertEqual([f['m'] for f in datos[self.v2.pk]['fuentes']], ['Sí'])
 
     def test_respuesta_con_version_vieja_se_informa_y_reabre_el_modal(self):
         self.post('preparar_faltantes_hu11')
@@ -167,26 +169,22 @@ class PrepararFaltantesTransaccionTests(TransactionTestCase):
 class AnalisisIAPaso4Tests(RevisionFaltantesTests):
     """Pantalla «Análisis de IA en curso»: solo encadena HU09 y HU10 existentes."""
 
-    def test_la_pantalla_analiza_solo_los_subfactores_con_evidencia(self):
+    def test_la_pantalla_analiza_sola_los_subfactores_con_evidencia(self):
         with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'):
-            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1'})
-        self.assertContains(r, 'Análisis de IA en curso')
-        self.assertContains(r, 'id="hu11-ia-obj"')
+            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertEqual([o['vid'] for o in r.context['ia_objetivos']], [self.v1.pk])
-        self.assertContains(r, 'Continuar en modo manual')
-        self.assertNotContains(r, 'id="hu11-evstrip"')
+        self.assertContains(r, 'id="rv-objetivos"')
+        self.assertContains(r, 'data-auto="1"')
+        self.assertNotContains(r, 'Análisis de IA en curso')
+        datos = {d['id']: d for d in r.context['rv_datos']}
+        self.assertEqual(datos[self.v1.pk]['est'], 'ANALISIS_PENDIENTE')
 
-    def test_solo_un_subfactor_cuando_se_pide_expresamente(self):
-        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'):
-            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1', 'solo': self.v2.pk})
-        self.assertEqual([o['vid'] for o in r.context['ia_objetivos']], [self.v2.pk])
-
-    def test_sin_modelo_configurado_explica_y_deja_continuar_en_manual(self):
+    def test_sin_modelo_configurado_avisa_y_no_arranca_el_analisis(self):
         with override_settings(HU09_OLLAMA_MODEL=''):
-            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk, 'analizar': '1'})
+            r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertContains(r, 'HU09_OLLAMA_MODEL')
-        self.assertContains(r, 'Continuar en modo manual')
-        self.assertNotContains(r, 'id="hu11-ia-obj"')
+        self.assertNotContains(r, 'data-auto="1"')
+        self.assertContains(r, 'id="rv"')
 
     def test_endpoint_encadena_suficiencia_y_propuesta(self):
         fila = {'valoracion_id': self.v1.pk, 'estado': 'ANALISIS_PENDIENTE'}
@@ -210,6 +208,8 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['valor_ia'], 3)
         self.assertEqual(r.json()['preguntas'], 2)
+        self.assertEqual(len(r.json()['version']), 64)
+        self.assertIn('Respuesta del modelo', r.json()['jia'] or 'Respuesta del modelo')
         suf.assert_called_once()
         ia.assert_called_once()
 

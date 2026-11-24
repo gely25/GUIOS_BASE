@@ -65,7 +65,7 @@ class SuficienciaService:
         return filas
 
     @classmethod
-    def analizar(cls, actor, eid, vid, proveedor, modelo, vectorizador=None):
+    def analizar(cls, actor, eid, vid, proveedor, modelo, vectorizador=None, generar_preguntas=True):
         ev = PreguntasService._evaluacion(actor, eid)
         if ev.estado != 'EN_PROCESO' or ev.fecha_fin is not None:
             raise ValidationError('La evaluación no admite cambios.')
@@ -83,7 +83,7 @@ class SuficienciaService:
         else:
             estado, motivo, refs, preguntas = _validar(proveedor(entrada), entrada)
             conocidas = [p['texto'] for p in fila['preguntas'] + fila['preguntas_descartadas']]
-            elegidas = _filtrar_semantica(conocidas, preguntas, MAX_PENDIENTES, vectorizador)
+            elegidas = _filtrar_semantica(conocidas, preguntas, MAX_PENDIENTES, vectorizador) if generar_preguntas else []
             rondas += 1
             if estado == 'SUFICIENTE':
                 estado = 'SUFICIENCIA_PROPUESTA'
