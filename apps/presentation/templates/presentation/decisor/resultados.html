@@ -9,7 +9,8 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
 
 {% block title %}Resultados | GUIOS PRO{% endblock %}
 
-{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}">{% endblock %}
+{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}?v=4">{% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/resultados_calculo.js' %}?v=3" defer></script>{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
@@ -43,11 +44,24 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
 
             {% if not resultados %}
             <section class="res-panel">
-                <h2>Aún no hay resultados</h2>
                 {% if preparacion and preparacion.filas %}
-                <p class="res-sub">Las valoraciones están confirmadas. Calcule la PM y el FODA de sus factores.</p>
-                {% include "presentation/includes/pm_foda_calculo.html" %}
+                <h2>Falta una decisión para calcular</h2>
+                <p class="res-sub">Las {{ preparacion.filas|length }} valoraciones por factor ya están confirmadas. {% if preparacion.pendientes_alcance|length == 1 %}Un factor puede ser interno o externo según tu organización{% else %}Algunos factores pueden ser internos o externos según tu organización{% endif %}: elige cómo lo tratas y se calculan la PM, el FODA y la recomendación.</p>
+                <form method="post" action="{% url 'presentation:decisor-resultados' %}" class="res-decision-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}">
+                    {% for f in preparacion.pendientes_alcance %}
+                    <fieldset class="res-decision">
+                        <legend>{{ f.factor }} <small>PM {{ f.pm_texto }} · {{ f.cantidad }} valoraciones</small></legend>
+                        {% if f.factor == 'Soporte' %}<p class="res-decision-ayuda">Soporte es la ayuda con la que cuenta tu organización para resolver problemas con el software: soporte técnico, comunidad, soporte comercial o consultores. Elige según <strong>quién lo da</strong>.</p>{% endif %}
+                        <label><input type="radio" name="alcance_{{ f.factor_id }}" value="interno" required><span><b>Interno</b><small>{% if f.factor == 'Soporte' %}Lo da la propia organización: su equipo de TI o una mesa de ayuda interna resuelve las incidencias.{% else %}Depende de la propia organización.{% endif %}</small><em>Fortaleza o Debilidad</em></span></label>
+                        <label><input type="radio" name="alcance_{{ f.factor_id }}" value="externo" required><span><b>Externo</b><small>{% if f.factor == 'Soporte' %}Depende de terceros: la comunidad del software, un proveedor comercial o consultores contratados.{% else %}Depende de terceros.{% endif %}</small><em>Oportunidad o Amenaza</em></span></label>
+                    </fieldset>
+                    {% endfor %}
+                    <button type="submit" class="res-boton res-boton--principal">Ver resultados</button>
+                </form>
                 {% else %}
+                <h2>Aún no hay resultados</h2>
                 <p class="res-sub">{% if preparacion.motivo %}{{ preparacion.motivo }}{% else %}Cuando confirme las valoraciones en la revisión de evidencia, aquí podrá calcular la ponderación media y la clasificación FODA.{% endif %}</p>
                 {% if evaluacion %}<a class="res-boton res-boton--claro" href="{{ url_anterior }}">&larr; Ir a la revisión de evidencia</a>{% else %}<a class="res-boton res-boton--claro" href="{{ url_inicio }}">Volver al inicio</a>{% endif %}
                 {% endif %}
@@ -58,7 +72,10 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
             <section class="res-banner" aria-label="Recomendación final">
                 <div>
                     <small>Recomendación final{% if resultados.version_regla %} · Regla {{ resultados.version_regla }}{% endif %}</small>
-                    <h2>{{ resultados.recomendacion|linebreaksbr }}</h2>
+                    <h2>{% if resultados.letra_recomendacion %}<span class="res-letra" aria-label="Recomendación {{ resultados.letra_recomendacion }}">{{ resultados.letra_recomendacion }}</span>{% endif %}{{ resultados.recomendacion|linebreaksbr }}</h2>
+                    <ol class="res-abc" aria-label="Escala de recomendación">
+                        {% for letra, texto, activa in resultados.escala_recomendacion %}<li{% if activa %} class="es-activa" aria-current="true"{% endif %}><b>{{ letra }}</b><span>{{ texto }}</span></li>{% endfor %}
+                    </ol>
                 </div>
             </section>
             {% else %}
@@ -74,7 +91,7 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                 <h2>Ponderación Media por factor</h2>
                 <p class="res-sub">PM: media aritmética de las valoraciones confirmadas de los subfactores · IR: importancia relativa.</p>
                 <div class="admin-table-container">
-                    <table class="res-tabla" aria-label="Ponderación media y clasificación FODA por factor">
+                    <table class="res-tabla res-tabla--compacta" data-paginar="5" aria-label="Ponderación media y clasificación FODA por factor">
                         <thead>
                             <tr>
                                 <th scope="col">Factor</th>
@@ -107,7 +124,7 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                     <div class="res-matriz">
                         {% for clase, factores in resultados.cuadrantes %}
                         <div class="res-cuadrante res-cuadrante--{{ clase }}">
-                            <h3>{{ clase }}</h3>
+                            <h3>{{ clase }} <small>{{ factores|length }}</small></h3>
                             {% if factores %}
                             <ul>{% for f in factores %}<li><strong>{{ f.factor }}</strong> · {{ f.pm|floatformat:2 }}</li>{% endfor %}</ul>
                             {% else %}<p class="res-vacio">Ningún factor en esta clase.</p>{% endif %}
@@ -119,33 +136,18 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                 <section class="res-panel">
                     <h2>Perfil de cumplimiento</h2>
                     <p class="res-sub">Ponderación Media · Escala de 1 a 4</p>
+                    <div class="res-perfil-lista">
                     {% for f in resultados.factores %}
                     <div class="res-barra-fila">
                         <div class="res-barra-etiqueta"><span>{{ f.factor }}</span><strong>{{ f.pm|floatformat:2 }}</strong></div>
                         <div class="res-pista" role="img" aria-label="{{ f.factor }}: {{ f.pm|floatformat:2 }} de 4"><span style="width: {{ f.porcentaje }}%"></span></div>
                     </div>
                     {% endfor %}
+                    </div>
                     <div class="res-escala" aria-hidden="true"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
                     <p class="res-nota">{{ resultados.confirmadas }} valoraciones confirmadas, incluidas las modificadas por el decisor.</p>
                 </section>
             </div>
-
-            {% if resultados.explicacion %}
-            <section class="res-panel">
-                <h2>Explicación redactada por IA</h2>
-                <p class="res-sub">Narrativa de apoyo · No forma parte del motor de cálculo.</p>
-                <div class="res-explicacion">{{ resultados.explicacion|linebreaks }}</div>
-                <div class="res-aviso"><strong>No modifica los valores calculados.</strong>La explicación redacta los resultados; los valores salen de las reglas del sistema.</div>
-            </section>
-            {% endif %}
-
-            {% if preparacion and preparacion.filas %}
-            <details class="res-panel res-recalcular">
-                <summary>Recalcular o cambiar el alcance de Soporte</summary>
-                <p class="res-sub">Use esto si cambió alguna valoración o quiere tratar Soporte como interno o externo de otra forma.</p>
-                {% include "presentation/includes/pm_foda_calculo.html" %}
-            </details>
-            {% endif %}
 
             <nav class="res-navegacion" aria-label="Navegación del proceso">
                 <a class="res-boton res-boton--claro" href="{{ url_anterior }}">&larr; Anterior</a>

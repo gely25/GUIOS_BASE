@@ -64,7 +64,17 @@ class ResultadosHU12Tests(TestCase):
         self.assertContains(r, 'Adoptar mediante un piloto controlado')
         self.assertContains(r, 'Siguiente · Informe')
         self.assertNotContains(r, 'res-boton--inactivo')
-        self.assertContains(r, 'Explicación redactada por IA')
+        self.assertNotContains(r, 'Explicación de la recomendación')
+
+    def test_el_banner_muestra_la_escala_a_b_c_con_la_recomendacion_activa(self):
+        ResultadoEvaluacion.objects.create(evaluacion=self.ev, recomendacion='Es posible adoptar, con matices',
+                                           explicacion='Resumen.', version_regla='1.0')
+        r = self.cliente().get(self.url, {'evaluacion': self.ev.pk})
+        self.assertContains(r, 'Escala de recomendación')
+        self.assertContains(r, 'aria-label="Recomendación B"')
+        self.assertContains(r, 'class="es-activa"', count=1)
+        self.assertContains(r, 'Adoptar el FLOSS seleccionado')
+        self.assertContains(r, 'Se sugiere analizar la adopción y debería ser pospuesta')
 
     def test_sin_evaluacion_indicada_usa_la_mas_reciente_con_pm(self):
         self.assertContains(self.cliente().get(self.url), 'Ponderación Media por factor')

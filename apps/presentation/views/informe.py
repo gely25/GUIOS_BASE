@@ -86,6 +86,13 @@ def resultados_view(request):
     except InformeNoDisponible:
         resultados = None
     preparacion = PmFodaService.vista_previa(request.user, evaluacion.pk) if evaluacion else None
+    # Sin decisiones pendientes (todos los alcances conocidos) no hay nada que preguntar: se calcula de una vez.
+    if resultados is None and preparacion and preparacion.get('filas') and preparacion.get('lista') and request.GET.get('c') != '1':
+        try:
+            PmFodaService.calcular_y_guardar(request.user, evaluacion.pk, None)
+            return redirect(reverse('presentation:decisor-resultados') + '?' + urlencode({'evaluacion': evaluacion.pk, 'c': 1}))
+        except ValidationError as exc:
+            messages.error(request, ' '.join(exc.messages))
 
     revision = reverse('presentation:decisor-revision-valoraciones')
     url_informe = reverse('presentation:decisor-informe')

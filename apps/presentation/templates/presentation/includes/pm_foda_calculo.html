@@ -6,7 +6,7 @@ Soporte tiene alcance mixto: el decisor elige si, para su organización, es inte
     {% csrf_token %}
     <input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}">
     <div class="admin-table-container">
-        <table class="res-tabla" aria-label="Cálculo de PM y FODA por factor">
+        <table class="res-tabla res-tabla--compacta" data-paginar="5" aria-label="Cálculo de PM y FODA por factor">
             <thead>
                 <tr><th scope="col">Factor</th><th scope="col" class="num">IR</th><th scope="col" class="num">Valoraciones</th><th scope="col" class="num">PM / 4</th><th scope="col">Alcance</th><th scope="col">FODA</th></tr>
             </thead>
@@ -25,5 +25,5 @@ Soporte tiene alcance mixto: el decisor elige si, para su organización, es inte
         </table>
     </div>
     <p class="res-nota">Algunos factores, como Soporte, pueden ser internos o externos según la organización: elija cómo se trata en su caso. La PM es la media de las valoraciones confirmadas.</p>
-    <button type="submit" class="res-boton res-boton--principal">{% if preparacion.guardado %}Recalcular y guardar{% else %}Calcular y guardar PM y FODA{% endif %}</button>
+    <div class="res-accion"><button type="submit" class="res-boton res-boton--principal">{% if preparacion.guardado %}Recalcular y guardar{% else %}Calcular y guardar PM y FODA{% endif %}</button></div>
 </form>
