@@ -80,6 +80,23 @@ class ResultadosHU12Tests(TestCase):
         self.assertContains(r, 'Adoptar el FLOSS seleccionado')
         self.assertContains(r, 'Se sugiere analizar la adopción y debería ser pospuesta')
 
+    def test_separa_las_cuatro_clases_foda_en_internas_y_externas(self):
+        ResultadoEvaluacion.objects.create(evaluacion=self.ev, recomendacion='Es posible adoptar, con matices',
+                                           explicacion='Resumen.', version_regla='1.0')
+        r = self.cliente().get(self.url, {'evaluacion': self.ev.pk})
+        for texto in ('Fortalezas', 'Debilidades', 'Oportunidades', 'Amenazas',
+                      'Factores internos', 'Factores externos'):
+            self.assertContains(r, texto)
+        self.assertContains(r, 'Puede adoptarlo, pero atienda primero las amenazas y debilidades marcadas.')
+        self.assertContains(r, 'Cómo leer los números')
+        clase = {'fortaleza': 'Fortaleza', 'debilidad': 'Debilidad', 'oportunidad': 'Oportunidad', 'amenaza': 'Amenaza'}
+        ambito = {'fortaleza': 'interno', 'debilidad': 'interno', 'oportunidad': 'externo', 'amenaza': 'externo'}
+        grupos = {g['clave']: g for g in r.context['resultados'].grupos}
+        self.assertEqual(set(grupos), set(clase))
+        for clave, g in grupos.items():
+            self.assertEqual(g['ambito'], ambito[clave])
+            self.assertTrue(all(f.foda == clase[clave] for f in g['factores']))
+
     def test_sin_evaluacion_indicada_usa_la_mas_reciente_con_pm(self):
         self.assertContains(self.cliente().get(self.url), 'Ponderación Media por factor')
 

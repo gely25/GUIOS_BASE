@@ -9,8 +9,8 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
 
 {% block title %}Resultados | GUIOS PRO{% endblock %}
 
-{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}?v=4">{% endblock %}
-{% block extra_js %}<script src="{% static 'presentation/js/resultados_calculo.js' %}?v=3" defer></script>{% endblock %}
+{% block extra_head %}{% include "presentation/includes/informe_estilos.html" %}<link rel="stylesheet" href="{% static 'presentation/css/resultados.css' %}?v=9">{% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/resultados_calculo.js' %}?v=3" defer></script><script src="{% static 'presentation/js/resultados_pestanas.js' %}?v=1" defer></script><script src="{% static 'presentation/js/resultados_grupos.js' %}?v=1" defer></script>{% endblock %}
 
 {% block content %}
 <div class="workspace-screen-layout">
@@ -73,6 +73,7 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                 <div>
                     <small>Recomendación final{% if resultados.version_regla %} · Regla {{ resultados.version_regla }}{% endif %}</small>
                     <h2>{% if resultados.letra_recomendacion %}<span class="res-letra" aria-label="Recomendación {{ resultados.letra_recomendacion }}">{{ resultados.letra_recomendacion }}</span>{% endif %}{{ resultados.recomendacion|linebreaksbr }}</h2>
+                    {% if resultados.ayuda_recomendacion %}<p class="res-banner-ayuda">{{ resultados.ayuda_recomendacion }}</p>{% endif %}
                     <ol class="res-abc" aria-label="Escala de recomendación">
                         {% for letra, texto, activa in resultados.escala_recomendacion %}<li{% if activa %} class="es-activa" aria-current="true"{% endif %}><b>{{ letra }}</b><span>{{ texto }}</span></li>{% endfor %}
                     </ol>
@@ -87,9 +88,42 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
             </section>
             {% endif %}
 
-            <section class="res-panel">
-                <h2>Ponderación Media por factor</h2>
-                <p class="res-sub">PM: media aritmética de las valoraciones confirmadas de los subfactores · IR: importancia relativa.</p>
+            {% for ambito, rotulo in ambitos %}
+            <h2 class="res-ambito">{{ rotulo }}</h2>
+            <section class="res-grupos" aria-label="{{ rotulo }}">
+                {% for g in resultados.grupos %}{% if g.ambito == ambito %}
+                <article class="res-grupo res-grupo--{{ g.clave }}" data-grupo data-por-pagina="5">
+                    <header class="res-grupo-cab">
+                        <h3>{{ g.titulo }} <span class="res-grupo-n">{{ g.factores|length }}</span></h3>
+                        <span class="res-grupo-etiqueta">{{ g.etiqueta }}</span>
+                    </header>
+                    <p class="res-grupo-ayuda">{{ g.ayuda }}</p>
+                    {% if g.factores %}
+                    <ul class="res-items">
+                        {% for f in g.factores %}{% include "presentation/includes/res_item.html" %}{% endfor %}
+                    </ul>
+                    <div class="res-grupo-pie"><span class="res-grupo-cuenta">{{ g.factores|length }} de {{ g.factores|length }}</span></div>
+                    {% else %}<p class="res-vacio">{{ g.vacio }}</p>{% endif %}
+                </article>
+                {% endif %}{% endfor %}
+            </section>
+            {% endfor %}
+            <p class="res-leyenda"><b>Cómo leer los números:</b> el valor grande es el <b>cumplimiento</b> (PM, de 0 a 4): qué tanto cumple el software ese factor según las valoraciones confirmadas. <b>Importancia</b> (IR, de 1 a 4) es cuánto le pesa ese factor a su organización.</p>
+
+            <section class="res-panel res-detalle" id="res-detalle">
+                <div class="res-detalle-cab">
+                    <div>
+                        <h2>Detalle por factor</h2>
+                        <p class="res-sub">Los mismos resultados en otras vistas.</p>
+                    </div>
+                    <div class="res-pestanas" role="tablist" aria-label="Vistas del detalle">
+                        <button type="button" role="tab" id="pest-tabla" aria-controls="vista-tabla" aria-selected="true" data-vista="tabla">Tabla</button>
+                        <button type="button" role="tab" id="pest-matriz" aria-controls="vista-matriz" aria-selected="false" data-vista="matriz">Matriz FODA</button>
+                        <button type="button" role="tab" id="pest-perfil" aria-controls="vista-perfil" aria-selected="false" data-vista="perfil">Perfil de cumplimiento</button>
+                    </div>
+                </div>
+                <div class="res-vista" id="vista-tabla" role="tabpanel" aria-labelledby="pest-tabla">
+                <p class="res-sub"><b>Ponderación Media por factor</b> · PM: media aritmética de las valoraciones confirmadas de los subfactores · IR: importancia relativa.</p>
                 <div class="admin-table-container">
                     <table class="res-tabla res-tabla--compacta" data-paginar="5" aria-label="Ponderación media y clasificación FODA por factor">
                         <thead>
@@ -115,11 +149,10 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                     </table>
                 </div>
                 <p class="res-nota">Solo participan las valoraciones confirmadas por el decisor. Los factores con IR = 1 se excluyen de la evaluación.</p>
-            </section>
+            </div>
 
-            <div class="res-dos-columnas">
-                <section class="res-panel">
-                    <h2>Matriz FODA</h2>
+
+<div class="res-vista" id="vista-matriz" role="tabpanel" aria-labelledby="pest-matriz">
                     <p class="res-sub">Fortaleza y Debilidad: factores internos · Oportunidad y Amenaza: factores externos.</p>
                     <div class="res-matriz">
                         {% for clase, factores in resultados.cuadrantes %}
@@ -131,10 +164,8 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                         </div>
                         {% endfor %}
                     </div>
-                </section>
-
-                <section class="res-panel">
-                    <h2>Perfil de cumplimiento</h2>
+                </div>
+<div class="res-vista" id="vista-perfil" role="tabpanel" aria-labelledby="pest-perfil">
                     <p class="res-sub">Ponderación Media · Escala de 1 a 4</p>
                     <div class="res-perfil-lista">
                     {% for f in resultados.factores %}
@@ -146,8 +177,8 @@ PM y FODA salen ya calculados (HU12); aquí no se calcula nada.
                     </div>
                     <div class="res-escala" aria-hidden="true"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div>
                     <p class="res-nota">{{ resultados.confirmadas }} valoraciones confirmadas, incluidas las modificadas por el decisor.</p>
-                </section>
-            </div>
+                </div>
+            </section>
 
             <nav class="res-navegacion" aria-label="Navegación del proceso">
                 <a class="res-boton res-boton--claro" href="{{ url_anterior }}">&larr; Anterior</a>

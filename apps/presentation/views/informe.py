@@ -98,6 +98,8 @@ def resultados_view(request):
     url_informe = reverse('presentation:decisor-informe')
     contexto = {
         'resultados': resultados, 'preparacion': preparacion, 'evaluacion': evaluacion,
+        'ambitos': (('interno', 'Factores internos · dependen de su organización'),
+                    ('externo', 'Factores externos · dependen de terceros')),
         'active_tab': 'resultados', 'url_inicio': reverse('presentation:decisor-inicio'),
     }
     if evaluacion is not None:
