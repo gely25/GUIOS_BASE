@@ -9,7 +9,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
                               ValoracionSubfactor)
 
 
-@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'], HU09_EMBEDDING_MODEL='')
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'], HU09_EMBEDDING_MODEL='', GUIOS_AI_BACKEND='ollama')
 class PreguntasInterfazTests(TestCase):
     @classmethod
     def setUpTestData(cls):

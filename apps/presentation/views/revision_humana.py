@@ -8,9 +8,12 @@ from django.views.decorators.cache import never_cache
 from urllib.parse import urlencode
 
 from apps.application.services.preguntas import PreguntasService
+from apps.application.services.lotes_hu09 import LotesHU09Service
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
 from apps.data.models import BorradorRevisionHumana, Evaluacion, ReaperturaRevisionHumana, RevisionHumana
 from django.db.models import OuterRef, Subquery
+from decimal import Decimal
+from apps.data.models import Evidencia
 
 ESCALA = ((1, 'No cumple'), (2, 'Desconozco / No sé'), (3, 'Cumple parcialmente'), (4, 'Cumple'))
 
@@ -108,12 +111,20 @@ def revision_humana_view(request):
     guardados = {b.valoracion_id: b for b in BorradorRevisionHumana.objects.filter(valoracion_id__in=[v.pk for v in valoraciones], actor=request.user)}
     disponibles = []
     obsoletos = []
-    candidatos = [v for v in valoraciones if v.pk in guardados and v.estado_validacion == 'PENDIENTE'
-                  and v.valor_confirmado is None]
-    contextos = {f['valoracion_id']: f for f in PreguntasService.contexto(request.user, eid)} if candidatos else {}
+    contextos = {f['valoracion_id']: f for f in PreguntasService.contexto(request.user, eid)}
     for v in valoraciones:
         b = guardados.get(v.pk)
         v.tiene_borrador = bool(b)
+        contexto = contextos.get(v.pk) or {}
+        v.n_evidencias = len(contexto.get('evidencias', []))
+        v.tiene_respuesta = any(p['estado_respuesta'] == 'APORTADA' for p in contexto.get('preguntas', []))
+        if v.estado_validacion in ESTADOS_VALIDOS:
+            v.estado_visual = 'Modificada' if v.estado_validacion == 'MODIFICADA' else 'Confirmada'
+            v.estado_clase = 'confirmada'
+        elif b:
+            v.estado_visual, v.estado_clase = 'Borrador', 'borrador'
+        else:
+            v.estado_visual, v.estado_clase = 'Pendiente', 'pendiente'
         v.etiqueta_hu11 = 'VALIDACIÓN MANUAL' if v.ultimo_modo == 'MANUAL' and v.estado_validacion in ESTADOS_VALIDOS else v.estado_validacion
         if b and v.pk in contextos and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None:
             if b.huella_contexto != _version(v, contextos[v.pk], v.ultima_reapertura_id):
@@ -127,19 +138,40 @@ def revision_humana_view(request):
         seleccion['reaperturas'] = ReaperturaRevisionHumana.objects.filter(valoracion_id=vid).select_related('actor')
         seleccion['ultima_reapertura'] = seleccion['reaperturas'].first()
         seleccion['tiene_pendientes'] = any(p['estado_respuesta'] == 'PENDIENTE' for p in seleccion['preguntas'])
+        ids_docs = [fuente['evidencia_id'] for fuente in seleccion['fuentes'] if fuente['origen'] == 'DOCUMENTO']
+        documentos = dict(Evidencia.objects.filter(pk__in=ids_docs,
+            fragmento__documento__evaluacion=ev).values_list('pk', 'fragmento__documento_id'))
+        relevancias = dict(Evidencia.objects.filter(pk__in=ids_docs,
+            fragmento__documento__evaluacion=ev).values_list('pk', 'relevancia'))
+        for fuente in seleccion['fuentes']:
+            if fuente['origen'] == 'DOCUMENTO' and fuente['evidencia_id'] in documentos:
+                fuente['url_documento'] = reverse('presentation:decisor-carga-documental') + '?' + urlencode(
+                    {'evaluacion_id': ev.pk, 'doc_id': documentos[fuente['evidencia_id']], 'panel': 1})
+                relevancia = relevancias.get(fuente['evidencia_id'])
+                fuente['nivel'] = ('Alta' if relevancia >= Decimal('0.40') else 'Media' if relevancia >= Decimal('0.20') else 'Baja') if relevancia is not None else 'Sin clasificar'
+        seleccion['fuentes_documentales'] = sum(f['origen'] == 'DOCUMENTO' for f in seleccion['fuentes'])
+        seleccion['preguntas_pendientes'] = sum(p['estado_respuesta'] == 'PENDIENTE' for p in seleccion['preguntas'])
     actual = guardados.get(vid)
     if seleccion:
         seleccion['etiqueta_hu11'] = next(v.etiqueta_hu11 for v in valoraciones if v.pk == vid)
+        seleccion['tiene_borrador'] = bool(actual)
         seleccion['version_borrador'] = params.get('version_borrador', '0') if error else str(actual.version if actual else 0)
         seleccion['borrador_obsoleto'] = bool(actual and actual.huella_contexto != seleccion['version'])
     if not error and actual:
         borrador = actual.justificacion
     revisadas = sum(v.estado_validacion in ESTADOS_VALIDOS and v.valor_confirmado in (1, 2, 3, 4) for v in valoraciones)
-    ctx.update(evaluacion=ev, valoraciones=valoraciones, seleccion=seleccion, total=len(valoraciones), revisadas=revisadas,
-               pendientes=len(valoraciones)-revisadas, error=error, borrador=borrador,
+    analisis_en_curso = _lote_activo(ev)
+    estado_analisis = LotesHU09Service.estado(request.user, eid) if analisis_en_curso else None
+    ids = [v.pk for v in valoraciones]
+    posicion = ids.index(vid) if vid in ids else None
+    anterior_pk = ids[posicion - 1] if posicion is not None and posicion > 0 else None
+    siguiente_pk = ids[posicion + 1] if posicion is not None and posicion + 1 < len(ids) else None
+    ctx.update(posicion=(posicion + 1 if posicion is not None else 0), anterior_pk=anterior_pk,
+               siguiente_pk=siguiente_pk, evaluacion=ev, valoraciones=valoraciones, seleccion=seleccion, total=len(valoraciones), revisadas=revisadas,
+               pendientes=len(valoraciones)-revisadas, analisis_en_curso=analisis_en_curso, estado_analisis=estado_analisis, error=error, borrador=borrador,
                valor_elegido=params.get('valor', '') if error else str(actual.valor or '') if actual else '',
                modo_elegido=params.get('modo', '') if error else actual.modo if actual else '',
-               borradores=disponibles, borradores_obsoletos=obsoletos, cantidad_borradores=len(guardados), lote_editable=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and not _lote_activo(ev))
+               borradores=disponibles, borradores_obsoletos=obsoletos, cantidad_borradores=len(guardados), lote_editable=ev.estado == 'EN_PROCESO' and ev.fecha_fin is None and not analisis_en_curso)
     # Una decisión pudo haber quedado obsoleta: nunca se sustituye su versión silenciosamente.
     if error and seleccion:
         seleccion['version'] = params.get('version', '')

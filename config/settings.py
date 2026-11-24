@@ -159,3 +159,11 @@ HU09_EMBEDDING_MODEL = os.getenv('HU09_EMBEDDING_MODEL', '').strip()
 
 # HU10: proveedor local para valoración preliminar (escala 1 a 4 con evidencia).
 HU10_OLLAMA_MODEL = os.getenv('HU10_OLLAMA_MODEL', '').strip() or HU09_OLLAMA_MODEL
+
+# --- IA generativa HU09/HU10: Ollama local o API HTTPS compatible -----------
+# Por defecto se mantiene el comportamiento anterior (ollama).
+GUIOS_AI_BACKEND = os.getenv('GUIOS_AI_BACKEND', 'ollama').strip().lower()
+GUIOS_AI_API_KEY = os.getenv('GUIOS_AI_API_KEY', '').strip()
+GUIOS_AI_MODEL = os.getenv('GUIOS_AI_MODEL', '').strip()
+GUIOS_AI_BASE_URL = os.getenv('GUIOS_AI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai').strip()
+GUIOS_AI_TIMEOUT = int(os.getenv('GUIOS_AI_TIMEOUT', '25'))

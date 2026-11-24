@@ -1,45 +1,175 @@
 {% extends 'presentation/layouts/base.html' %}
 {% load static %}
-{% block title %}Validación humana | GUIOS PRO{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}"><link rel="stylesheet" href="{% static 'presentation/css/revision_humana.css' %}">{% endblock %}
-{% block extra_js %}<script src="{% static 'presentation/js/revision_humana.js' %}" defer></script>{% endblock %}
+{% block title %}Revisión de evidencia | GUIOS PRO{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}">
+<link rel="stylesheet" href="{% static 'presentation/css/revision_humana.css' %}?v=11">
+{% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/revision_humana.js' %}?v=11" defer></script>{% endblock %}
 {% block content %}
 <div class="workspace-screen-layout">
     {% include 'presentation/includes/app_sidebar.html' with current_area='decisor' %}
     <div class="workspace-body-container">
         {% include 'presentation/includes/app_topbar.html' with current_area='decisor' %}
-        <main class="workspace-inner-content hu09 hu11">
-            {% include "presentation/includes/evaluation_stepper.html" with current_step=4 eval_id=evaluacion.pk %}
-            <div class="hu09-heading"><div><h1 class="page-main-heading">Validación humana de valoraciones</h1><p class="page-main-subheading">Revise las fuentes y registre una decisión explícita para cada subfactor relevante.</p></div><a class="hu09-secondary" href="{{ base }}{% if evaluacion %}?evaluacion={{ evaluacion.pk }}{% endif %}">Información complementaria (HU09)</a></div>
-            <section class="dashboard-block hu09-panel"><h2 class="block-title">Seleccionar evaluación</h2>
-                <form method="get" class="hu09-pick"><input name="etapa" type="hidden" value="validacion"><label for="hu11-evaluacion">Evaluación</label><select name="evaluacion" id="hu11-evaluacion" required><option value="">Seleccione una evaluación</option>{% for ev in evaluaciones %}<option value="{{ ev.pk }}" {% if evaluacion.pk == ev.pk %}selected{% endif %}>{{ ev.software.nombre }} · #{{ ev.pk }} · {{ ev.estado }}</option>{% endfor %}</select><button class="btn-top-action" type="submit">Consultar</button></form>
+        <main class="workspace-inner-content hu09 hu11 hu11-figma">
+            {% include 'presentation/includes/evaluation_stepper.html' with current_step=4 eval_id=evaluacion.pk %}
+            <header class="hu11-cabecera">
+                <div><h1 class="page-main-heading">Revisión de evidencia</h1>
+                    <p class="page-main-subheading">{% if evaluacion %}Evaluación #{{ evaluacion.pk }} · {{ evaluacion.software.nombre }}. Revise cada propuesta y registre su decisión.{% else %}Seleccione una evaluación para revisar sus evidencias.{% endif %}</p></div>
+                {% if evaluacion %}<span class="hu11-progreso-pill">{{ revisadas }} de {{ total }} confirmadas</span>{% endif %}
+            </header>
+            <details class="hu11-evaluacion-cambio" {% if not evaluacion %}open{% endif %}>
+                <summary>{% if evaluacion %}Cambiar evaluación{% else %}Seleccionar evaluación{% endif %}</summary>
+                <form method="get" class="hu09-pick">
+                    <input name="etapa" type="hidden" value="validacion">
+                    <label for="hu11-evaluacion">Evaluación</label>
+                    <select name="evaluacion" id="hu11-evaluacion" required>
+                        <option value="">Seleccione una evaluación</option>
+                        {% for ev in evaluaciones %}<option value="{{ ev.pk }}" {% if evaluacion.pk == ev.pk %}selected{% endif %}>{{ ev.software.nombre }} · #{{ ev.pk }} · {{ ev.estado }}</option>{% endfor %}
+                    </select>
+                    <button class="btn-top-action" type="submit">Consultar</button>
+                </form>
                 {% if not evaluaciones %}<p>No hay evaluaciones registradas para esta cuenta.</p>{% endif %}
-            </section>
+            </details>
             {% for message in messages %}<p class="{% if message.tags == 'error' %}hu09-error{% else %}hu09-notice{% endif %}" role="status">{{ message }}</p>{% endfor %}
             {% if error %}<p class="hu09-error" role="alert">{{ error }} <a href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ seleccion.valoracion_id }}">Volver a consultar</a> si cambió la información.</p>{% endif %}
             {% if evaluacion %}
-            <section class="dashboard-block hu09-panel"><h2 class="block-title">Progreso de revisión</h2><div class="hu09-counts"><div>Subfactores<strong>{{ total }}</strong></div><div>Revisados<strong>{{ revisadas }}</strong></div><div>Pendientes<strong>{{ pendientes }}</strong></div><div>Borradores<strong id="hu11-contador-borradores">{{ cantidad_borradores }}</strong></div></div>{% if total %}<progress value="{{ revisadas }}" max="{{ total }}" aria-label="Progreso de revisión"></progress>{% endif %}<p class="hu09-muted">El progreso cuenta valoraciones registradas, no acredita por sí solo que la evaluación esté lista para el cálculo.</p></section>
-            <div class="hu09-workbench">
-                <nav class="hu09-panel hu09-nav" aria-label="Subfactores de revisión"><h2 class="block-title">Subfactores</h2><label for="hu11-buscar">Buscar</label><input id="hu11-buscar" type="search" placeholder="Factor o subfactor"><label for="hu11-filtro">Estado</label><select id="hu11-filtro"><option value="">Todos</option><option value="PENDIENTE">Pendientes</option><option value="BORRADOR">Con borrador</option><option value="CONFIRMADA">Confirmadas</option><option value="MODIFICADA">Modificadas</option><option value="MANUAL">Validación manual</option></select><p id="hu11-sin-resultados" hidden>No hay coincidencias.</p>{% regroup valoraciones by evaluacion_factor.factor.dimension.nombre as dimensiones %}{% for d in dimensiones %}<h3 data-grupo-hu11>{{ d.grouper }}</h3>{% regroup d.list by evaluacion_factor.factor.nombre as factores %}{% for f in factores %}<p class="hu09-nav-factor" data-grupo-hu11>{{ f.grouper }}</p>{% for v in f.list %}<a data-hu11-nav data-busqueda="{{ d.grouper }} {{ f.grouper }} {{ v.subfactor.descripcion }}" data-estado="{% if v.ultimo_modo == 'MANUAL' and v.estado_validacion == 'CONFIRMADA' %}MANUAL{% else %}{{ v.estado_validacion }}{% endif %}" data-borrador="{% if v.tiene_borrador %}1{% else %}0{% endif %}" {% if v.pk == seleccion.valoracion_id %}aria-current="page"{% endif %} href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ v.pk }}">{{ v.subfactor.descripcion }}<small>{{ v.etiqueta_hu11 }}{% if v.tiene_borrador %} · Borrador{% endif %}</small></a>{% endfor %}{% endfor %}{% empty %}<p>No hay subfactores relevantes disponibles.</p>{% endfor %}</nav>
-                {% if seleccion %}<div class="hu09-content"><section class="hu09-panel"><div class="hu09-heading"><h2 class="block-title">{{ seleccion.factor }}</h2><span class="hu09-tag">IR {{ seleccion.ir }}</span></div><h3>{{ seleccion.subfactor }}</h3>
-                <div class="hu11-comparacion"><div><p>Propuesta original de IA</p><strong>{% if seleccion.propuesta %}{{ seleccion.valor_ia }}/4{% else %}Sin propuesta válida{% endif %}</strong>{% for n, etiqueta in escala %}{% if seleccion.valor_ia == n and seleccion.propuesta %}<p>{{ etiqueta }}</p>{% endif %}{% endfor %}<p class="hu11-texto">{{ seleccion.justificacion_ia|default:"No hay justificación de IA disponible." }}</p></div><div><p>Decisión humana</p><strong>{% if seleccion.valor_confirmado %}{{ seleccion.valor_confirmado }}/4{% else %}Pendiente{% endif %}</strong><p>{{ seleccion.etiqueta_hu11 }}</p><p class="hu11-texto">{{ seleccion.justificacion_decisor|default:"No se ha registrado una decisión." }}</p>{% if seleccion.fecha_validacion %}<p class="hu09-muted">{{ seleccion.fecha_validacion|date:"d/m/Y H:i" }}</p>{% endif %}</div></div>
-                {% if seleccion.tiene_pendientes %}<p class="hu09-muted">Hay preguntas complementarias pendientes. Revise HU09 antes de decidir o justifique explícitamente la información faltante.</p>{% endif %}
-                <p class="hu09-muted">La propuesta de IA es orientativa. El decisor es responsable de revisar su actualidad y las fuentes.</p></section>
-                <section class="hu09-panel"><h2 class="block-title">Fuentes disponibles</h2>{% for fuente in seleccion.fuentes %}<details class="hu11-fuente"><summary>{{ fuente.id }} · {% if fuente.origen == 'DOCUMENTO' %}Documento: {{ fuente.documento }}{% if fuente.pagina %} · pág. {{ fuente.pagina }}{% endif %}{% else %}Declaración del decisor{% endif %}</summary>{% if fuente.pregunta %}<p>{{ fuente.pregunta }}</p>{% endif %}<p class="hu09-evidence">{{ fuente.contenido }}</p>{% if fuente.referencia %}<p>{{ fuente.referencia }}</p>{% endif %}</details>{% empty %}<p>No hay fuentes informativas vinculadas.</p>{% endfor %}<p class="hu09-muted">Las declaraciones del decisor no equivalen a evidencia documental verificada.</p><details><summary>Preguntas complementarias ({{ seleccion.preguntas|length }})</summary>{% for pregunta in seleccion.preguntas %}<div class="hu11-fuente"><p>{{ pregunta.texto }}</p><p>{{ pregunta.respuesta|default:"Sin respuesta" }} · {{ pregunta.estado_respuesta }}</p></div>{% empty %}<p>No hay preguntas activas.</p>{% endfor %}</details></section>
-                <section class="hu09-panel"><h2 class="block-title">Registrar decisión</h2>{% if seleccion.editable %}<form method="post" class="hu11-form">{% csrf_token %}<input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ seleccion.valoracion_id }}"><input type="hidden" name="version" value="{{ seleccion.version }}"><input type="hidden" name="accion" value="resolver_hu11"><input type="hidden" name="version_borrador" value="{{ seleccion.version_borrador }}">{% if seleccion.borrador_obsoleto %}<p class="hu09-error" role="alert">Las fuentes cambiaron desde el último borrador. Revise de nuevo la propuesta y las fuentes antes de guardar o decidir.</p>{% endif %}
-                <fieldset><legend>Tipo de decisión</legend>{% if seleccion.propuesta %}<label><input type="radio" name="modo" value="CONFIRMAR" required {% if modo_elegido == 'CONFIRMAR' %}checked{% endif %}> Confirmar propuesta</label><label><input type="radio" name="modo" value="MODIFICAR" required {% if modo_elegido == 'MODIFICAR' %}checked{% endif %}> Modificar propuesta</label>{% else %}<label><input type="radio" name="modo" value="MANUAL" required checked> Valoración manual</label>{% endif %}</fieldset>
-                <fieldset><legend>Valoración humana</legend>{% for n, etiqueta in escala %}<label><input type="radio" name="valor" value="{{ n }}" required {% if valor_elegido == n|stringformat:'s' %}checked{% endif %}> {{ n }} · {{ etiqueta }}</label>{% endfor %}</fieldset>
-                <label for="hu11-justificacion">Justificación del decisor (obligatoria)</label><textarea id="hu11-justificacion" name="justificacion" rows="5" maxlength="4000" required>{{ borrador }}</textarea><div class="hu11-acciones"><button type="button" class="hu09-secondary" id="hu11-guardar">Guardar borrador</button><button type="submit" class="btn-top-action">Registrar decisión definitiva</button></div><p id="hu11-guardado" role="status" aria-live="polite">{% if seleccion.borrador_obsoleto %}Borrador anterior: revise las fuentes.{% elif seleccion.version_borrador != '0' %}Borrador guardado.{% else %}Todavía no hay borrador guardado.{% endif %}</p><p class="hu09-muted">Guardar un borrador no confirma la valoración. Para cambiar una decisión registrada, utilice la reapertura justificada.</p></form>{% else %}<p>Solo lectura: decisión registrada, evaluación cerrada o análisis HU09 en curso.</p>{% if seleccion.reabrible %}
-                <details class="hu11-fuente"><summary>Reabrir valoración</summary><p class="hu09-muted">La decisión vigente dejará de contar para PM y FODA. Los resultados derivados se retirarán y quedarán archivados; deberá registrar una nueva decisión.</p>
-                <form method="post" class="hu11-reapertura">{% csrf_token %}<input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ seleccion.valoracion_id }}"><input type="hidden" name="version" value="{{ seleccion.version }}"><input type="hidden" name="accion" value="reabrir_hu11"><label for="hu11-motivo">Motivo de reapertura (obligatorio)</label><textarea id="hu11-motivo" name="motivo" rows="3" maxlength="4000" required></textarea><label><input type="checkbox" name="confirmar_reapertura" value="1" required> Confirmo que deseo invalidar esta decisión y los resultados derivados.</label><button type="submit" class="hu09-secondary">Confirmar reapertura</button></form></details>{% endif %}{% endif %}</section>
-                <section class="hu09-panel"><h2 class="block-title">Historial de decisiones</h2>{% for r in seleccion.historial %}<details class="hu11-fuente"><summary>{{ r.fecha|date:"d/m/Y H:i" }} · {{ r.get_modo_display }} · {{ r.valor }}/4</summary><p>{{ r.actor.nombre }}</p><p class="hu11-texto">{{ r.justificacion }}</p><p>Propuesta IA histórica: {{ r.valor_ia|default_if_none:"Sin propuesta" }}</p><p class="hu11-texto">{{ r.justificacion_ia }}</p><p>Fuentes conservadas: {{ r.fuentes|length }}</p>{% for fuente in r.fuentes %}<div class="hu11-fuente"><p>{{ fuente.id }} · {{ fuente.origen }}{% if fuente.documento %} · {{ fuente.documento }}{% endif %}</p><p class="hu11-texto">{{ fuente.contenido }}</p></div>{% endfor %}</details>{% empty %}<p>No hay decisiones registradas.</p>{% endfor %}
-                {% if seleccion.ultima_reapertura %}<h3>Comparación con la última decisión invalidada</h3><p>Anterior: {{ seleccion.ultima_reapertura.decision_anterior.valor }}/4 · Actual: {% if seleccion.valor_confirmado %}{{ seleccion.valor_confirmado }}/4{% else %}Pendiente{% endif %}</p>{% endif %}
-                <h3>Historial de reaperturas</h3>{% for evento in seleccion.reaperturas %}<details class="hu11-fuente"><summary>{{ evento.fecha|date:"d/m/Y H:i" }} · Reapertura · {{ evento.decision_anterior.valor }}/4</summary><p>{{ evento.actor.nombre }}</p><p class="hu11-texto">{{ evento.motivo }}</p><p>Justificación anterior: {{ evento.decision_anterior.justificacion }}</p>{% if evento.resultados_anteriores.resultado %}<p>Resultado final anterior archivado:</p><p class="hu11-texto">{{ evento.resultados_anteriores.resultado.recomendacion }}</p><p class="hu11-texto">{{ evento.resultados_anteriores.resultado.explicacion }}</p>{% endif %}{% for factor in evento.resultados_anteriores.factores %}{% if factor.ponderacion_media or factor.clasificacion_foda %}<p>Factor #{{ factor.pk }} · PM {{ factor.ponderacion_media|default_if_none:"—" }} · {{ factor.clasificacion_foda|default_if_none:"—" }}</p>{% endif %}{% endfor %}</details>{% empty %}<p>No hay reaperturas registradas.</p>{% endfor %}</section></div>{% endif %}
+            <div class="hu11-regla" role="note">Solo las valoraciones confirmadas participan en el cálculo. Las sugerencias de IA son orientativas.</div>
+            {% if analisis_en_curso %}
+            <section class="hu11-panel hu11-analisis" aria-live="polite"><h2>Análisis de IA en curso</h2>
+                <p>HU09 está procesando {{ estado_analisis.procesados }} de {{ estado_analisis.total }} subfactores. Este contador representa subfactores, no documentos.</p>
+                <progress value="{{ estado_analisis.procesados }}" max="{{ estado_analisis.total|default:1 }}" aria-label="Progreso real del lote HU09"></progress>
+                <p class="hu11-ayuda">La revisión permanece en solo lectura mientras el lote esté activo. Consulte su estado en HU09; al terminar podrá continuar manualmente si no hay propuesta de IA.</p>
+                <a class="hu09-secondary" href="{{ base }}?evaluacion={{ evaluacion.pk }}">Ver análisis HU09</a>
+            </section>
+            {% endif %}
+            <section class="hu11-panel hu11-resumen" aria-label="Resumen de revisión">
+                <div><span>Subfactores activos</span><strong>{{ total }}</strong></div>
+                <div><span>Confirmadas</span><strong>{{ revisadas }}</strong></div>
+                <div><span>Pendientes</span><strong>{{ pendientes }}</strong></div>
+                <div><span>Borradores</span><strong id="hu11-contador-borradores">{{ cantidad_borradores }}</strong></div>
+                <progress value="{{ revisadas }}" max="{{ total|default:1 }}" aria-label="Progreso de confirmaciones"></progress>
+            </section>
+            <div class="hu11-tablero">
+                <nav class="hu11-panel hu09-nav hu11-indice" aria-label="Factores activos">
+                    <h2>Factores activos</h2><p class="hu11-ayuda">Seleccione un subfactor para revisar su evidencia.</p>
+                    <label for="hu11-buscar">Buscar factor o subfactor</label>
+                    <input id="hu11-buscar" type="search" placeholder="Buscar…" autocomplete="off">
+                    <label for="hu11-filtro">Estado de revisión</label>
+                    <select id="hu11-filtro"><option value="">Todos</option><option value="PENDIENTE">Pendientes</option><option value="BORRADOR">Con borrador</option><option value="CONFIRMADA">Confirmadas</option><option value="MODIFICADA">Modificadas</option><option value="MANUAL">Validación manual</option></select>
+                    <p id="hu11-sin-resultados" hidden role="status">No hay coincidencias.</p>
+                    {% regroup valoraciones by evaluacion_factor.factor.dimension.nombre as dimensiones %}
+                    {% for d in dimensiones %}
+                    <h3 class="hu11-dimension" data-grupo-hu11>{{ d.grouper }}</h3>
+                    {% regroup d.list by evaluacion_factor.factor.nombre as factores %}
+                    {% for f in factores %}
+                    <p class="hu11-factor" data-grupo-hu11>{{ f.grouper }} <small>IR {{ f.list.0.evaluacion_factor.importancia_relativa }}</small></p>
+                    {% for v in f.list %}
+                    <a class="hu11-item" data-hu11-nav data-busqueda="{{ d.grouper }} {{ f.grouper }} {{ v.subfactor.descripcion }}"
+                       data-estado="{% if v.ultimo_modo == 'MANUAL' and v.estado_validacion == 'CONFIRMADA' %}MANUAL{% else %}{{ v.estado_validacion }}{% endif %}"
+                       data-borrador="{% if v.tiene_borrador %}1{% else %}0{% endif %}"
+                       {% if v.pk == seleccion.valoracion_id %}aria-current="page"{% endif %}
+                       href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ v.pk }}">
+                        <span>{{ v.subfactor.descripcion }}</span><small class="hu11-status hu11-status--{{ v.estado_clase }}">{{ v.estado_visual }}{% if v.etiqueta_hu11 == "VALIDACIÓN MANUAL" %} · VALIDACIÓN MANUAL{% endif %}{% if v.tiene_borrador and v.estado_clase != 'borrador' %} · Borrador{% endif %}</small>
+                    </a>
+                    {% endfor %}{% endfor %}
+                    {% empty %}<p>No hay subfactores relevantes disponibles.</p>{% endfor %}
+                </nav>
+                {% if seleccion %}
+                <div class="hu11-contenido">
+                    <section class="hu11-panel hu11-valoracion">
+                        <div class="hu11-encabezado-factor"><div><h2>{{ seleccion.factor }}</h2><p>{{ seleccion.subfactor }}</p></div><span class="hu09-tag">IR {{ seleccion.ir }}</span></div>
+                        <p class="hu11-ayuda">Subfactor {{ posicion }} de {{ total }} · Contraste las fuentes antes de confirmar. {% if seleccion.etiqueta_hu11 == "VALIDACIÓN MANUAL" %}<strong>VALIDACIÓN MANUAL</strong>{% endif %}</p>
+                        <h3>{% if seleccion.propuesta %}Sugerencia de IA{% else %}Valoración del decisor{% endif %}</h3>
+                        {% if seleccion.propuesta %}<p class="hu11-estado-propuesta">Propuesta de IA: <strong>{{ seleccion.valor_ia }}/4</strong> · no participa en los resultados hasta su confirmación</p>{% else %}<p class="hu11-estado-propuesta">Sin propuesta calculada · puede continuar con valoración manual</p>{% endif %}
+                        <div class="hu11-escala" aria-label="Escala de valoración de 1 a 4">
+                            {% for n, etiqueta in escala %}
+                            <div class="hu11-escala-item {% if seleccion.valor_ia == n and seleccion.propuesta %}hu11-escala-item--ia{% endif %}">
+                                <span>{{ etiqueta }} ({{ n }})</span>{% if seleccion.valor_ia == n and seleccion.propuesta %}<small>Propuesta de IA</small>{% endif %}
+                            </div>{% endfor %}
+                        </div>
+                        {% if seleccion.propuesta %}<h3>Justificación de IA</h3><p class="hu11-texto">{{ seleccion.justificacion_ia }}</p>{% endif %}
+                        {% if seleccion.valor_confirmado %}<div class="hu11-confirmada"><strong>{% if seleccion.estado_validacion == 'MODIFICADA' %}Valoración modificada y confirmada{% else %}Valoración confirmada{% endif %} · {{ seleccion.valor_confirmado }}/4</strong><p class="hu11-texto">{{ seleccion.justificacion_decisor }}</p>{% if seleccion.fecha_validacion %}<small>{{ seleccion.fecha_validacion|date:"d/m/Y H:i" }}</small>{% endif %}</div>{% else %}<p class="hu11-aviso-pendiente">Pendiente de confirmación. La propuesta no participa en los cálculos.</p>{% endif %}
+                    </section>
+                    <section class="hu11-panel hu11-evidencias" aria-labelledby="hu11-titulo-evidencia"><h2 id="hu11-titulo-evidencia">Evidencia vinculada</h2><p class="hu11-ayuda">Revise la procedencia de cada fragmento. Una declaración del decisor no equivale a evidencia documental.</p>
+                        {% for fuente in seleccion.fuentes %}
+                        <article class="hu11-tarjeta-evidencia"><div class="hu11-evidencia-cab"><strong>{% if fuente.origen == 'DOCUMENTO' %}{{ fuente.documento }}{% if fuente.pagina %} · pág. {{ fuente.pagina }}{% endif %}{% else %}Declaración del decisor{% endif %}</strong><span class="hu09-tag">{% if fuente.origen == 'DOCUMENTO' %}Relevancia {{ fuente.nivel }}{% else %}Declaración{% endif %}</span></div>
+                            {% if fuente.pregunta %}<p><strong>Pregunta:</strong> {{ fuente.pregunta }}</p>{% endif %}
+                            <p class="hu11-texto">{{ fuente.contenido }}</p>
+                            <p class="hu11-evidencia-pie">{{ fuente.id }}{% if fuente.referencia %} · {{ fuente.referencia }}{% endif %}{% if fuente.url_documento %} · <a href="{{ fuente.url_documento }}">Ver documento</a>{% endif %}</p>
+                        </article>
+                        {% empty %}<p class="hu11-sin-evidencia">No hay evidencia informativa vinculada a este subfactor.</p>{% endfor %}
+                    </section>
+                    <section class="hu11-panel hu11-faltantes"><h2>Información faltante</h2>
+                        {% if seleccion.tiene_pendientes %}<div class="hu11-aviso-faltante">Hay {{ seleccion.preguntas_pendientes }} pregunta(s) pendiente(s) de respuesta.</div>{% elif not seleccion.fuentes %}<div class="hu11-aviso-faltante">No hay respaldo informativo. Puede pedir información o registrar una valoración manual debidamente justificada.</div>{% else %}<p class="hu11-ayuda">Consulte las preguntas y verifique la suficiencia de la información antes de decidir.</p>{% endif %}
+                        <h3>Preguntas complementarias</h3>
+                        {% for pregunta in seleccion.preguntas %}<div class="hu11-pregunta"><strong>{{ pregunta.texto }}</strong><small>{{ pregunta.estado_respuesta }}</small>{% if pregunta.respuesta %}<p class="hu11-texto">{{ pregunta.respuesta }}</p>{% endif %}</div>{% empty %}<p class="hu11-ayuda">No hay preguntas activas para este subfactor.</p>{% endfor %}
+                        <a class="hu09-secondary" href="{{ base }}?evaluacion={{ evaluacion.pk }}">Solicitar más información / revisar con IA (HU09)</a>
+                    </section>
+                    <section class="hu11-panel hu11-decision" aria-label="Decisión del decisor">
+                        {% if seleccion.editable %}
+                            <div><h2>Decisión del decisor</h2><p class="hu11-ayuda">La IA no confirma automáticamente. Registre una decisión fundamentada.</p></div>
+                            <div class="hu11-botones-decision">
+                                {% if seleccion.propuesta %}<button type="button" class="btn-top-action" data-hu11-open="CONFIRMAR">Confirmar propuesta</button><button type="button" class="hu09-secondary" data-hu11-open="MODIFICAR">Modificar</button>
+                                {% else %}<button type="button" class="btn-top-action" data-hu11-open="MANUAL">Valoración manual</button>{% endif %}
+                                {% if seleccion.tiene_borrador %}<span class="hu11-status hu11-status--borrador">Borrador disponible</span>{% endif %}
+                            </div>
+                        {% else %}
+                            <div><h2>Decisión registrada</h2><p>Solo lectura: decisión registrada, evaluación cerrada o análisis HU09 en curso.</p></div>
+                            {% if seleccion.reabrible %}<details class="hu11-reabrir"><summary>Reabrir valoración</summary><p class="hu11-ayuda">La decisión vigente dejará de contar en PM y FODA. Los resultados derivados se archivarán y deberán recalcularse.</p>
+                            <form method="post" class="hu11-reapertura">{% csrf_token %}
+                                <input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ seleccion.valoracion_id }}"><input type="hidden" name="version" value="{{ seleccion.version }}"><input type="hidden" name="accion" value="reabrir_hu11">
+                                <label for="hu11-motivo">Motivo de reapertura (obligatorio)</label><textarea id="hu11-motivo" name="motivo" maxlength="4000" required rows="3"></textarea>
+                                <label><input type="checkbox" name="confirmar_reapertura" value="1" required> Confirmo que deseo invalidar esta decisión y los resultados derivados.</label><button class="hu09-secondary" type="submit">Confirmar reapertura</button>
+                            </form></details>{% endif %}
+                        {% endif %}
+                    </section>
+                    {% if seleccion.editable %}
+                    <dialog id="hu11-editor" class="hu11-dialog" aria-labelledby="hu11-editor-titulo" data-propuesta="{% if seleccion.propuesta %}1{% else %}0{% endif %}" data-valor-ia="{{ seleccion.valor_ia|default_if_none:'' }}" {% if error %}data-error="1"{% endif %}>
+                        <div class="hu11-modal-cab"><h2 id="hu11-editor-titulo">Modificar valoración</h2><button type="button" id="hu11-cerrar" aria-label="Cerrar ventana">×</button></div>
+                        <p class="hu11-ayuda">{{ seleccion.factor }} → {{ seleccion.subfactor }}. La propuesta de IA se conserva para trazabilidad.</p>
+                        <form method="post" class="hu11-form">{% csrf_token %}
+                            <input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ seleccion.valoracion_id }}"><input type="hidden" name="version" value="{{ seleccion.version }}"><input type="hidden" name="accion" value="resolver_hu11"><input type="hidden" name="version_borrador" value="{{ seleccion.version_borrador }}">
+                            {% if seleccion.borrador_obsoleto %}<p class="hu09-error" role="alert">Las fuentes cambiaron desde el último borrador. Revise las fuentes antes de guardar.</p>{% endif %}
+                            {% if seleccion.propuesta %}<p class="hu11-modal-nota">Propuesta original de IA: {{ seleccion.valor_ia }}/4. Confirmar conserva ese valor; modificar requiere elegir otro.</p>{% endif %}
+                            <fieldset class="hu11-modo"><legend>Tipo de decisión</legend>
+                                {% if seleccion.propuesta %}<label><input type="radio" name="modo" value="CONFIRMAR" required {% if modo_elegido == 'CONFIRMAR' %}checked{% endif %}> Confirmar propuesta</label><label><input type="radio" name="modo" value="MODIFICAR" required {% if modo_elegido == 'MODIFICAR' %}checked{% endif %}> Modificar propuesta</label>
+                                {% else %}<label><input type="radio" name="modo" value="MANUAL" required checked> Valoración manual</label>{% endif %}
+                            </fieldset>
+                            <fieldset class="hu11-modal-escala"><legend>Valoración del decisor *</legend>
+                                {% for n, etiqueta in escala %}<label><input type="radio" name="valor" value="{{ n }}" required {% if valor_elegido == n|stringformat:'s' %}checked{% endif %}><span>{{ etiqueta }} ({{ n }})</span></label>{% endfor %}
+                            </fieldset>
+                            <label for="hu11-justificacion">Justificación del decisor (obligatoria)</label><textarea id="hu11-justificacion" name="justificacion" rows="4" maxlength="4000" required placeholder="Explique qué información respalda su decisión…">{{ borrador }}</textarea>
+                            <p class="hu11-ayuda">Las fuentes se conservan automáticamente en el registro auditable. Consulte sus fragmentos en la pantalla principal.</p>
+                            <p id="hu11-guardado" role="status" aria-live="polite">{% if seleccion.borrador_obsoleto %}Borrador anterior: revise las fuentes.{% elif seleccion.version_borrador != '0' %}Borrador guardado.{% else %}Todavía no hay borrador guardado.{% endif %}</p>
+                            <div class="hu11-acciones"><button type="button" class="hu09-secondary" id="hu11-guardar">Guardar borrador</button><button type="submit" class="btn-top-action">Registrar decisión definitiva</button></div>
+                        </form>
+                        <button type="button" class="hu09-secondary hu11-cancelar" id="hu11-cancelar">Cancelar / cerrar</button>
+                    </dialog>
+                    {% endif %}
+                    <details class="hu11-panel hu11-historial"><summary>Historial de decisiones y reaperturas</summary>
+                        {% for r in seleccion.historial %}<details class="hu11-fuente"><summary>{{ r.fecha|date:"d/m/Y H:i" }} · {{ r.get_modo_display }} · {{ r.valor }}/4</summary><p>{{ r.actor.nombre }}</p><p class="hu11-texto">{{ r.justificacion }}</p><p>Propuesta IA histórica: {{ r.valor_ia|default_if_none:"Sin propuesta" }}</p><p>Fuentes conservadas: {{ r.fuentes|length }}</p>{% for fuente in r.fuentes %}<p class="hu11-texto">{{ fuente.id }} · {{ fuente.contenido }}</p>{% endfor %}</details>{% empty %}<p>No hay decisiones registradas.</p>{% endfor %}
+                        {% if seleccion.ultima_reapertura %}<h3>Comparación con la última decisión invalidada</h3><p>Decisión anterior: {{ seleccion.ultima_reapertura.decision_anterior.valor }}/4 · Actual: {{ seleccion.valor_confirmado|default_if_none:"Pendiente" }}</p>{% endif %}
+                        {% for evento in seleccion.reaperturas %}<details class="hu11-fuente"><summary>{{ evento.fecha|date:"d/m/Y H:i" }} · Reapertura</summary><p>{{ evento.actor.nombre }} · {{ evento.motivo }}</p><p>Valor anterior: {{ evento.decision_anterior.valor }}/4</p></details>{% empty %}<p>No hay reaperturas registradas.</p>{% endfor %}
+                    </details>
+                    <nav class="hu11-subnav" aria-label="Siguiente subfactor">
+                        {% if anterior_pk %}<a class="hu09-secondary" href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ anterior_pk }}">← Subfactor anterior</a>{% else %}<span></span>{% endif %}
+                        {% if siguiente_pk %}<a class="hu09-secondary" href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ siguiente_pk }}">Siguiente subfactor →</a>{% endif %}
+                    </nav>
+                </div>
+                {% endif %}
             </div>
-            {% if lote_editable %}<section class="hu09-panel hu11-lote"><h2 class="block-title">Revisión masiva de borradores</h2><p class="hu09-muted">Seleccione solo decisiones que ya revisó individualmente. Se verificará la vigencia de todas al registrar el lote. Si una no es válida, ninguna se registrará. Recargue la página para ver borradores recién guardados.</p>{% if borradores_obsoletos %}<p class="hu09-error" role="status">Borradores desactualizados: {{ borradores_obsoletos|length }}. Revise las fuentes y guarde de nuevo antes de incluirlos en el lote.</p>{% for v in borradores_obsoletos %}<p><a href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ v.pk }}">{{ v.evaluacion_factor.factor.nombre }} · {{ v.subfactor.descripcion }}</a></p>{% endfor %}{% endif %}{% if borradores %}<form method="post" id="hu11-lote">{% csrf_token %}<input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="accion" value="resolver_lote_hu11">
-            {% for item in borradores %}<div class="hu11-fuente"><label><input type="checkbox" name="seleccion" value="{{ item.v.pk }}:{{ item.b.version }}:{{ item.b.huella_contexto }}"> {{ item.v.evaluacion_factor.factor.nombre }} · {{ item.v.subfactor.descripcion }} — {{ item.b.modo }}: {{ item.b.valor }}/4</label><p class="hu11-texto">{{ item.b.justificacion }}</p><a href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ item.v.pk }}">Consultar propuesta y fuentes</a></div>{% endfor %}
-            <label class="hu11-lote-confirmar"><input type="checkbox" name="confirmar_lote" value="1" required> He revisado las fuentes de cada decisión seleccionada y confirmo su registro definitivo.</label><button class="btn-top-action" type="submit">Registrar decisiones seleccionadas</button><p id="hu11-lote-estado" role="status"></p></form>{% else %}<p>No hay borradores completos disponibles.</p>{% endif %}</section>{% endif %}{% endif %}
-            {% if evaluacion %}{% url 'presentation:decisor-carga-documental' as u_ant %}{% url 'presentation:decisor-resultados' as u_sig %}{% with ev=evaluacion.pk|stringformat:"s" %}{% include "presentation/includes/paso_navegacion.html" with anterior_url=u_ant|add:"?evaluacion_id="|add:ev siguiente_url=u_sig|add:"?evaluacion="|add:ev nota="Solo las valoraciones confirmadas participan en el cálculo." %}{% endwith %}{% endif %}
+            {% if lote_editable %}<details class="hu11-panel hu11-lote"><summary>Revisión masiva de borradores ({{ borradores|length }} disponibles)</summary>
+                <p class="hu11-ayuda">Solo registre decisiones que haya revisado individualmente. Si una es inválida, el lote entero se rechaza.</p>
+                {% if borradores_obsoletos %}<p class="hu09-error">Borradores desactualizados: {{ borradores_obsoletos|length }}. Consulte las fuentes y guarde de nuevo.</p>{% endif %}
+                {% if borradores %}<form method="post" id="hu11-lote">{% csrf_token %}<input type="hidden" name="etapa" value="validacion"><input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="accion" value="resolver_lote_hu11">
+                    {% for item in borradores %}<div class="hu11-lote-item"><label><input type="checkbox" name="seleccion" value="{{ item.v.pk }}:{{ item.b.version }}:{{ item.b.huella_contexto }}"> {{ item.v.evaluacion_factor.factor.nombre }} · {{ item.v.subfactor.descripcion }} — {{ item.b.modo }}: {{ item.b.valor }}/4</label><p class="hu11-texto">{{ item.b.justificacion }}</p><a href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ item.v.pk }}">Consultar fuentes</a></div>{% endfor %}
+                    <label class="hu11-lote-confirmar"><input type="checkbox" name="confirmar_lote" value="1" required> He revisado las fuentes y confirmo las decisiones seleccionadas.</label><button class="btn-top-action" type="submit">Registrar decisiones seleccionadas</button><p id="hu11-lote-estado" role="status"></p>
+                </form>{% else %}<p>No hay borradores completos disponibles.</p>{% endif %}
+            </details>{% endif %}
+            {% url 'presentation:decisor-carga-documental' as u_ant %}{% url 'presentation:decisor-resultados' as u_sig %}
+            {% with ev=evaluacion.pk|stringformat:"s" %}{% include "presentation/includes/paso_navegacion.html" with anterior_url=u_ant|add:"?evaluacion_id="|add:ev siguiente_url=u_sig|add:"?evaluacion="|add:ev nota="Solo las valoraciones confirmadas participan en el cálculo." %}{% endwith %}
+            {% endif %}
         </main>
     </div>
 </div>
