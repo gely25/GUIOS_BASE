@@ -11,10 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="{% static 'presentation/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'presentation/css/guia.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% block body_class %}guios-body{% endblock %}">
     {% block content %}{% endblock %}
     {% block extra_js %}{% endblock %}
+    <script src="{% static 'presentation/js/guia.js' %}" defer></script>
 </body>
 </html>

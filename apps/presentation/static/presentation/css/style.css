@@ -1260,8 +1260,9 @@ html, body {
     }
 
     .sidebar-footer {
-        display: none;
+        padding: 10px 16px;
     }
+
 
     .app-topbar {
         padding: 0 20px;
@@ -1271,11 +1272,6 @@ html, body {
         padding-top: 12px;
         padding-bottom: 12px;
         gap: 8px;
-    }
-
-    .topbar-right {
-        width: 100%;
-        justify-content: space-between;
     }
 
     .workspace-inner-content {
@@ -1333,3 +1329,16 @@ button.topbar-logout-link { background: none; border: 0; font: inherit; cursor: 
 .paso-nav-btn:hover { background: #8f5822; }
 .paso-nav-btn--inactivo { background: #e9e3d8; color: #9a917f; cursor: not-allowed; }
 .paso-nav-btn--inactivo:hover { background: #e9e3d8; }
+
+/* Sesión de la persona usuaria al pie del menú lateral */
+.sidebar-footer { display: flex; flex-direction: column; gap: 10px; }
+.sidebar-usuario { display: flex; align-items: center; gap: 10px; padding: 10px 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.sidebar-usuario-inicial { width: 34px; height: 34px; border-radius: 50%; background: #3a3f42; color: #e8c79b; display: grid; place-items: center; font-weight: 700; font-size: 14px; flex: none; }
+.sidebar-usuario-datos { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.sidebar-usuario-nombre { color: #ffffff; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-usuario-rol { color: #7e8b93; font-size: 11.5px; }
+.sidebar-usuario-salir { margin: 0; }
+.sidebar-usuario-salir button { background: none; border: 0; color: #7e8b93; cursor: pointer; padding: 6px; border-radius: 6px; display: grid; place-items: center; }
+.sidebar-usuario-salir button:hover, .sidebar-usuario-salir button:focus-visible { color: #ffffff; background: rgba(255, 255, 255, 0.08); }
+
+button.sidebar-footer-link { background: none; border: 0; font: inherit; font-size: 13px; cursor: pointer; width: 100%; text-align: left; }

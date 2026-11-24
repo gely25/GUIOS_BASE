@@ -1,0 +1,73 @@
+<dialog class="guia-ventana" id="guia-metodologica" aria-labelledby="guia-titulo">
+    <header class="guia-cab">
+        <div>
+            <h2 id="guia-titulo">Guía metodológica</h2>
+            <p>Cómo funciona una evaluación de adopción de software.</p>
+        </div>
+        <button type="button" class="guia-cerrar" data-cerrar-guia aria-label="Cerrar la guía">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+    </header>
+    <div class="guia-tabs" role="tablist" aria-label="Secciones de la guía">
+        <button type="button" role="tab" id="guia-t1" aria-controls="guia-p1" aria-selected="true">Los 6 pasos</button>
+        <button type="button" role="tab" id="guia-t2" aria-controls="guia-p2" aria-selected="false" tabindex="-1">Cómo se calcula</button>
+        <button type="button" role="tab" id="guia-t3" aria-controls="guia-p3" aria-selected="false" tabindex="-1">IA y decisor</button>
+        <button type="button" role="tab" id="guia-t4" aria-controls="guia-p4" aria-selected="false" tabindex="-1">Glosario</button>
+    </div>
+    <div class="guia-cuerpo">
+        <section id="guia-p1" role="tabpanel" aria-labelledby="guia-t1">
+            <ol class="guia-pasos">
+                <li><i>1</i><div><h3>Ficha inicial</h3><p>Registre el software, su organización y el propósito de adopción.</p></div></li>
+                <li><i>2</i><div><h3>Valoración de factores</h3><p>Indique qué tan importante es cada factor para su organización.</p></div></li>
+                <li><i>3</i><div><h3>Carga documental</h3><p>Suba los documentos del software que servirán como evidencia.</p></div></li>
+                <li><i>4</i><div><h3>Revisión de evidencia</h3><p>La IA propone una respuesta con fragmentos de los documentos; usted confirma cada una.</p></div></li>
+                <li><i>5</i><div><h3>Resultados</h3><p>El sistema calcula la puntuación de cada factor, su clasificación FODA y la recomendación.</p></div></li>
+                <li><i>6</i><div><h3>Informe</h3><p>Documento de cuatro hojas con la recomendación, los hallazgos y la evidencia. Se descarga en PDF.</p></div></li>
+            </ol>
+            <p class="guia-nota">Cada paso se puede retomar desde <b>Inicio → Continuar</b>. Solo las valoraciones que usted confirma entran al cálculo.</p>
+        </section>
+        <section id="guia-p2" role="tabpanel" aria-labelledby="guia-t2" hidden>
+            <div class="guia-dos">
+                <article class="guia-tarjeta"><h3>Importancia de cada factor (IR)</h3>
+                    <p>Combina la importancia que usted le da (ID) con la sugerida por el sistema (IS). Un factor con IR 1 se excluye de la evaluación.</p>
+                    <div class="guia-escala"><span><b>1</b> Irrelevante</span><span><b>2</b> Opcional</span><span><b>3</b> Importante</span><span><b>4</b> Fundamental</span></div></article>
+                <article class="guia-tarjeta"><h3>Puntuación media (PM)</h3>
+                    <p>Promedio de las respuestas confirmadas de cada factor, de 1 a 4.</p>
+                    <div class="guia-escala"><span><b>1</b> No cumple</span><span><b>2</b> No sé</span><span><b>3</b> Cumple parcialmente</span><span><b>4</b> Cumple</span></div></article>
+                <article class="guia-tarjeta"><h3>Clasificación FODA</h3>
+                    <p>Según el alcance del factor y su PM (el corte es 3).</p>
+                    <div class="guia-foda" role="table" aria-label="Clasificación FODA">
+                        <span></span><span class="h">PM de 3 a 4</span><span class="h">PM menor a 3</span>
+                        <span class="h">Interno</span><span class="f">Fortaleza</span><span class="d">Debilidad</span>
+                        <span class="h">Externo</span><span class="o">Oportunidad</span><span class="a">Amenaza</span>
+                    </div></article>
+                <article class="guia-tarjeta"><h3>Recomendación</h3>
+                    <ul class="guia-rec">
+                        <li><b>A</b><span><strong>Adoptar el FLOSS seleccionado</strong>Ningún factor relevante está en contra.</span></li>
+                        <li><b>B</b><span><strong>Es posible adoptar, con matices</strong>Hay factores en contra, pero no superan a los que van a favor.</span></li>
+                        <li><b>C</b><span><strong>Se sugiere analizar la adopción y debería ser pospuesta</strong>Los factores en contra superan a los que van a favor.</span></li>
+                    </ul></article>
+            </div>
+            <p class="guia-nota">Regla de recomendación v1.0 del equipo del proyecto.</p>
+        </section>
+        <section id="guia-p3" role="tabpanel" aria-labelledby="guia-t3" hidden>
+            <div class="guia-dos">
+                <article class="guia-tarjeta"><h3>Lo que hace la IA</h3><ul class="guia-lista"><li>Propone una valoración para cada subfactor.</li><li>Localiza fragmentos de sus documentos como evidencia.</li><li>No calcula resultados ni cambia ningún valor por su cuenta.</li></ul></article>
+                <article class="guia-tarjeta"><h3>Lo que decide usted</h3><ul class="guia-lista"><li>Confirma, corrige o rechaza cada valoración.</li><li>Ajusta la importancia de cada factor.</li><li>Solo las valoraciones confirmadas participan en el cálculo.</li></ul></article>
+            </div>
+            <p class="guia-nota"><b>Sobre «No sé»:</b> una respuesta «No sé» baja la puntuación del factor. Por eso el informe distingue entre «Falta de información» e «Incumplimiento»: un factor puede quedar en contra solo porque faltó evidencia.</p>
+        </section>
+        <section id="guia-p4" role="tabpanel" aria-labelledby="guia-t4" hidden>
+            <dl class="guia-glosario">
+                <div><dt>Factor</dt><dd>Característica del software que se evalúa; los factores se agrupan por dimensión.</dd></div>
+                <div><dt>Subfactor</dt><dd>Criterio concreto dentro de un factor; recibe una respuesta de 1 a 4.</dd></div>
+                <div><dt>Alcance</dt><dd>Interno si depende de su organización; externo si depende de terceros.</dd></div>
+                <div><dt>Evidencia</dt><dd>Fragmento de un documento que respalda una respuesta.</dd></div>
+                <div><dt>IS / ID / IR</dt><dd>Importancia sugerida, del decisor y relativa (la que se usa).</dd></div>
+                <div><dt>PM</dt><dd>Puntuación media de las respuestas confirmadas de un factor.</dd></div>
+                <div><dt>FODA</dt><dd>Fortalezas, Oportunidades, Debilidades y Amenazas.</dd></div>
+                <div><dt>Regla v1.0</dt><dd>Versión de la regla de recomendación que generó el resultado.</dd></div>
+            </dl>
+        </section>
+    </div>
+</dialog>

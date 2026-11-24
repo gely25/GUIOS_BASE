@@ -23,15 +23,33 @@
         </nav>
     </div>
 
-    <!-- Pie del sidebar -->
+    <!-- Pie del sidebar: guía y sesión de la persona usuaria -->
     <div class="sidebar-footer">
-        <a href="#guia" class="sidebar-footer-link" title="Guía metodológica GUIOS">
+        <button type="button" class="sidebar-footer-link sidebar-guia-link" data-abrir-guia aria-haspopup="dialog" title="Guía metodológica GUIOS">
             <svg class="sidebar-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="12" y1="16" x2="12" y2="12"></line>
                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
             <span>Guía metodológica</span>
-        </a>
+        </button>
+        <div class="sidebar-usuario">
+            <span class="sidebar-usuario-inicial" aria-hidden="true">{{ request.user.get_full_name|slice:":1"|upper }}</span>
+            <span class="sidebar-usuario-datos">
+                <span class="sidebar-usuario-nombre">{{ request.user.get_full_name }}</span>
+                <span class="sidebar-usuario-rol">{{ request.user.get_rol_display }}</span>
+            </span>
+            <form method="post" action="{% url 'presentation:logout' %}" class="sidebar-usuario-salir">
+                {% csrf_token %}
+                <button type="submit" title="Cerrar sesión" aria-label="Cerrar sesión">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+            </form>
+        </div>
     </div>
 </aside>
+{% include "presentation/includes/guia_metodologica.html" %}
