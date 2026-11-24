@@ -43,9 +43,9 @@ class PmFodaVistaTests(TestCase):
 
     def test_resultados_pide_elegir_el_alcance_de_soporte(self):
         r = self.cliente().get(self.url, {'evaluacion': self.ev.pk})
-        self.assertContains(r, 'Aún no hay resultados')
+        self.assertContains(r, 'Falta una decisión para calcular')
         self.assertContains(r, f'name="alcance_{self.soporte.pk}"')
-        self.assertContains(r, 'Calcular y guardar PM y FODA')
+        self.assertContains(r, 'Ver resultados')
 
     def test_la_revision_de_evidencia_ya_no_muestra_el_calculo(self):
         r = self.cliente().get(self.url_revision, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
@@ -57,7 +57,7 @@ class PmFodaVistaTests(TestCase):
         r = c.post(self.url, self.datos(**{f'alcance_{self.soporte.pk}': 'externo'}), follow=True)
         self.assertContains(r, 'Ponderación Media por factor')
         self.assertContains(r, 'Oportunidad')
-        self.assertContains(r, 'Recalcular y guardar')
+        self.assertNotContains(r, 'Recalcular')
 
     def test_post_guarda_pm_y_foda(self):
         r = self.cliente().post(self.url, self.datos(**{f'alcance_{self.soporte.pk}': 'externo'}))
@@ -82,3 +82,40 @@ class PmFodaVistaTests(TestCase):
         self.assertIn(r.status_code, (302, 403))
         self.ef.refresh_from_db()
         self.assertIsNone(self.ef.ponderacion_media)
+
+
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+class CalculoAutomaticoTests(TestCase):
+    """Sin factores de alcance mixto no hay nada que preguntar: entrar a Resultados calcula solo."""
+
+    @classmethod
+    def setUpTestData(cls):
+        CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
+        org = Organizacion.objects.create(nombre='Org auto HU12')
+        cls.actor = Usuario.objects.create_user('auto12@test.local', 'Clave-test-123', nombre='Decisor', organizacion=org)
+        cat = CatalogoVersion.objects.create(version='HU12 auto', fecha_creacion=date.today())
+        cls.ev = Evaluacion.objects.create(organizacion=org, usuario=cls.actor,
+                                           software=Software.objects.create(nombre='Soft auto'), catalogo=cat)
+        dim = Dimension.objects.create(nombre='Tecnológica')
+        factor = Factor.objects.create(dimension=dim, nombre='Compatibilidad', alcance=Factor.EXTERNO)
+        cls.ef = EvaluacionFactor.objects.create(evaluacion=cls.ev, factor=factor, importancia_relativa=3)
+        sf = Subfactor.objects.create(factor=factor, descripcion='Compatible con formatos abiertos')
+        v = ValoracionSubfactor.objects.create(evaluacion_factor=cls.ef, subfactor=sf)
+        version = RevisionHumanaService.obtener(cls.actor, cls.ev.pk, v.pk)['version']
+        RevisionHumanaService.resolver(cls.actor, cls.ev.pk, v.pk, 'MANUAL', 4, 'Confirmada.', version)
+        cls.url = reverse('presentation:decisor-resultados')
+
+    def test_entrar_a_resultados_calcula_y_guarda_sin_pulsar_nada(self):
+        c = Client()
+        c.force_login(self.actor)
+        r = c.get(self.url, {'evaluacion': self.ev.pk})
+        self.assertEqual(r.status_code, 302)
+        self.assertIn('c=1', r['Location'])
+        self.ef.refresh_from_db()
+        self.assertEqual((str(self.ef.ponderacion_media), self.ef.clasificacion_foda), ('4.00', 'Oportunidad'))
+        self.assertContains(c.get(r['Location']), 'Ponderación Media por factor')
+
+    def test_no_hay_bucle_de_redireccion_con_c_1(self):
+        c = Client()
+        c.force_login(self.actor)
+        self.assertEqual(c.get(self.url, {'evaluacion': self.ev.pk, 'c': 1}).status_code, 200)

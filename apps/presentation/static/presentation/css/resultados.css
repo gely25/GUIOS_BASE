@@ -66,3 +66,58 @@
 .res-recalcular summary { cursor: pointer; font-weight: 600; color: var(--res-tinta); }
 .res-recalcular[open] summary { margin-bottom: 8px; }
 .res-panel .res-boton { margin-top: 14px; border: 0; cursor: pointer; }
+
+/* Cálculo de PM y FODA: tabla paginada y acción siempre a la vista */
+.res-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: #64748b; }
+.res-pager button { border: 1px solid var(--res-borde); background: #fff; border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; color: var(--res-tinta); }
+.res-pager button:disabled { opacity: .45; cursor: default; }
+.res-pager b { color: var(--res-acento); }
+.res-accion { position: sticky; bottom: 0; margin-top: 16px; padding: 14px 0; background: linear-gradient(to top, #fff 70%, rgba(255,255,255,0)); display: flex; justify-content: flex-end; }
+
+/* Decisión previa al cálculo: solo se pregunta lo que falta */
+.res-decision-form { display: grid; gap: 14px; max-width: 520px; margin-top: 18px; }
+.res-decision { border: 1px solid var(--res-borde); border-radius: 12px; padding: 14px 16px; margin: 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.res-decision legend { font-weight: 600; font-size: 15px; padding: 0 6px; color: var(--res-tinta); }
+.res-decision legend small { font-weight: 400; color: #64748b; margin-left: 6px; }
+.res-decision label { flex: 1 1 140px; cursor: pointer; }
+.res-decision input { position: absolute; opacity: 0; pointer-events: none; }
+.res-decision label span { display: block; text-align: center; padding: 12px; border: 1px solid var(--res-borde); border-radius: 10px; font-weight: 600; background: #fff; }
+.res-decision label:hover span { background: #f4f1ec; }
+.res-decision input:checked + span { background: var(--res-tinta); color: #fff; border-color: var(--res-tinta); }
+.res-decision input:focus-visible + span { outline: 2px solid var(--res-acento); outline-offset: 2px; }
+.res-decision-form .res-boton { justify-self: start; }
+
+/* Tabla compacta: son solo números */
+.res-tabla--compacta th { padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.res-tabla--compacta td { padding: 8px 12px; font-size: 13px; }
+.res-tabla--compacta .res-etiqueta { padding: 2px 9px; font-size: 11px; }
+.res-tabla--compacta .res-select { padding: 4px 8px; font-size: 12px; }
+.res-pager { margin-top: 8px; font-size: 12px; }
+.res-pager button { padding: 4px 10px; font-size: 12px; }
+
+/* Matriz y perfil más pequeños: la lista larga se desplaza dentro de su caja */
+.res-cuadrante { padding: 12px 14px; min-height: 0; }
+.res-cuadrante h3 { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+.res-cuadrante h3 small { font-weight: 600; opacity: .7; }
+.res-cuadrante ul { max-height: 128px; overflow-y: auto; }
+.res-cuadrante li { font-size: 12.5px; line-height: 1.45; }
+.res-perfil-lista { max-height: 300px; overflow-y: auto; padding-right: 6px; }
+.res-barra-fila { margin-bottom: 8px; }
+.res-barra-fila .res-barra-etiqueta { font-size: 12px; margin-bottom: 3px; }
+.res-pista { height: 8px; }
+
+/* Tarjeta de decisión: explica el factor y da ejemplos */
+.res-decision-form { max-width: 640px; }
+.res-decision-ayuda { flex: 1 1 100%; margin: 0 0 4px; font-size: 13px; color: #475569; line-height: 1.5; }
+.res-decision label span { text-align: left; display: flex; flex-direction: column; gap: 4px; }
+.res-decision label span b { font-size: 15px; }
+.res-decision label span small { font-size: 12px; font-weight: 400; line-height: 1.4; opacity: .85; }
+.res-decision label span em { font-style: normal; font-size: 11px; font-weight: 600; opacity: .7; margin-top: 2px; }
+
+/* Recomendación A / B / C en el banner oscuro */
+.res-letra { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; margin-right: 14px; border-radius: 10px; background: var(--res-acento); color: #fff; font-size: 22px; font-weight: 700; vertical-align: middle; }
+.res-abc { list-style: none; margin: 14px 0 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.res-abc li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border: 1px solid #4a5257; border-radius: 999px; font-size: 12px; color: #aab1b5; }
+.res-abc li b { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 50%; background: #343b3f; font-size: 12px; }
+.res-abc li.es-activa { background: #fff; color: var(--res-tinta); border-color: #fff; font-weight: 600; }
+.res-abc li.es-activa b { background: var(--res-acento); color: #fff; }

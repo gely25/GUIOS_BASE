@@ -80,6 +80,17 @@ class ResultadosEvaluacion:
     def tiene_recomendacion(self) -> bool:
         return bool((self.recomendacion or '').strip())
 
+    @property
+    def escala_recomendacion(self):
+        """(letra, texto, activa) de las tres recomendaciones posibles (A, B, C) de la regla."""
+        from .recomendacion import TEXTOS_RECOMENDACION
+        actual = (self.recomendacion or '').strip()
+        return [(letra, texto, texto == actual) for letra, texto in TEXTOS_RECOMENDACION.items()]
+
+    @property
+    def letra_recomendacion(self) -> str:
+        return next((letra for letra, _, activa in self.escala_recomendacion if activa), '')
+
 
 class ResultadosService:
     """Lectura de PM, FODA y (si existen) recomendación de una evaluación."""
