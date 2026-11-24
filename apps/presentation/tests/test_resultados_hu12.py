@@ -66,6 +66,10 @@ class ResultadosHU12Tests(TestCase):
         self.assertNotContains(r, 'res-boton--inactivo')
         self.assertNotContains(r, 'Explicación de la recomendación')
 
+    def test_el_boton_anterior_lleva_a_la_revision_rapida_y_no_a_la_pantalla_antigua(self):
+        r = self.cliente().get(self.url, {'evaluacion': self.ev.pk})
+        self.assertContains(r, f'evaluacion={self.ev.pk}&amp;etapa=validacion')
+
     def test_el_banner_muestra_la_escala_a_b_c_con_la_recomendacion_activa(self):
         ResultadoEvaluacion.objects.create(evaluacion=self.ev, recomendacion='Es posible adoptar, con matices',
                                            explicacion='Resumen.', version_regla='1.0')
