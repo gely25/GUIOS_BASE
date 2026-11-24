@@ -6,6 +6,7 @@ El usuario entra con correo y contraseña. El rol no se elige: sale de usuario.r
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.password_validation import validate_password
 from apps.data.models import Usuario
 
 
@@ -118,6 +119,53 @@ class AccesoForm(AuthenticationForm):
         'invalid_login': 'Correo o contraseña incorrectos.',
         'inactive': 'Correo o contraseña incorrectos.',
     }
+
+
+class RegistroForm(forms.Form):
+    """Alta de una persona decisora. La organización se registra luego, en su primera evaluación."""
+
+    nombre = forms.CharField(
+        label='Nombre completo', max_length=150,
+        widget=forms.TextInput(attrs={'autocomplete': 'name', 'autofocus': True,
+                                      'placeholder': 'Nombre y apellido'}))
+    correo = forms.EmailField(
+        label='Correo electrónico', max_length=150,
+        widget=forms.EmailInput(attrs={'autocomplete': 'username',
+                                       'placeholder': 'usuario@organizacion.com'}))
+    rol = forms.ChoiceField(
+        label='Tipo de cuenta', choices=[(Usuario.DECISOR, 'Decisor'), (Usuario.ADMINISTRADOR, 'Administrador')], initial=Usuario.DECISOR,
+        widget=forms.RadioSelect)
+    password1 = forms.CharField(
+        label='Contraseña', strip=False,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'placeholder': 'Mínimo 8 caracteres'}))
+    password2 = forms.CharField(
+        label='Confirmar contraseña', strip=False,
+        widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'placeholder': 'Repita la contraseña'}))
+
+    def clean_nombre(self):
+        nombre = ' '.join(self.cleaned_data['nombre'].split())
+        if not nombre:
+            raise forms.ValidationError('Escriba su nombre.')
+        return nombre
+
+    def clean_correo(self):
+        correo = self.cleaned_data['correo'].strip().lower()
+        if Usuario.objects.filter(correo__iexact=correo).exists():
+            raise forms.ValidationError('Ya existe una cuenta con este correo. Inicie sesión.')
+        return correo
+
+    def clean(self):
+        datos = super().clean()
+        clave, repetida = datos.get('password1'), datos.get('password2')
+        if clave and repetida and clave != repetida:
+            self.add_error('password2', 'Las contraseñas no coinciden.')
+        elif clave:
+            candidato = Usuario(nombre=datos.get('nombre', ''), correo=datos.get('correo', ''))
+            try:
+                validate_password(clave, candidato)
+            except forms.ValidationError as error:
+                self.add_error('password1', error)
+        return datos
 
 
 class UsuarioEditarForm(forms.Form):

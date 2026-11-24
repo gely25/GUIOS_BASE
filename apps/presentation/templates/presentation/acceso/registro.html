@@ -1,0 +1,95 @@
+{% extends "presentation/layouts/base.html" %}
+{% load static %}
+
+{% block title %}Crear cuenta · GUIOS PRO{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'presentation/css/login.css' %}">
+{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block content %}
+<main class="login">
+  <aside class="login__brand">
+    <div class="login__logo">GUIOS <span>PRO</span></div>
+    <div class="login__pitch">
+      <p class="login__eyebrow">Sistema de apoyo a la decisión</p>
+      <h1 class="login__headline">Cree su cuenta y empiece a evaluar.</h1>
+      <p class="login__lead">Registre su organización y el software que desea adoptar en su primera evaluación. Sus datos quedan guardados y trazables.</p>
+    </div>
+  </aside>
+
+  <section class="login__panel">
+    <div class="login__box">
+      <p class="login__eyebrow login__eyebrow--dark">Registro en GUIOS PRO</p>
+      <h2 class="login__title">Crear cuenta</h2>
+      <p class="login__subtitle">Elija su tipo de cuenta y complete sus datos.</p>
+
+      {% if form.non_field_errors %}
+      <div class="login__error" role="alert">{{ form.non_field_errors|join:" " }}</div>
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <fieldset class="login__roles">
+          <legend class="login__label">Tipo de cuenta</legend>
+          <div class="login__roles-pista">
+            {% for opcion in form.rol %}
+            <label class="login__rol">
+              {{ opcion.tag }}
+              <span class="login__rol-caja">
+                {% if opcion.data.value == "DECISOR" %}
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>
+                {% endif %}
+                {{ opcion.choice_label }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+          <p class="login__rol-desc" data-rol="DECISOR">Realiza las evaluaciones de software de su organización.</p>
+          <p class="login__rol-desc" data-rol="ADMINISTRADOR">Gestiona usuarios y el catálogo bibliográfico.</p>
+        </fieldset>
+        {% if form.rol.errors %}<p class="login__campo-error login__campo-error--roles" role="alert">{{ form.rol.errors|join:" " }}</p>{% endif %}
+
+        {% for campo in form %}{% if campo.name != "rol" %}
+        <div class="login__campo">
+          <label class="login__label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+          {% if campo.name == "password1" or campo.name == "password2" %}
+          <div class="login__pw">{{ campo }}
+            <button type="button" class="login__toggle" aria-controls="{{ campo.id_for_label }}" aria-pressed="false">Mostrar</button>
+          </div>
+          {% else %}
+          {{ campo }}
+          {% endif %}
+          {% if campo.errors %}
+          <p class="login__campo-error" role="alert">{{ campo.errors|join:" " }}</p>
+          {% endif %}
+        </div>
+        {% endif %}{% endfor %}
+
+        <button type="submit" class="login__submit">Crear cuenta</button>
+      </form>
+
+      <p class="login__alterno">¿Ya tiene cuenta? <a href="{% url 'presentation:home' %}">Iniciar sesión</a></p>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.login__toggle').forEach(function (boton) {
+    var campo = document.getElementById(boton.getAttribute('aria-controls'));
+    boton.addEventListener('click', function () {
+      var visible = campo.type === 'text';
+      campo.type = visible ? 'password' : 'text';
+      boton.textContent = visible ? 'Mostrar' : 'Ocultar';
+      boton.setAttribute('aria-pressed', visible ? 'false' : 'true');
+    });
+  });
+</script>
+{% endblock %}

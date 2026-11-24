@@ -7,12 +7,16 @@ contra la tabla `usuario`. No hay cálculos ni consultas directas aquí.
 
 from urllib.parse import urlparse
 
+from django.contrib.auth import login
 from django.contrib.auth.views import LoginView
+from django.shortcuts import redirect
 from django.urls import Resolver404, resolve, reverse
+from django.views.generic import FormView
 
 from apps.application.services.login_throttle import LoginThrottle
 from apps.business_rules import menu
-from apps.presentation.forms import AccesoForm
+from apps.data.models import Usuario
+from apps.presentation.forms import AccesoForm, RegistroForm
 
 
 def _destino_permitido(rol, destino):
@@ -65,4 +69,27 @@ class AccesoView(LoginView):
         return reverse('presentation:' + (menu.inicio_de(rol) or 'home'))
 
 
+class RegistroView(FormView):
+    """Registro público: crea una cuenta de Decisor o Administrador e inicia la sesión."""
+
+    template_name = 'presentation/acceso/registro.html'
+    form_class = RegistroForm
+    extra_context = {'titulo': 'Crear cuenta'}
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return redirect('presentation:' + (menu.inicio_de(request.user.rol) or 'home'))
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        datos = form.cleaned_data
+        # El rol sale de la elección validada del formulario (Decisor o Administrador).
+        usuario = Usuario.objects.create_user(
+            correo=datos['correo'], password=datos['password1'],
+            nombre=datos['nombre'], rol=datos['rol'])
+        login(self.request, usuario, backend='django.contrib.auth.backends.ModelBackend')
+        return redirect('presentation:' + (menu.inicio_de(usuario.rol) or 'home'))
+
+
 home_view = AccesoView.as_view()
+registro_view = RegistroView.as_view()

@@ -9,12 +9,13 @@ toda ruta nueva debe declararse allí o queda denegada.
 from django.contrib.auth.views import LogoutView
 from django.urls import include, path, reverse_lazy
 
-from .views import home_view
+from .views import home_view, registro_view
 
 app_name = 'presentation'
 
 urlpatterns = [
     path('', home_view, name='home'),
+    path('registro/', registro_view, name='registro'),
     path('salir/', LogoutView.as_view(next_page=reverse_lazy('presentation:home')), name='logout'),
     path('decisor/', include('apps.presentation.urls_decisor')),
     path('administracion/', include('apps.presentation.urls_admin')),
