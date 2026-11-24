@@ -8,7 +8,7 @@ por la vista real en esa ruta.
 
 from django.urls import path
 
-from .views import admin_home_view, modulo_pendiente_view
+from .views import admin_home_view
 from .views import bibliografia
 from .views.literatura import indicadores_literatura_view
 
@@ -22,14 +22,4 @@ urlpatterns = [
     path('actualizacion-bibliografica/estado/', bibliografia.estado_view, name='admin-bibliografia-estado'),
     path('actualizacion-bibliografica/version/', bibliografia.version_view, name='admin-bibliografia-version'),
     path('indicadores-literatura/', indicadores_literatura_view, name='admin-indicadores-literatura'),
-    path(
-        'catalogo-metodologico/',
-        modulo_pendiente_view,
-        {
-            'nombre_modulo': 'Catálogo metodológico',
-            'area': 'administracion',
-            'referencia_figma': 'nodo 7:5516',
-        },
-        name='admin-catalogo-metodologico',
-    ),
 ]
