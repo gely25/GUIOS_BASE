@@ -14,7 +14,6 @@ class MenuPorRolTests(unittest.TestCase):
         self.assertEqual(self.rutas(menu.ADMINISTRADOR), [
             'admin-usuarios-roles',
             'admin-actualizacion-bibliografica',
-            'admin-catalogo-metodologico',
         ])
 
     def test_indicadores_de_literatura_no_aparece_en_el_menu_pero_el_admin_puede_abrirla(self):
@@ -57,9 +56,9 @@ class PermisosTests(unittest.TestCase):
 
 class CatalogoTests(unittest.TestCase):
 
-    def test_las_16_rutas_de_presentacion_estan_en_el_catalogo(self):
-        self.assertEqual(len(menu.CATALOGO), 16)
-        self.assertEqual(len({m.ruta for m in menu.CATALOGO}), 16)
+    def test_las_15_rutas_de_presentacion_estan_en_el_catalogo(self):
+        self.assertEqual(len(menu.CATALOGO), 15)
+        self.assertEqual(len({m.ruta for m in menu.CATALOGO}), 15)
 
     def test_cada_ruta_tiene_exactamente_un_rol(self):
         for modulo in menu.CATALOGO:

@@ -24,7 +24,6 @@ Los módulos que todavía no se implementan muestran «Módulo no disponible».
 | `/administracion/actualizacion-bibliografica/estado/` | `admin-bibliografia-estado` | **implementada**: progreso en JSON (sondeo de la interfaz) | HU02, Merly |
 | `/administracion/actualizacion-bibliografica/version/` | `admin-bibliografia-version` | **implementada**: recalcular TC/IL/IS y publicar versión | HU02, Merly |
 | `/administracion/indicadores-literatura/` | `admin-indicadores-literatura` | **implementada** (versión activa del catálogo; sin opción en el menú, se abre por URL) | HU03/HU04, Angely |
-| `/administracion/catalogo-metodologico/` | `admin-catalogo-metodologico` | módulo no disponible | por asignar |
 
 ## Espacio del Decisor (rol DECISOR)
 

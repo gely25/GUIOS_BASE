@@ -4,9 +4,7 @@ from django.urls import reverse
 from apps.business_rules import menu
 from apps.data.models import Usuario
 
-PENDIENTES = [
-    'admin-catalogo-metodologico',
-]
+PENDIENTES = []  # hoy no queda ninguna ruta de «módulo no disponible»
 
 
 class RutasPorAreaTests(TestCase):

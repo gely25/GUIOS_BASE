@@ -59,8 +59,6 @@ CATALOGO = (
            (ADMINISTRADOR,), en_menu=False),
     Modulo('admin-indicadores-literatura', 'Indicadores de literatura', 'grafica',
            (ADMINISTRADOR,), en_menu=False),
-    Modulo('admin-catalogo-metodologico', 'Catálogo metodológico', 'catalogo',
-           (ADMINISTRADOR,)),
     # Decisor
     Modulo('decisor-inicio', 'Inicio', 'inicio', (DECISOR,)),
     Modulo('decisor-ficha-inicial', 'Nueva evaluación', 'mas', (DECISOR,)),
