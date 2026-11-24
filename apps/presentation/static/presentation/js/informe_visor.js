@@ -18,6 +18,12 @@
   nav.hidden = false;
   minis.hidden = false;
 
+  var cuerpo = document.createElement('div');
+  cuerpo.className = 'iv-cuerpo';
+  contenedor.parentNode.insertBefore(cuerpo, contenedor);
+  cuerpo.appendChild(minis);
+  cuerpo.appendChild(contenedor);
+
   var marco = document.createElement('div');
   marco.className = 'iv-marco';
   contenedor.insertBefore(marco, hojas[0]);
@@ -42,13 +48,21 @@
     return { boton: b, vista: vista, copia: copia };
   });
 
+  var fijo = window.matchMedia('(min-width: 1101px)');
+
   function escalar() {
-    var ancho = contenedor.clientWidth;
-    var factor = Math.max(0.62, Math.min(1, ancho / ANCHO));
     var hoja = hojas[actual];
+    var alto = hoja.offsetHeight;
+    var factor = contenedor.clientWidth / ANCHO;
+    if (fijo.matches) {
+      contenedor.style.height = '';
+      factor = Math.min(factor, contenedor.clientHeight / alto);
+    }
+    factor = Math.max(0.3, Math.min(1, factor));
     hoja.style.transform = 'scale(' + factor + ')';
     marco.style.width = Math.round(ANCHO * factor) + 'px';
-    marco.style.height = Math.round(hoja.offsetHeight * factor) + 'px';
+    marco.style.height = Math.round(alto * factor) + 'px';
+    if (!fijo.matches) contenedor.style.height = marco.style.height;
     botones.forEach(function (b) {
       var w = b.vista.clientWidth;
       if (!w) return;
