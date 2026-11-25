@@ -1,21 +1,67 @@
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: guios-web:latest
+  restart: unless-stopped
+  env_file:
+    - .env
+
 services:
   db:
     image: pgvector/pgvector:pg17
-    container_name: postgresGuiosad
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-guios_pro_db_dev}
+    # El puerto del host es el mismo que usa el .env para conectarse en local.
     ports:
-      - 5432:5432
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgvector_data:/var/lib/postgresql/data
     healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-        interval: 5s
-        timeout: 5s
-        retries: 5
-volumes:
-  pgvector_data: null
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-guios_pro_db_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
+  web:
+    <<: *app
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      RUN_MIGRATIONS: "1"
+      RUN_COLLECTSTATIC: "1"
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000", "--noreload"]
+
+  # Procesa la cola de búsquedas bibliográficas (HU02) en segundo plano.
+  worker:
+    <<: *app
+    # El worker no sirve HTTP: no debe heredar el healthcheck del puerto 8000.
+    healthcheck:
+      disable: true
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      RUN_MIGRATIONS: "0"
+      RUN_COLLECTSTATIC: "0"
+      CARGAR_CATALOGO: "0"
+      CARGAR_DATOS_DEMO: "0"
+    depends_on:
+      web:
+        condition: service_healthy
+    command: ["python", "manage.py", "procesar_busquedas"]
+
+volumes:
+  pgvector_data:
+  media_data:
+  static_data:
