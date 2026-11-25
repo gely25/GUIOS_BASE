@@ -127,3 +127,14 @@
 .page-title-row .bib-enlace {display:inline-block;margin-bottom:12px;padding:10px 20px;background-color:#c79a66;color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;border:0;border-radius:8px;white-space:nowrap;cursor:pointer;transition:background-color 0.2s ease,transform 0.1s ease;}
 .page-title-row .bib-enlace:hover {background-color:#b88a55;transform:translateY(-1px);}
 .page-title-row .bib-enlace::first-letter {font-size:1.4em;font-weight:800;line-height:0.8;margin-right:4px;}
+.admin-table .bib-enlace {display:inline-block;padding:6px 14px;background-color:#ffffff;color:#292d2f;font-family:inherit;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #e7e1d7;border-radius:8px;white-space:nowrap;transition:background-color 0.2s ease,transform 0.1s ease;}
+.admin-table .bib-enlace:hover {background-color:#f8f7f4;transform:translateY(-1px);}
+.admin-table tbody tr[hidden] {display:none;}
+.bib-paginador {display:flex;flex-direction:column;gap:14px;margin-top:16px;}
+.bib-paginas {display:flex;justify-content:center;align-items:center;gap:6px;}
+.bib-paginas[hidden] {display:none;}
+.bib-pagina {min-width:30px;height:40px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:#212121;font:inherit;font-size:15px;cursor:pointer;}
+.bib-pagina:hover {background:#f5f5f5;}
+.bib-pagina[aria-current="page"] {background:#eeeeee;cursor:default;}
+.bib-mostrar-todas {align-self:flex-start;height:41px;padding:0 18px;border:0;border-radius:8px;background:#f5f5f5;color:#212121;font:inherit;font-size:14px;cursor:pointer;}
+.bib-mostrar-todas:hover {background:#eeeeee;}

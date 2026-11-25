@@ -28,3 +28,21 @@
     }
     setTimeout(consultar, 4000);
 }());
+
+(function () {
+    var POR_PAGINA_DEFECTO = 10;
+    var POR_PAGINA_BUSQUEDAS = 5;
+
+    function paginar(tabla, POR_PAGINA) {
+        // ... el resto de la función igual, sin cambios ...
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('main table'), function (tabla) {
+        var primera = tabla.querySelector('tr');
+        var cabecera = tabla.tHead ? tabla.tHead.textContent : (primera ? primera.textContent : '');
+        if (/Periodo/i.test(cabecera) && /Acci[oó]n/i.test(cabecera)) {
+            var esBusquedas = /Publicaciones/i.test(cabecera) && /Por revisar/i.test(cabecera);
+            paginar(tabla, esBusquedas ? POR_PAGINA_BUSQUEDAS : POR_PAGINA_DEFECTO);
+        }
+    });
+})();
