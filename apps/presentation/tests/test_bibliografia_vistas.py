@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.data.models import BusquedaBibliografica, CatalogoVersion, Factor, PublicacionFactor, Usuario
+from apps.data.models import BusquedaBibliografica, BusquedaPublicacion, CatalogoVersion, Factor, Publicacion, PublicacionFactor, Usuario
 from apps.external_services.bibliografia import ResultadoPublicacion
 
 RUTAS = ['admin-actualizacion-bibliografica', 'admin-bibliografia-busquedas',
@@ -92,3 +92,43 @@ class VistasBibliografiaTests(TestCase):
         self.client.force_login(self.admin)
         respuesta = self.client.post(url('admin-bibliografia-version'), {'accion': 'publicar'}, follow=True)
         self.assertContains(respuesta, 'No hay un borrador para publicar')
+
+    def test_paginacion_publicaciones_revisar(self):
+        self.client.force_login(self.admin)
+        factor = Factor.objects.first()
+        busqueda = BusquedaBibliografica.objects.create(
+            factor=factor,
+            fuente='Simulada',
+            anio_inicio=2020,
+            anio_fin=2025,
+            consulta='test paginador',
+            estado=BusquedaBibliografica.COMPLETADA
+        )
+        for i in range(15):
+            pub = Publicacion.objects.create(
+                titulo=f'Publicación de Prueba #{i+1}',
+                anio=2022,
+                doi=f'10.1000/test.{i+1}'
+            )
+            BusquedaPublicacion.objects.create(
+                busqueda=busqueda,
+                publicacion=pub,
+                posicion=i + 1
+            )
+
+        # Página 1
+        respuesta = self.client.get(url('admin-bibliografia-busquedas') + f'?id={busqueda.pk}')
+        self.assertEqual(respuesta.status_code, 200)
+        page_obj = respuesta.context['resultados']
+        self.assertEqual(len(page_obj), 10)
+        self.assertEqual(page_obj.paginator.count, 15)
+        self.assertEqual(page_obj.paginator.num_pages, 2)
+        self.assertContains(respuesta, 'Página 1 de 2')
+        self.assertContains(respuesta, 'Publicación de Prueba #1')
+
+        # Página 2
+        respuesta_p2 = self.client.get(url('admin-bibliografia-busquedas') + f'?id={busqueda.pk}&page=2')
+        self.assertEqual(respuesta_p2.status_code, 200)
+        page_obj_p2 = respuesta_p2.context['resultados']
+        self.assertEqual(len(page_obj_p2), 5)
+        self.assertContains(respuesta_p2, 'Publicación de Prueba #15')

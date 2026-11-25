@@ -9,6 +9,7 @@ import uuid
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.paginator import Paginator
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.db import transaction
 
@@ -78,6 +79,12 @@ def busquedas_view(request):
     except ObjectDoesNotExist:
         raise Http404('Búsqueda no encontrada.')
 
+    page_param = request.GET.get('page') or request.GET.get('pag')
+    page_number = _entero_positivo(page_param) or 1
+    paginator = Paginator(resultados, 10)
+    resultados_pagina = paginator.get_page(page_number)
+    page_suffix = f'&page={resultados_pagina.number}'
+
     if request.method == 'POST':
         accion = request.POST.get('accion')
         if accion == 'revisar_lote':
@@ -120,7 +127,7 @@ def busquedas_view(request):
                         messages.error(request, _errores(error))
                     else:
                         messages.success(request, f'{len(elegidos)} vínculos revisados correctamente.')
-            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}#bib-lote')
+            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}{page_suffix}#bib-lote')
         if accion == 'revisar':
             formulario = RevisionVinculoForm(request.POST)
         elif accion == 'vincular':
@@ -145,14 +152,14 @@ def busquedas_view(request):
                 raise Http404('Vínculo no encontrado.')
             except ValidationError as error:
                 messages.error(request, _errores(error))
-        destino = reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}'
+        destino = reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}{page_suffix}'
         publicacion = _entero_positivo(request.POST.get('publicacion_ancla'))
         return redirect(destino + (f'#pub-{publicacion}' if publicacion else ''))
 
     return render(request, 'presentation/administracion/bibliografia_busqueda.html', {
         'active_tab': 'actualizacion-bibliografica',
         'busqueda': busqueda,
-        'resultados': resultados,
+        'resultados': resultados_pagina,
         'factores': factores,
         'cantidad_sugeridas': sum(
             v.estado == PublicacionFactor.SUGERIDA

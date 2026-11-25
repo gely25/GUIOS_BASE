@@ -26,7 +26,7 @@
             <section class="dashboard-block bib-tarjeta" aria-labelledby="bib-resultados-titulo">
                 <div class="bib-titulo-flex">
                     <div>
-                        <h2 class="admin-panel-title" id="bib-resultados-titulo">Publicaciones recuperadas ({{ resultados|length }})</h2>
+                        <h2 class="admin-panel-title" id="bib-resultados-titulo">Publicaciones recuperadas ({{ resultados.paginator.count }})</h2>
                         <p class="bib-nota">{{ cantidad_sugeridas }} vínculos sugeridos por revisar · Seleccione únicamente los que haya comprobado.</p>
                     </div>
                     {% if cantidad_sugeridas %}
@@ -34,7 +34,7 @@
                     {% endif %}
                 </div>
                 {% if cantidad_sugeridas %}
-                <form id="bib-form-lote" method="post" class="bib-form-lote" action="{% url 'presentation:admin-bibliografia-busquedas' %}?id={{ busqueda.pk }}#bib-lote">
+                <form id="bib-form-lote" method="post" class="bib-form-lote" action="{% url 'presentation:admin-bibliografia-busquedas' %}?id={{ busqueda.pk }}&page={{ resultados.number }}#bib-lote">
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="revisar_lote">
                     <span class="bib-lote-texto" id="bib-lote" aria-live="polite">0 sugerencias seleccionadas</span>
@@ -75,17 +75,17 @@
                             {% for v in p.factores.all %}
                             <div class="bib-acciones-fila">
                             {% if v.estado != 'APROBADA' %}
-                            <form method="post" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="aprobar" class="bib-boton-chico">Aprobar</button></form>
+                            <form method="post" action="?id={{ busqueda.pk }}&page={{ resultados.number }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="aprobar" class="bib-boton-chico">Aprobar</button></form>
                             {% endif %}
                             {% if v.estado != 'RECHAZADA' %}
-                            <form method="post" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="rechazar" class="bib-boton-chico bib-boton-baja">Rechazar</button></form>
+                            <form method="post" action="?id={{ busqueda.pk }}&page={{ resultados.number }}#pub-{{ p.pk }}">{% csrf_token %}<input type="hidden" name="accion" value="revisar"><input type="hidden" name="vinculo" value="{{ v.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}"><button type="submit" name="decision" value="rechazar" class="bib-boton-chico bib-boton-baja">Rechazar</button></form>
                             {% endif %}
                             </div>
                             {% endfor %}
                         </td>
                     </tr>
                     <tr class="bib-fila-manual"><td colspan="6"><details class="bib-detalle-manual"><summary>Vincular esta publicación a otro factor (manualmente)</summary>
-                        <form method="post" class="bib-vincular" action="?id={{ busqueda.pk }}#pub-{{ p.pk }}">
+                        <form method="post" class="bib-vincular" action="?id={{ busqueda.pk }}&page={{ resultados.number }}#pub-{{ p.pk }}">
                             {% csrf_token %}<input type="hidden" name="accion" value="vincular"><input type="hidden" name="publicacion" value="{{ p.pk }}"><input type="hidden" name="publicacion_ancla" value="{{ p.pk }}">
                             <label class="filter-label" for="factor-{{ p.pk }}">Factor</label>
                             <select id="factor-{{ p.pk }}" name="factor" class="filter-select" required>{% for f in factores %}<option value="{{ f.pk }}">{{ f.nombre }}</option>{% endfor %}</select>
@@ -99,6 +99,34 @@
                     </tbody>
                 </table>
                 </div>
+                {% if resultados.paginator.num_pages > 1 %}
+                <nav class="bib-paginador" aria-label="Paginación de publicaciones">
+                    <div class="bib-paginas">
+                        {% if resultados.has_previous %}
+                        <a href="?id={{ busqueda.pk }}&page={{ resultados.previous_page_number }}" class="bib-pagina" aria-label="Página anterior">&lsaquo; Anterior</a>
+                        {% else %}
+                        <span class="bib-pagina" style="opacity:0.5; cursor:not-allowed;">&lsaquo; Anterior</span>
+                        {% endif %}
+
+                        {% for num in resultados.paginator.page_range %}
+                            {% if num == resultados.number %}
+                                <span class="bib-pagina" aria-current="page"><strong>{{ num }}</strong></span>
+                            {% elif num > resultados.number|add:"-3" and num < resultados.number|add:"3" %}
+                                <a href="?id={{ busqueda.pk }}&page={{ num }}" class="bib-pagina">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if resultados.has_next %}
+                        <a href="?id={{ busqueda.pk }}&page={{ resultados.next_page_number }}" class="bib-pagina" aria-label="Página siguiente">Siguiente &rsaquo;</a>
+                        {% else %}
+                        <span class="bib-pagina" style="opacity:0.5; cursor:not-allowed;">Siguiente &rsaquo;</span>
+                        {% endif %}
+                    </div>
+                    <div style="text-align: center;" class="bib-nota">
+                        Página {{ resultados.number }} de {{ resultados.paginator.num_pages }} · Mostrando {{ resultados|length }} de {{ resultados.paginator.count }} publicaciones (10 por página)
+                    </div>
+                </nav>
+                {% endif %}
                 {% if resultados %}<p class="bib-nota">Los registros se muestran con sus estados reales. Los datos sin DOI deben verificarse antes de aceptar su vinculación.</p>{% endif %}
             </section>
         </main>
