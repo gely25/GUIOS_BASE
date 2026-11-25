@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.serializers.json import DjangoJSONEncoder
 
-from apps.data.models import (BorradorRevisionHumana, EvaluacionFactor, LoteHU09,
+from apps.data.models import (BorradorRevisionHumana, Evaluacion, EvaluacionFactor, LoteHU09,
     ReaperturaRevisionHumana, ResultadoEvaluacion, RevisionHumana, Subfactor, ValoracionSubfactor)
 from apps.business_rules.pm import calcular_pm
 from apps.business_rules.foda import clasificar_foda
@@ -166,7 +166,15 @@ class RevisionHumanaService:
     @transaction.atomic
     def reabrir(cls, actor, evaluacion_id, valoracion_id, motivo, version):
         """Reapertura explícita: no elimina decisiones históricas ni la propuesta IA."""
-        ev = PreguntasService._evaluacion(actor, evaluacion_id, escritura=True)
+        ev = PreguntasService._evaluacion(actor, evaluacion_id)
+        ev = Evaluacion.objects.select_for_update().filter(
+            pk=ev.pk, usuario_id=actor.pk).first()
+        if ev is None:
+            raise PermissionDenied('Evaluación no disponible.')
+        if ev.estado not in (Evaluacion.EN_PROCESO, Evaluacion.CERRADA):
+            raise ValidationError('La evaluación no admite cambios.')
+        if ev.estado == Evaluacion.EN_PROCESO and ev.fecha_fin is not None:
+            raise ValidationError('La evaluación no admite cambios.')
         if _lote_activo(ev):
             raise ValidationError('Espere a que termine el análisis de HU09.')
         if not PreguntasService._valoraciones(ev).filter(pk=valoracion_id).exists():
@@ -206,6 +214,10 @@ class RevisionHumanaService:
         v.save(update_fields=['valor_confirmado', 'estado_validacion', 'justificacion_decisor',
                               'fecha_validacion', 'validado_por'])
         BorradorRevisionHumana.objects.filter(valoracion=v).delete()
+        if ev.estado == Evaluacion.CERRADA:
+            ev.estado = Evaluacion.EN_PROCESO
+            ev.fecha_fin = None
+            ev.save(update_fields=['estado', 'fecha_fin', 'fecha_actualizacion'])
         return evento
 
     @classmethod

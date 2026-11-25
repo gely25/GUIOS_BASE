@@ -15,11 +15,25 @@ class CargarInformeTests(TestCase):
         self.servicio = ReportService()
 
     def test_informe_trae_datos_de_la_evaluacion(self):
+        organizacion = self.evaluacion.organizacion
+        organizacion.sector = "Educación"
+        organizacion.tamano = "Mediana"
+        organizacion.objetivo_adopcion = "Modernizar la gestión documental"
+        organizacion.save(update_fields=["sector", "tamano", "objetivo_adopcion"])
+        software = self.evaluacion.software
+        software.descripcion = "Suite ofimática para documentos institucionales"
+        software.save(update_fields=["descripcion"])
+
         informe = self.servicio.informe(self.decisor)
         self.assertEqual(informe.evaluacion_id, self.evaluacion.evaluacion_id)
         self.assertEqual(informe.software_completo, "LibreOffice 24.8")
         self.assertEqual(informe.organizacion, "Universidad de Prueba")
         self.assertEqual(informe.decisor, "Dario Decisor")
+        self.assertEqual(informe.sector, "Educación")
+        self.assertEqual(informe.tamano, "Mediana")
+        self.assertEqual(informe.objetivo_adopcion, "Modernizar la gestión documental")
+        self.assertEqual(informe.proveedor, "TDF")
+        self.assertEqual(informe.descripcion_software, "Suite ofimática para documentos institucionales")
         self.assertEqual(informe.catalogo_version, "2021")
         self.assertEqual(informe.version_regla, "1.0")
         self.assertIn("Recomendación B", informe.recomendacion)

@@ -6,10 +6,11 @@ from typing import Iterable, Mapping
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.revision_humana import RevisionHumanaService
-from apps.data.models import EvaluacionFactor, ResultadoEvaluacion
+from apps.data.models import Evaluacion, EvaluacionFactor, ResultadoEvaluacion
 
 
 # Regla híbrida (v2.0). Combina las dos fuentes de la tesis de Rea Sánchez (2022):
@@ -151,4 +152,7 @@ class RecomendacionService:
                 'factores_criticos': recomendacion.factores_criticos,
             },
         )
+        evaluacion.estado = Evaluacion.CERRADA
+        evaluacion.fecha_fin = timezone.now()
+        evaluacion.save(update_fields=['estado', 'fecha_fin', 'fecha_actualizacion'])
         return recomendacion

@@ -5,7 +5,8 @@ Uso: python manage.py cargar_catalogo_guios
 
 Es repetible: no duplica nada si se corre otra vez. Lee `apps/data/semillas/guios_2021/`.
 IL e IS se recalculan con las reglas de GUIOS (no se importan).
-Si ya hay otra versión ACTIVA, `v1-2021` se guarda como HISTORICO.
+Si ya hay otra versión ACTIVA con factores, `v1-2021` se guarda como HISTORICO.
+Si la versión ACTIVA no tiene factores, `v1-2021` se activa para que el catálogo sea utilizable.
 """
 
 import csv
@@ -82,6 +83,18 @@ class Command(BaseCommand):
                     'relacion_ri': c.relacion_ri, 'importancia_experto': ie,
                     'importancia_literatura': c.il, 'importancia_sugerida': c.is_,
                 })
+
+        activa = CatalogoVersion.objects.filter(estado=CatalogoVersion.ACTIVO).first()
+        if (
+            activa is not None
+            and activa.pk != version.pk
+            and not activa.indicadores.filter(factor__activo=True).exists()
+            and version.indicadores.filter(factor__activo=True).exists()
+        ):
+            activa.estado = CatalogoVersion.HISTORICO
+            activa.save(update_fields=['estado'])
+            version.estado = CatalogoVersion.ACTIVO
+            version.save(update_fields=['estado'])
 
         if opciones['verbosity']:
             self.stdout.write(self.style.SUCCESS(

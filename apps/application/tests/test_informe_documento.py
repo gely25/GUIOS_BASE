@@ -41,10 +41,12 @@ def _informe(factores, recomendacion="Es posible adoptar, con matices"):
     for f in factores:
         cuenta[f.clasificacion_foda] += 1
     return InformeEvaluacion(
-        evaluacion_id=35, software="LibreOffice", software_version="24.8", proveedor=None,
+        evaluacion_id=35, software="LibreOffice", software_version="24.8",
+        proveedor="The Document Foundation",
         organizacion="Organización Demo", decisor="Decisor Demo", catalogo_version="v1-2021", estado="EN_PROCESO",
         fecha_inicio=AHORA, fecha_fin=None, recomendacion=recomendacion, explicacion=None, version_regla="1.0",
-        fecha_resultado=AHORA,
+        fecha_resultado=AHORA, sector="Educación", tamano="Mediana",
+        objetivo_adopcion="Modernizar gestión documental", descripcion_software="Suite de oficina libre",
         resumen_foda=ResumenFoda(cuenta["Fortaleza"], cuenta["Oportunidad"], cuenta["Debilidad"], cuenta["Amenaza"]),
         factores=factores,
         documentos=[DocumentoInforme("guia.pdf", "PDF", None, "ab" * 32, AHORA)])
@@ -143,6 +145,15 @@ class ContenidoDelInformeTests(SimpleTestCase):
         doc = construir_documento(_informe([_factor("Fiabilidad", "Amenaza", "2.00", [2])]), AHORA)
         self.assertEqual(doc.fuentes[0].huella, "abababababab…abababab")
 
+    def test_contexto_de_ficha_se_normaliza_y_recorta(self):
+        informe = _informe([_factor("Fiabilidad", "Amenaza", "2.00", [2])])
+        informe.objetivo_adopcion = "x" * 240
+
+        doc = construir_documento(informe, AHORA)
+
+        self.assertEqual(len(doc.objetivo_adopcion), 220)
+        self.assertTrue(doc.objetivo_adopcion.endswith("…"))
+
 
 class PdfDelInformeTests(SimpleTestCase):
 
@@ -159,7 +170,9 @@ class PdfDelInformeTests(SimpleTestCase):
         texto = self._texto(pdf)
         for esperado in ("Evaluación de adopción FLOSS", "Es posible adoptar, con matices", "Qué atender primero",
                          "Falta de información", "Incumplimiento", "Las 3 respuestas fueron", "Resultados por factor",
-                         "Fuentes documentales", "Trazabilidad", "guia.pdf"):
+                         "Fuentes documentales", "Trazabilidad", "guia.pdf", "Contexto de la evaluación",
+                         "Educación", "Mediana", "Modernizar gestión documental", "The Document Foundation",
+                         "Suite de oficina libre", "no intervienen en los cálculos"):
             self.assertIn(esperado, texto)
         self.assertNotIn("EN_PROCESO", texto)
         self.assertNotIn("Versión del catálogo", texto)

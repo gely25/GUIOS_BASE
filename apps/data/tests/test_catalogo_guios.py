@@ -1,5 +1,7 @@
 """Pruebas de `manage.py cargar_catalogo_guios` (catálogo GUIOS 2021)."""
 
+from datetime import date
+
 from django.core.management import call_command
 from django.test import TestCase
 
@@ -49,3 +51,18 @@ class CargarCatalogoTests(TestCase):
         self.assertEqual(Subfactor.objects.count(), 61)
         self.assertEqual(IndicadorFactor.objects.count(), 18)
         self.assertEqual(CatalogoVersion.objects.count(), 1)
+
+    def test_activa_el_catalogo_cargado_si_la_version_activa_no_tiene_factores(self):
+        cargado = CatalogoVersion.objects.get(version='v1-2021')
+        cargado.estado = CatalogoVersion.HISTORICO
+        cargado.save(update_fields=['estado'])
+        vacio = CatalogoVersion.objects.create(
+            version='GUIOS-V1', fecha_creacion=date(2021, 1, 1), estado=CatalogoVersion.ACTIVO)
+
+        call_command('cargar_catalogo_guios', verbosity=0)
+
+        vacio.refresh_from_db()
+        cargado.refresh_from_db()
+        self.assertEqual(vacio.estado, CatalogoVersion.HISTORICO)
+        self.assertEqual(cargado.estado, CatalogoVersion.ACTIVO)
+        self.assertEqual(cargado.indicadores.filter(factor__activo=True).count(), 18)
