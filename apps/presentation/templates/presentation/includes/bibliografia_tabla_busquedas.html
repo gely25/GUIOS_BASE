@@ -1,6 +1,6 @@
 {% comment %}
 Tabla de búsquedas bibliográficas (HU02).
-Contexto: busquedas (con n_resultados y n_sugeridas).
+Contexto: busquedas (Page de búsquedas con n_resultados y n_sugeridas).
 {% endcomment %}
 <div class="admin-table-container">
     <table class="admin-table" aria-label="Búsquedas bibliográficas">
@@ -39,3 +39,31 @@ Contexto: busquedas (con n_resultados y n_sugeridas).
         </tbody>
     </table>
 </div>
+{% if busquedas.paginator.num_pages > 1 %}
+<nav class="bib-paginador" aria-label="Paginación de búsquedas bibliográficas">
+    <div class="bib-paginas">
+        {% if busquedas.has_previous %}
+        <a href="{{ request.path }}?pag_busquedas={{ busquedas.previous_page_number }}" class="bib-pagina" aria-label="Página anterior">&lsaquo; Anterior</a>
+        {% else %}
+        <span class="bib-pagina" aria-disabled="true">&lsaquo; Anterior</span>
+        {% endif %}
+
+        {% for num in busquedas.paginator.page_range %}
+            {% if num == busquedas.number %}
+                <span class="bib-pagina" aria-current="page"><strong>{{ num }}</strong></span>
+            {% elif num > busquedas.number|add:"-3" and num < busquedas.number|add:"3" %}
+                <a href="{{ request.path }}?pag_busquedas={{ num }}" class="bib-pagina">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if busquedas.has_next %}
+        <a href="{{ request.path }}?pag_busquedas={{ busquedas.next_page_number }}" class="bib-pagina" aria-label="Página siguiente">Siguiente &rsaquo;</a>
+        {% else %}
+        <span class="bib-pagina" aria-disabled="true">Siguiente &rsaquo;</span>
+        {% endif %}
+    </div>
+    <div class="bib-nota bib-paginas-resumen">
+        Página {{ busquedas.number }} de {{ busquedas.paginator.num_pages }} · Mostrando {{ busquedas|length }} de {{ busquedas.paginator.count }} búsquedas
+    </div>
+</nav>
+{% endif %}

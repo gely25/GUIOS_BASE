@@ -70,15 +70,25 @@ def ultimo_lote():
     return ultima
 
 
-def busquedas_recientes(limite=50):
-    return list(
+def _busquedas_con_conteos():
+    """Consulta base de búsquedas con el número de publicaciones y sugerencias."""
+    return (
         Busqueda.objects.select_related('factor', 'lanzada_por')
         .annotate(
             n_resultados=Count('resultados', distinct=True),
             n_sugeridas=Count('resultados__publicacion__factores', distinct=True,
                               filter=Q(resultados__publicacion__factores__estado=PublicacionFactor.SUGERIDA)),
         )
-        .order_by('-busqueda_id')[:limite])
+        .order_by('-busqueda_id'))
+
+
+def busquedas_recientes(limite=50):
+    return list(_busquedas_con_conteos()[:limite])
+
+
+def busquedas_paginables():
+    """QuerySet completo para paginar en la vista sin cargar todas las filas."""
+    return _busquedas_con_conteos()
 
 
 def obtener_busqueda(busqueda_id):
