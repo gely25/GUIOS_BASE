@@ -45,7 +45,7 @@ dice lo mismo en el mismo orden. Contexto: doc (DocumentoVista).
             {% endfor %}
             </tbody>
         </table></div>
-        <p class="ih-nota">Se muestran los factores en contra, ordenados por importancia{% if doc.atender_extra %}; {{ doc.atender_extra }} más aparecen en el detalle{% endif %}. «Falta de información» significa que el factor baja por respuestas «No sé», no porque el software incumpla. PM: puntuación media (más alta es mejor).</p>
+        <p class="ih-nota">Se muestran los factores en contra, ordenados por importancia{% if doc.atender_extra %}; {{ doc.atender_extra }} más aparecen en el detalle{% endif %}. «Falta de información» significa que el factor baja por respuestas «No sé», no porque el software incumpla. PM: ponderación media (más alta es mejor).</p>
         {% else %}
         <p class="ih-vacio">Ningún factor relevante quedó como debilidad o amenaza.</p>
         {% endif %}
@@ -68,8 +68,8 @@ dice lo mismo en el mismo orden. Contexto: doc (DocumentoVista).
         </div>
         <div class="ih-leer">
             <div><b>IR · importancia</b>Qué tanto pesa el factor para su organización, de 1 a 4. Los de IR 1 no se incluyen.</div>
-            <div><b>PM · puntuación media</b>Promedio de lo que usted confirmó, de 1 a 4. Una respuesta «No sé» baja la PM: cuenta como riesgo hasta comprobarse.</div>
-            <div><b>Regla A / B / C</b>A: sin factores en contra. B: hay alguno, pero no superan a los positivos. C: superan a los positivos.</div>
+            <div><b>PM · ponderación media</b>Promedio de lo que usted confirmó, de 1 a 4. Una respuesta «No sé» baja la PM: cuenta como riesgo hasta comprobarse.</div>
+            <div><b>Regla A / B / C</b>A: sin factores en contra. B: los hay, solo en factores opcionales y sin superar a los positivos. C: alguno es importante o fundamental, o superan a los positivos.</div>
         </div>
     </div>
     <div class="ih-sec">

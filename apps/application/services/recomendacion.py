@@ -12,9 +12,17 @@ from apps.application.services.revision_humana import RevisionHumanaService
 from apps.data.models import EvaluacionFactor, ResultadoEvaluacion
 
 
-# Esta formalización sigue las descripciones cualitativas de la tesis de Rea Sánchez (2022),
-# sección 6.1.1, Paso 6. Es una decisión del equipo y está pendiente de validación con el docente.
-REGLA_VERSION = '1.0'
+# Regla híbrida (v2.0). Combina las dos fuentes de la tesis de Rea Sánchez (2022):
+#   - Cap. 6, Recomendación B/C: B si las debilidades/amenazas están en factores con IR opcional;
+#     C si las amenazas y debilidades son mayores que las oportunidades y fortalezas.
+#   - Prototipo GUIOS PRO (main.py) y Figura 6.5 (caso LibreOffice = C): una debilidad o amenaza
+#     en un factor Importante o Fundamental basta para recomendar C.
+#     C: alguna D/A con IR >= 3, o negativas > positivas
+#     B: hay D/A, todas con IR = 2 (opcional), y no superan a las positivas
+#     A: ninguna D/A
+# La v1.0 solo contaba F+O contra D+A y no usaba el IR; los resultados ya guardados conservan su versión.
+REGLA_VERSION = '2.0'
+IR_OPCIONAL = 2
 
 TEXTOS_RECOMENDACION = {
     'A': 'Adoptar el FLOSS seleccionado',
@@ -63,8 +71,9 @@ def calcular_recomendacion(factores: Iterable[Mapping]) -> Recomendacion:
 
     negativas = conteos['D'] + conteos['A']
     positivas = conteos['F'] + conteos['O']
+    criticos_importantes = [item for item in factores_criticos if item['ir'] > IR_OPCIONAL]
 
-    if negativas > positivas:
+    if criticos_importantes or negativas > positivas:
         tipo = 'C'
     elif negativas >= 1:
         tipo = 'B'
@@ -85,6 +94,12 @@ def calcular_recomendacion(factores: Iterable[Mapping]) -> Recomendacion:
         f"{'es mayor que' if negativas > positivas else 'no supera'} "
         f"los factores positivos ({positivas})."
     )
+    if criticos_importantes:
+        nombres = ', '.join(item['factor'] for item in criticos_importantes)
+        explicacion += (f" Hay debilidades o amenazas en factores importantes o fundamentales "
+                        f"para la organización: {nombres}.")
+    elif negativas >= 1 and tipo == 'B':
+        explicacion += " Las debilidades o amenazas están solo en factores opcionales."
     if criticos:
         explicacion += f" Factores críticos considerados: {criticos}."
 

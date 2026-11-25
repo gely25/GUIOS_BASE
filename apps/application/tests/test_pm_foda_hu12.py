@@ -127,7 +127,7 @@ class PmFodaTests(TestCase):
         self.confirmar_todo()
         Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
         resultado = ResultadoEvaluacion.objects.get(evaluacion=self.ev)
-        self.assertEqual(resultado.version_regla, '1.0')
+        self.assertEqual(resultado.version_regla, '2.0')
         self.assertIn(resultado.recomendacion, (
             'Adoptar el FLOSS seleccionado',
             'Es posible adoptar, con matices',
