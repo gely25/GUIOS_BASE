@@ -35,10 +35,10 @@ y entrar a revisar resultados o recalcular el catálogo.
                 <div class="bib-parametros-grid">
                     <div><span class="filter-label">Año inicial</span><span class="bib-campo-lectura">2020</span></div>
                     <div><span class="filter-label">Año final</span><span class="bib-campo-lectura">2025</span></div>
-                    <div><span class="filter-label">Fuente</span><span class="bib-campo-lectura">{% if busquedas %}{{ busquedas.0.fuente }}{% else %}Según configuración del servidor{% endif %}</span></div>
+                    <div><span class="filter-label">Fuente</span><span class="bib-campo-lectura">{% if ultima_busqueda %}{{ ultima_busqueda.fuente }}{% else %}Según configuración del servidor{% endif %}</span></div>
                 </div>
                 <label class="filter-label" for="bib-consulta-previa">Consulta</label>
-                <textarea id="bib-consulta-previa" class="bib-consulta-lectura" rows="2" readonly>{% if busquedas %}{{ busquedas.0.consulta }}{% else %}Se genera una consulta para cada factor al ejecutar la búsqueda.{% endif %}</textarea>
+                <textarea id="bib-consulta-previa" class="bib-consulta-lectura" rows="2" readonly>{% if ultima_busqueda %}{{ ultima_busqueda.consulta }}{% else %}Se genera una consulta para cada factor al ejecutar la búsqueda.{% endif %}</textarea>
                 <div class="bib-panel-comandos">
                     <p class="bib-nota">Fuente y consultas reales determinadas por el proceso de búsqueda. No se utilizan referencias ficticias del diseño.</p>
                     <form method="post">{% csrf_token %}<input type="hidden" name="accion" value="lanzar"><button type="submit" class="btn-top-action bib-boton" {% if estado.total and not estado.terminado %}disabled{% endif %}>Ejecutar búsqueda 2020–2025</button></form>

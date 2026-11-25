@@ -50,6 +50,11 @@ class BibliographicService:
         return repo.busquedas_recientes(limite)
 
     @staticmethod
+    def busquedas_paginables():
+        """QuerySet de todas las búsquedas, para paginar en la vista."""
+        return repo.busquedas_paginables()
+
+    @staticmethod
     def detalle_busqueda(busqueda_id):
         """(búsqueda, resultados con sus vínculos, factores activos para vincular a mano)."""
         busqueda = repo.obtener_busqueda(busqueda_id)

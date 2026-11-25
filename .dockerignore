@@ -1,0 +1,43 @@
+# Control de versiones
+.git
+.gitignore
+.gitattributes
+
+# Entornos virtuales y cachés de Python
+venv
+.venv
+env
+ENV
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+.coverage
+htmlcov
+
+# Variables de entorno: se inyectan con env_file, no se copian a la imagen
+.env
+.env.*
+!.env.example
+
+# Archivos generados en local
+staticfiles
+media
+*.sqlite3
+*.log
+*.bak
+*.tmp
+
+# IDEs y sistema operativo
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Archivos que no necesita la imagen
+Dockerfile
+.dockerignore
+docker-compose*.yml
+DOCKER.md

@@ -23,6 +23,8 @@ from apps.presentation.forms import RevisionVinculoForm, VinculoManualForm
 
 servicio = BibliographicService()
 
+BUSQUEDAS_POR_PAGINA = 10
+
 
 def _errores(error):
     return ' '.join(error.messages) if isinstance(error, ValidationError) else str(error)
@@ -34,6 +36,12 @@ def _entero_positivo(valor):
     except (TypeError, ValueError):
         return None
     return numero if 0 < numero <= 9223372036854775807 else None
+
+
+def _pagina_busquedas(request, consulta):
+    """Pagina búsquedas con `pag_busquedas` para no chocar con `page` del detalle."""
+    numero = _entero_positivo(request.GET.get('pag_busquedas')) or 1
+    return Paginator(consulta, BUSQUEDAS_POR_PAGINA).get_page(numero)
 
 
 @require_http_methods(['GET', 'POST'])
@@ -51,10 +59,12 @@ def panel_view(request):
         return redirect('presentation:admin-actualizacion-bibliografica')
 
     comparacion = servicio.comparacion_versiones()
+    recientes = servicio.busquedas_recientes(20)
     return render(request, 'presentation/administracion/bibliografia_panel.html', {
         'active_tab': 'actualizacion-bibliografica',
         'estado': servicio.estado_lote(),
-        'busquedas': servicio.busquedas_recientes(20),
+        'busquedas': _pagina_busquedas(request, recientes),
+        'ultima_busqueda': recientes[0] if recientes else None,
         'vinculos': servicio.resumen_vinculos(),
         'version_activa': comparacion.activa,
         'version_borrador': comparacion.borrador,
@@ -71,7 +81,7 @@ def busquedas_view(request):
             raise Http404('Búsqueda no encontrada.')
         return render(request, 'presentation/administracion/bibliografia_busquedas.html', {
             'active_tab': 'actualizacion-bibliografica',
-            'busquedas': servicio.busquedas_recientes(200),
+            'busquedas': _pagina_busquedas(request, servicio.busquedas_paginables()),
         })
 
     try:
