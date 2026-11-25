@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.data.models import BusquedaBibliografica, CatalogoVersion, Factor, PublicacionFactor, Usuario
+from apps.data.models import BusquedaBibliografica, BusquedaPublicacion, CatalogoVersion, Factor, Publicacion, PublicacionFactor, Usuario
 from apps.external_services.bibliografia import ResultadoPublicacion
 
 RUTAS = ['admin-actualizacion-bibliografica', 'admin-bibliografia-busquedas',
@@ -92,3 +92,122 @@ class VistasBibliografiaTests(TestCase):
         self.client.force_login(self.admin)
         respuesta = self.client.post(url('admin-bibliografia-version'), {'accion': 'publicar'}, follow=True)
         self.assertContains(respuesta, 'No hay un borrador para publicar')
+
+    def test_paginacion_publicaciones_revisar(self):
+        self.client.force_login(self.admin)
+        factor = Factor.objects.first()
+        busqueda = BusquedaBibliografica.objects.create(
+            factor=factor,
+            fuente='Simulada',
+            anio_inicio=2020,
+            anio_fin=2025,
+            consulta='test paginador',
+            estado=BusquedaBibliografica.COMPLETADA
+        )
+        for i in range(15):
+            pub = Publicacion.objects.create(
+                titulo=f'Publicación de Prueba #{i+1}',
+                anio=2022,
+                doi=f'10.1000/test.{i+1}'
+            )
+            BusquedaPublicacion.objects.create(
+                busqueda=busqueda,
+                publicacion=pub,
+                posicion=i + 1
+            )
+
+        # Página 1
+        respuesta = self.client.get(url('admin-bibliografia-busquedas') + f'?id={busqueda.pk}')
+        self.assertEqual(respuesta.status_code, 200)
+        page_obj = respuesta.context['resultados']
+        self.assertEqual(len(page_obj), 10)
+        self.assertEqual(page_obj.paginator.count, 15)
+        self.assertEqual(page_obj.paginator.num_pages, 2)
+        self.assertContains(respuesta, 'Página 1 de 2')
+        self.assertContains(respuesta, 'Publicación de Prueba #1')
+
+        # Página 2
+        respuesta_p2 = self.client.get(url('admin-bibliografia-busquedas') + f'?id={busqueda.pk}&page=2')
+        self.assertEqual(respuesta_p2.status_code, 200)
+        page_obj_p2 = respuesta_p2.context['resultados']
+        self.assertEqual(len(page_obj_p2), 5)
+        self.assertContains(respuesta_p2, 'Publicación de Prueba #15')
+
+    def _crear_busquedas(self, total):
+        factor = Factor.objects.first()
+        for i in range(total):
+            BusquedaBibliografica.objects.create(
+                factor=factor,
+                fuente=f'Fuente {i}',
+                anio_inicio=2020,
+                anio_fin=2025,
+                consulta=f'Consulta {i}',
+                estado=BusquedaBibliografica.COMPLETADA,
+            )
+
+    def test_paginacion_busquedas_recientes_en_el_panel(self):
+        self.client.force_login(self.admin)
+        self._crear_busquedas(25)
+
+        respuesta = self.client.get(url('admin-actualizacion-bibliografica'))
+        pagina = respuesta.context['busquedas']
+        # El panel conserva solo las 20 búsquedas más recientes.
+        self.assertEqual(pagina.paginator.count, 20)
+        self.assertEqual(pagina.paginator.num_pages, 2)
+        self.assertEqual(len(pagina), 10)
+        self.assertContains(respuesta, 'Página 1 de 2')
+        self.assertContains(respuesta, '?pag_busquedas=2')
+
+        respuesta_p2 = self.client.get(url('admin-actualizacion-bibliografica') + '?pag_busquedas=2')
+        self.assertEqual(len(respuesta_p2.context['busquedas']), 10)
+        self.assertContains(respuesta_p2, 'Página 2 de 2')
+
+    def test_paginacion_historial_busquedas(self):
+        self.client.force_login(self.admin)
+        self._crear_busquedas(25)
+
+        # Una búsqueda con resultados y vínculos no debe duplicar filas al contar.
+        busqueda = BusquedaBibliografica.objects.order_by('busqueda_id').first()
+        publicacion = Publicacion.objects.create(
+            titulo='Publicación con vínculo', anio=2022, doi='10.1000/vinculo')
+        BusquedaPublicacion.objects.create(busqueda=busqueda, publicacion=publicacion, posicion=1)
+        PublicacionFactor.objects.create(
+            publicacion=publicacion, factor=Factor.objects.first(),
+            estado=PublicacionFactor.SUGERIDA)
+
+        respuesta = self.client.get(url('admin-bibliografia-busquedas'))
+        pagina = respuesta.context['busquedas']
+        self.assertEqual(pagina.paginator.count, 25)
+        self.assertEqual(pagina.paginator.num_pages, 3)
+        self.assertEqual(len(pagina), 10)
+        self.assertContains(respuesta, 'Página 1 de 3')
+
+        respuesta_p3 = self.client.get(url('admin-bibliografia-busquedas') + '?pag_busquedas=3')
+        self.assertEqual(len(respuesta_p3.context['busquedas']), 5)
+        self.assertContains(respuesta_p3, 'Página 3 de 3')
+        self.assertContains(respuesta_p3, 'Mostrando 5 de 25 búsquedas')
+
+    def test_pagina_invalida_o_fuera_de_rango(self):
+        self.client.force_login(self.admin)
+        self._crear_busquedas(25)
+
+        respuesta = self.client.get(url('admin-bibliografia-busquedas') + '?pag_busquedas=abc')
+        self.assertEqual(respuesta.context['busquedas'].number, 1)
+
+        respuesta = self.client.get(url('admin-bibliografia-busquedas') + '?pag_busquedas=999')
+        self.assertEqual(respuesta.context['busquedas'].number, 3)
+
+    def test_la_vista_previa_muestra_la_busqueda_mas_reciente_al_paginar(self):
+        self.client.force_login(self.admin)
+        self._crear_busquedas(15)
+        ultima = BusquedaBibliografica.objects.order_by('-busqueda_id').first()
+
+        respuesta = self.client.get(url('admin-actualizacion-bibliografica') + '?pag_busquedas=2')
+        self.assertEqual(respuesta.context['ultima_busqueda'].pk, ultima.pk)
+        self.assertContains(respuesta, 'Fuente 14')
+        self.assertContains(respuesta, 'Consulta 14')
+
+    def test_sin_busquedas_no_hay_paginador(self):
+        self.client.force_login(self.admin)
+        respuesta = self.client.get(url('admin-actualizacion-bibliografica'))
+        self.assertNotContains(respuesta, 'bib-paginador')

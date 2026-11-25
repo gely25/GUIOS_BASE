@@ -115,3 +115,26 @@
 .bib-informacion-pie p {font-size:13px;line-height:1.6;color:#58636b;}
 @media(max-width:850px){.bib-panel-figma .kpi-grid,.bib-parametros-grid,.bib-informacion-pie{grid-template-columns:1fr;}.bib-titulo-flex{flex-direction:column;}.bib-form-lote{align-items:stretch;}}
 @media(max-width:620px){.bib-tarjeta{padding:16px;}.bib-panel-comandos>.btn-top-action{white-space:normal;}}
+.bib-panel-figma .block-header {flex-wrap:wrap;align-items:flex-start;gap:16px 24px;}
+.bib-panel-figma .block-header > div:first-child {flex:1 1 320px;min-width:0;}
+.bib-panel-figma .bib-enlaces {flex:0 0 auto;margin-left:auto;justify-content:flex-end;gap:12px;}
+.bib-panel-figma .bib-enlaces .bib-enlace {display:inline-block;padding:10px 20px;background-color:#c79a66;color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;border:0;border-radius:8px;white-space:nowrap;cursor:pointer;transition:background-color 0.2s ease,transform 0.1s ease;}
+.bib-panel-figma .bib-enlaces .bib-enlace:hover {background-color:#b88a55;transform:translateY(-1px);}
+.bib-indicadores-figma .bib-titulo-flex > .bib-enlace {flex:0 0 auto;display:inline-block;padding:10px 20px;background-color:#c79a66;color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;border:0;border-radius:8px;white-space:nowrap;cursor:pointer;transition:background-color 0.2s ease,transform 0.1s ease;}
+.bib-indicadores-figma .bib-titulo-flex > .bib-enlace:hover {background-color:#b88a55;transform:translateY(-1px);}
+.bib-panel-figma .admin-table .bib-enlace {display:inline-block;padding:6px 14px;background-color:#ffffff;color:#292d2f;font-family:inherit;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #e7e1d7;border-radius:8px;white-space:nowrap;transition:background-color 0.2s ease,transform 0.1s ease;}
+.bib-panel-figma .admin-table .bib-enlace:hover {background-color:#f8f7f4;transform:translateY(-1px);}
+.page-title-row .bib-enlace {display:inline-block;margin-bottom:12px;padding:10px 20px;background-color:#c79a66;color:#ffffff;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;border:0;border-radius:8px;white-space:nowrap;cursor:pointer;transition:background-color 0.2s ease,transform 0.1s ease;}
+.page-title-row .bib-enlace:hover {background-color:#b88a55;transform:translateY(-1px);}
+.page-title-row .bib-enlace::first-letter {font-size:1.4em;font-weight:800;line-height:0.8;margin-right:4px;}
+.admin-table .bib-enlace {display:inline-block;padding:6px 14px;background-color:#ffffff;color:#292d2f;font-family:inherit;font-size:13px;font-weight:600;text-decoration:none;border:1px solid #e7e1d7;border-radius:8px;white-space:nowrap;transition:background-color 0.2s ease,transform 0.1s ease;}
+.admin-table .bib-enlace:hover {background-color:#f8f7f4;transform:translateY(-1px);}
+.admin-table tbody tr[hidden] {display:none;}
+.bib-paginador {display:flex;flex-direction:column;gap:14px;margin-top:16px;}
+.bib-paginas {display:flex;justify-content:center;align-items:center;gap:6px;}
+.bib-paginas[hidden] {display:none;}
+.bib-pagina {min-width:30px;height:40px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:#212121;font:inherit;font-size:15px;cursor:pointer;}
+.bib-pagina:hover {background:#f5f5f5;}
+.bib-pagina[aria-current="page"] {background:#eeeeee;cursor:default;}
+.bib-pagina[aria-disabled="true"] {opacity:.5;cursor:not-allowed;}
+.bib-paginas-resumen {text-align:center;}

@@ -9,6 +9,7 @@ import uuid
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.paginator import Paginator
 from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.db import transaction
 
@@ -22,6 +23,8 @@ from apps.presentation.forms import RevisionVinculoForm, VinculoManualForm
 
 servicio = BibliographicService()
 
+BUSQUEDAS_POR_PAGINA = 10
+
 
 def _errores(error):
     return ' '.join(error.messages) if isinstance(error, ValidationError) else str(error)
@@ -33,6 +36,12 @@ def _entero_positivo(valor):
     except (TypeError, ValueError):
         return None
     return numero if 0 < numero <= 9223372036854775807 else None
+
+
+def _pagina_busquedas(request, consulta):
+    """Pagina búsquedas con `pag_busquedas` para no chocar con `page` del detalle."""
+    numero = _entero_positivo(request.GET.get('pag_busquedas')) or 1
+    return Paginator(consulta, BUSQUEDAS_POR_PAGINA).get_page(numero)
 
 
 @require_http_methods(['GET', 'POST'])
@@ -50,10 +59,12 @@ def panel_view(request):
         return redirect('presentation:admin-actualizacion-bibliografica')
 
     comparacion = servicio.comparacion_versiones()
+    recientes = servicio.busquedas_recientes(20)
     return render(request, 'presentation/administracion/bibliografia_panel.html', {
         'active_tab': 'actualizacion-bibliografica',
         'estado': servicio.estado_lote(),
-        'busquedas': servicio.busquedas_recientes(20),
+        'busquedas': _pagina_busquedas(request, recientes),
+        'ultima_busqueda': recientes[0] if recientes else None,
         'vinculos': servicio.resumen_vinculos(),
         'version_activa': comparacion.activa,
         'version_borrador': comparacion.borrador,
@@ -70,13 +81,19 @@ def busquedas_view(request):
             raise Http404('Búsqueda no encontrada.')
         return render(request, 'presentation/administracion/bibliografia_busquedas.html', {
             'active_tab': 'actualizacion-bibliografica',
-            'busquedas': servicio.busquedas_recientes(200),
+            'busquedas': _pagina_busquedas(request, servicio.busquedas_paginables()),
         })
 
     try:
         busqueda, resultados, factores = servicio.detalle_busqueda(busqueda_id)
     except ObjectDoesNotExist:
         raise Http404('Búsqueda no encontrada.')
+
+    page_param = request.GET.get('page') or request.GET.get('pag')
+    page_number = _entero_positivo(page_param) or 1
+    paginator = Paginator(resultados, 10)
+    resultados_pagina = paginator.get_page(page_number)
+    page_suffix = f'&page={resultados_pagina.number}'
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
@@ -120,7 +137,7 @@ def busquedas_view(request):
                         messages.error(request, _errores(error))
                     else:
                         messages.success(request, f'{len(elegidos)} vínculos revisados correctamente.')
-            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}#bib-lote')
+            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}{page_suffix}#bib-lote')
         if accion == 'revisar':
             formulario = RevisionVinculoForm(request.POST)
         elif accion == 'vincular':
@@ -145,14 +162,14 @@ def busquedas_view(request):
                 raise Http404('Vínculo no encontrado.')
             except ValidationError as error:
                 messages.error(request, _errores(error))
-        destino = reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}'
+        destino = reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}{page_suffix}'
         publicacion = _entero_positivo(request.POST.get('publicacion_ancla'))
         return redirect(destino + (f'#pub-{publicacion}' if publicacion else ''))
 
     return render(request, 'presentation/administracion/bibliografia_busqueda.html', {
         'active_tab': 'actualizacion-bibliografica',
         'busqueda': busqueda,
-        'resultados': resultados,
+        'resultados': resultados_pagina,
         'factores': factores,
         'cantidad_sugeridas': sum(
             v.estado == PublicacionFactor.SUGERIDA

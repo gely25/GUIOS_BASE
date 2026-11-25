@@ -27,6 +27,11 @@ python manage.py procesar_busquedas  # en otra terminal: ejecuta las búsquedas 
 
 Abre `http://127.0.0.1:8000/` e inicia sesión con un usuario de [`DATOS_DEMO.md`](DATOS_DEMO.md).
 
+### Con Docker
+
+Si prefieres no instalar Python ni PostgreSQL localmente, sigue [`DOCKER.md`](DOCKER.md):
+levanta la aplicación, PostgreSQL con pgvector y el procesador de búsquedas con Docker Compose.
+
 El archivo `.env` es local y **nunca se sube** a Git. Las variables están descritas en `.env.example`.
 Si falta una variable obligatoria, `settings.py` indica cuál es.
 
