@@ -180,7 +180,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         self.assertEqual(datos[self.v1.pk]['est'], 'ANALISIS_PENDIENTE')
 
     def test_sin_modelo_configurado_avisa_y_no_arranca_el_analisis(self):
-        with override_settings(HU09_OLLAMA_MODEL=''):
+        with override_settings(HU09_OLLAMA_MODEL='', GUIOS_AI_BACKEND='ollama'):
             r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertContains(r, 'HU09_OLLAMA_MODEL')
         self.assertNotContains(r, 'data-auto="1"')
@@ -226,7 +226,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         ia.assert_not_called()
 
     def test_endpoint_sin_modelo_devuelve_error_claro(self):
-        with override_settings(HU09_OLLAMA_MODEL=''):
+        with override_settings(HU09_OLLAMA_MODEL='', GUIOS_AI_BACKEND='ollama'):
             r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
         self.assertEqual(r.status_code, 400)
         self.assertIn('no está configurado', r.json()['error'])

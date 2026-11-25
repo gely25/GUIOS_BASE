@@ -241,20 +241,28 @@ def _pm(valor) -> str:
     return _coma(valor) if valor is not None else "—"
 
 
-def _sintesis(letra, a_favor, en_contra, total_clasificados, n_info) -> str:
+def _sintesis(letra, a_favor, en_contra, total_clasificados, n_info, n_importantes=0) -> str:
+    """Resumen de la recomendación. `n_importantes`: factores en contra con IR Importante o Fundamental."""
     if total_clasificados == 0:
         return "Esta evaluación no tiene factores relevantes clasificados."
     if en_contra == 0:
         texto = (f"Los {total_clasificados} factores relevantes juegan a favor: "
                  "no se detectaron debilidades ni amenazas.")
-    elif letra == "C":
+    elif letra == "C" and en_contra > a_favor:
         texto = (f"{a_favor} de los {total_clasificados} factores relevantes juegan a favor, pero los "
                  f"{en_contra} restantes los superan: conviene analizar la adopción y considerar posponerla "
+                 "hasta resolverlos.")
+    elif letra == "C":
+        texto = (f"{a_favor} de los {total_clasificados} factores relevantes juegan a favor, pero "
+                 + ("1 factor en contra es importante o fundamental" if n_importantes == 1
+                    else f"{n_importantes} factores en contra son importantes o fundamentales")
+                 + " para su organización: conviene analizar la adopción y considerar posponerla "
                  "hasta resolverlos.")
     else:
         texto = (f"{a_favor} de los {total_clasificados} factores relevantes juegan a favor. "
                  f"{'El restante no los supera' if en_contra == 1 else f'Los {en_contra} restantes no los superan'}"
-                 ", así que la adopción es viable si se atiende primero.")
+                 + (" y solo afectan a factores opcionales" if n_importantes == 0 else "")
+                 + ", así que la adopción es viable si se atiende primero.")
     if en_contra and n_info:
         if n_info == en_contra:
             texto += (" Además, " + ("ese factor baja" if en_contra == 1 else f"los {en_contra} bajan")
@@ -300,6 +308,7 @@ def construir_documento(informe: InformeEvaluacion, emitido) -> DocumentoVista:
     en_contra_ordenados = sorted((f for f in clasificados if CLAVE_FODA[f.clasificacion_foda] in ("D", "A")),
                                  key=lambda f: (-(f.importancia_relativa or 0), float(f.ponderacion_media or 0), f.factor))
     n_info = sum(1 for f in en_contra_ordenados if _tag(f) == TAG_INFORMACION)
+    n_importantes = sum(1 for f in en_contra_ordenados if (f.importancia_relativa or 0) >= 3)
 
     atender = []
     for f in en_contra_ordenados[:MAX_ATENDER]:
@@ -341,7 +350,7 @@ def construir_documento(informe: InformeEvaluacion, emitido) -> DocumentoVista:
         evaluacion_id=informe.evaluacion_id, software=informe.software_completo,
         organizacion=informe.organizacion, decisor=informe.decisor, emitido=emitido,
         version_regla=informe.version_regla, fecha_resultado=informe.fecha_resultado, letra=letra,
-        titulo_recomendacion=informe.recomendacion, sintesis=_sintesis(letra, a_favor, en_contra, total_clasificados, n_info),
+        titulo_recomendacion=informe.recomendacion, sintesis=_sintesis(letra, a_favor, en_contra, total_clasificados, n_info, n_importantes),
         a_favor=a_favor, en_contra=en_contra, total=len(factores), proporciones=proporciones,
         atender=atender, atender_extra=max(0, len(en_contra_ordenados) - MAX_ATENDER), cuadrantes=cuadrantes,
         filas=filas, hay_ajustes=any(f.ajustada for f in filas), evidencia=evidencia,

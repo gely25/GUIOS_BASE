@@ -406,7 +406,7 @@ def _pagina_resumen(doc: DocumentoVista, est, p, ancho):
         extra = f"; {doc.atender_extra} más aparecen en el detalle" if doc.atender_extra else ""
         h.append(p("Se muestran los factores en contra, ordenados por importancia" + extra + ". "
                    "«Falta de información» significa que el factor baja por respuestas «No sé», no porque el "
-                   "software incumpla. PM: puntuación media (más alta es mejor).", "nota"))
+                   "software incumpla. PM: ponderación media (más alta es mejor).", "nota"))
     else:
         h.append(p("Ningún factor relevante quedó como debilidad o amenaza."))
     return h
@@ -437,10 +437,10 @@ def _pagina_resultados(doc: DocumentoVista, est, p, ancho):
 
     ancho_l = (ancho - 2 * hueco) / 3
     leer = [("IR · importancia", "Qué tanto pesa el factor para su organización, de 1 a 4. Los de IR 1 no se incluyen."),
-            ("PM · puntuación media", "Promedio de lo que usted confirmó, de 1 a 4. Una respuesta «No sé» baja la PM: "
+            ("PM · ponderación media", "Promedio de lo que usted confirmó, de 1 a 4. Una respuesta «No sé» baja la PM: "
                                       "cuenta como riesgo hasta comprobarse."),
-            ("Regla A / B / C", "A: sin factores en contra. B: hay alguno, pero no superan a los positivos. "
-                                "C: superan a los positivos.")]
+            ("Regla A / B / C", "A: sin factores en contra. B: los hay, solo en factores opcionales y sin "
+                                "superar a los positivos. C: alguno es importante o fundamental, o superan a los positivos.")]
     celdas = []
     for i, (t, texto) in enumerate(leer):
         celdas.append(_caja([p(t, "leer_t"), p(texto, "leer_p")], ancho_l, fondo=SUAVE, borde=SUAVE, radio=7, pad=8))

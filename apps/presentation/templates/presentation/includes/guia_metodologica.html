@@ -31,7 +31,7 @@
                 <article class="guia-tarjeta"><h3>Importancia de cada factor (IR)</h3>
                     <p>Combina la importancia que usted le da (ID) con la sugerida por el sistema (IS). Un factor con IR 1 se excluye de la evaluación.</p>
                     <div class="guia-escala"><span><b>1</b> Irrelevante</span><span><b>2</b> Opcional</span><span><b>3</b> Importante</span><span><b>4</b> Fundamental</span></div></article>
-                <article class="guia-tarjeta"><h3>Puntuación media (PM)</h3>
+                <article class="guia-tarjeta"><h3>Ponderación media (PM)</h3>
                     <p>Promedio de las respuestas confirmadas de cada factor, de 1 a 4.</p>
                     <div class="guia-escala"><span><b>1</b> No cumple</span><span><b>2</b> No sé</span><span><b>3</b> Cumple parcialmente</span><span><b>4</b> Cumple</span></div></article>
                 <article class="guia-tarjeta"><h3>Clasificación FODA</h3>
@@ -44,15 +44,15 @@
                 <article class="guia-tarjeta"><h3>Recomendación</h3>
                     <ul class="guia-rec">
                         <li><b>A</b><span><strong>Adoptar el FLOSS seleccionado</strong>Ningún factor relevante está en contra.</span></li>
-                        <li><b>B</b><span><strong>Es posible adoptar, con matices</strong>Hay factores en contra, pero no superan a los que van a favor.</span></li>
-                        <li><b>C</b><span><strong>Se sugiere analizar la adopción y debería ser pospuesta</strong>Los factores en contra superan a los que van a favor.</span></li>
+                        <li><b>B</b><span><strong>Es posible adoptar, con matices</strong>Hay factores en contra, pero solo opcionales y sin superar a los que van a favor.</span></li>
+                        <li><b>C</b><span><strong>Se sugiere analizar la adopción y debería ser pospuesta</strong>Algún factor en contra es importante o fundamental, o los factores en contra superan a los que van a favor.</span></li>
                     </ul></article>
             </div>
-            <p class="guia-nota">Regla de recomendación v1.0 del equipo del proyecto.</p>
+            <p class="guia-nota">Regla de recomendación v2.0 (híbrida): combina la clasificación FODA, la importancia relativa (IR) y el conteo de factores, según la tesis GUIOS.</p>
         </section>
         <section id="guia-p3" role="tabpanel" aria-labelledby="guia-t3" hidden>
             <div class="guia-dos">
-                <article class="guia-tarjeta"><h3>Lo que hace la IA</h3><ul class="guia-lista"><li>Propone una valoración para cada subfactor.</li><li>Localiza fragmentos de sus documentos como evidencia.</li><li>No calcula resultados ni cambia ningún valor por su cuenta.</li></ul></article>
+                <article class="guia-tarjeta"><h3>Lo que hace la IA</h3><ul class="guia-lista"><li>Propone una valoración para cada subfactor.</li><li>Analiza los fragmentos que el sistema recupera de sus documentos y señala la información faltante.</li><li>No calcula resultados ni cambia ningún valor por su cuenta.</li></ul></article>
                 <article class="guia-tarjeta"><h3>Lo que decide usted</h3><ul class="guia-lista"><li>Confirma, corrige o rechaza cada valoración.</li><li>Ajusta la importancia de cada factor.</li><li>Solo las valoraciones confirmadas participan en el cálculo.</li></ul></article>
             </div>
             <p class="guia-nota"><b>Sobre «No sé»:</b> una respuesta «No sé» baja la puntuación del factor. Por eso el informe distingue entre «Falta de información» e «Incumplimiento»: un factor puede quedar en contra solo porque faltó evidencia.</p>
@@ -64,9 +64,9 @@
                 <div><dt>Alcance</dt><dd>Interno si depende de su organización; externo si depende de terceros.</dd></div>
                 <div><dt>Evidencia</dt><dd>Fragmento de un documento que respalda una respuesta.</dd></div>
                 <div><dt>IS / ID / IR</dt><dd>Importancia sugerida, del decisor y relativa (la que se usa).</dd></div>
-                <div><dt>PM</dt><dd>Puntuación media de las respuestas confirmadas de un factor.</dd></div>
+                <div><dt>PM</dt><dd>Ponderación media de las respuestas confirmadas de un factor.</dd></div>
                 <div><dt>FODA</dt><dd>Fortalezas, Oportunidades, Debilidades y Amenazas.</dd></div>
-                <div><dt>Regla v1.0</dt><dd>Versión de la regla de recomendación que generó el resultado.</dd></div>
+                <div><dt>Regla v2.0</dt><dd>Versión de la regla de recomendación que generó el resultado.</dd></div>
             </dl>
         </section>
     </div>
