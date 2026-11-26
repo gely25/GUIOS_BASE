@@ -107,7 +107,7 @@ class PreguntasInterfazTests(TestCase):
         p.refresh_from_db()
         self.assertEqual(p.respuesta, 'No lo sé')
 
-    @override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL='')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL='', GUIOS_AI_OPENAI_API_KEY='', GUIOS_AI_OPENAI_MODEL='', GUIOS_AI_GROQ_API_KEY='', GUIOS_AI_GROQ_MODEL='')
     def test_ia_desactivada_conserva_modo_manual(self):
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
         res = self.post('analizar', valoracion=v.pk)

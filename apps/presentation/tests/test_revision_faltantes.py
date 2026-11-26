@@ -181,7 +181,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         self.assertEqual(datos[self.v1.pk]['est'], 'ANALISIS_PENDIENTE')
 
     def test_sin_modelo_configurado_avisa_y_no_arranca_el_analisis(self):
-        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL='', GUIOS_AI_OPENAI_API_KEY='', GUIOS_AI_OPENAI_MODEL='', GUIOS_AI_GROQ_API_KEY='', GUIOS_AI_GROQ_MODEL=''):
             r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertContains(r, 'GUIOS_AI_*')
         self.assertNotContains(r, 'data-auto="1"')
@@ -227,7 +227,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         ia.assert_not_called()
 
     def test_endpoint_sin_modelo_devuelve_error_claro(self):
-        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL='', GUIOS_AI_OPENAI_API_KEY='', GUIOS_AI_OPENAI_MODEL='', GUIOS_AI_GROQ_API_KEY='', GUIOS_AI_GROQ_MODEL=''):
             r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
         self.assertEqual(r.status_code, 400)
         self.assertIn('Configure las claves y modelos', r.json()['error'])

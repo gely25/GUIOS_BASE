@@ -104,7 +104,9 @@ class APIJSON:
         peticion = Request(
             self.base_url + '/chat/completions',
             data=json.dumps(carga, ensure_ascii=False).encode('utf-8'),
-            headers={'Authorization': 'Bearer ' + self.clave, 'Content-Type': 'application/json', 'Accept': 'application/json'},
+            # User-Agent propio: algunos proveedores (p. ej. Groq) bloquean el de urllib con HTTP 403.
+            headers={'Authorization': 'Bearer ' + self.clave, 'Content-Type': 'application/json',
+                     'Accept': 'application/json', 'User-Agent': 'GUIOS-PRO/1.0'},
             method='POST',
         )
         try:
