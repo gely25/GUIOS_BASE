@@ -159,3 +159,19 @@ GUIOS_AI_OPENAI_MODEL = os.getenv('GUIOS_AI_OPENAI_MODEL', '').strip()
 GUIOS_AI_GROQ_API_KEY = os.getenv('GUIOS_AI_GROQ_API_KEY', '').strip()
 GUIOS_AI_GROQ_MODEL = os.getenv('GUIOS_AI_GROQ_MODEL', '').strip()
 GUIOS_AI_TIMEOUT = int(os.getenv('GUIOS_AI_TIMEOUT', '15'))
+
+# Compatibilidad con el formato anterior (GUIOS_AI_API_KEY / GUIOS_AI_MODEL /
+# GUIOS_AI_BASE_URL): se asigna al proveedor que corresponda según la URL.
+_legacy_clave = os.getenv('GUIOS_AI_API_KEY', '').strip()
+_legacy_modelo = os.getenv('GUIOS_AI_MODEL', '').strip()
+if _legacy_clave and _legacy_modelo:
+    _legacy_url = os.getenv('GUIOS_AI_BASE_URL', '').strip().lower()
+    if 'openai.com' in _legacy_url:
+        _legacy_proveedor = 'OPENAI'
+    elif 'groq.com' in _legacy_url:
+        _legacy_proveedor = 'GROQ'
+    else:
+        _legacy_proveedor = 'GEMINI'
+    if not globals()[f'GUIOS_AI_{_legacy_proveedor}_API_KEY']:
+        globals()[f'GUIOS_AI_{_legacy_proveedor}_API_KEY'] = _legacy_clave
+        globals()[f'GUIOS_AI_{_legacy_proveedor}_MODEL'] = _legacy_modelo
