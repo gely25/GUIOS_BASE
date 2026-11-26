@@ -2,7 +2,7 @@
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from apps.data.models import LoteHU09
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from .preguntas import PreguntasService
 from .suficiencia import ResultadoSuficienciaInvalido, SuficienciaService
 

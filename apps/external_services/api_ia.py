@@ -4,19 +4,59 @@ La IA recibe únicamente el contexto proporcionado por los servicios HU09/HU10.
 La validación, autorización y persistencia siguen dentro de la aplicación.
 """
 import json
+import math
 from copy import deepcopy
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-from apps.external_services.ollama_preguntas import (
-    AnalisisNoDisponible, ESQUEMA as ESQUEMA_PREGUNTAS, INSTRUCCION as INSTRUCCION_PREGUNTAS,
+from apps.external_services.ai_contracts import (
+    ESQUEMA_BIBLIOGRAFIA, ESQUEMA_PREGUNTAS, ESQUEMA_SUFICIENCIA, ESQUEMA_VALORACION,
+    INSTRUCCION_BIBLIOGRAFIA, INSTRUCCION_PREGUNTAS, INSTRUCCION_SUFICIENCIA,
+    INSTRUCCION_VALORACION,
 )
-from apps.external_services.ollama_suficiencia import ESQUEMA as ESQUEMA_SUFICIENCIA, INSTRUCCION as INSTRUCCION_SUFICIENCIA
-from apps.external_services.ollama_valoracion import ESQUEMA as ESQUEMA_VALORACION, INSTRUCCION as INSTRUCCION_VALORACION
+from apps.external_services.ai_errors import AnalisisNoDisponible
 
 LIMITE_ENTRADA = 16000
 LIMITE_RESPUESTA = 65536
+
+
+def _cumple_esquema(valor, esquema):
+    tipo = esquema.get('type')
+    if tipo == 'object':
+        if not isinstance(valor, dict):
+            return False
+        propiedades = esquema.get('properties', {})
+        if any(campo not in valor for campo in esquema.get('required', [])):
+            return False
+        if esquema.get('additionalProperties') is False and set(valor) - set(propiedades):
+            return False
+        return all(_cumple_esquema(valor[campo], subesquema)
+                   for campo, subesquema in propiedades.items() if campo in valor)
+    if tipo == 'array':
+        if not isinstance(valor, list):
+            return False
+        if len(valor) < esquema.get('minItems', 0) or len(valor) > esquema.get('maxItems', math.inf):
+            return False
+        return all(_cumple_esquema(item, esquema.get('items', {})) for item in valor)
+    if tipo == 'string':
+        if not isinstance(valor, str):
+            return False
+        if len(valor) < esquema.get('minLength', 0) or len(valor) > esquema.get('maxLength', math.inf):
+            return False
+    elif tipo == 'integer':
+        if type(valor) is not int:
+            return False
+    elif tipo == 'number':
+        if (isinstance(valor, bool) or not isinstance(valor, (int, float)) or
+                isinstance(valor, float) and not math.isfinite(valor)):
+            return False
+    if 'enum' in esquema and valor not in esquema['enum']:
+        return False
+    if tipo in ('integer', 'number'):
+        if valor < esquema.get('minimum', -math.inf) or valor > esquema.get('maximum', math.inf):
+            return False
+    return True
 
 
 class APIJSON:
@@ -39,7 +79,7 @@ class APIJSON:
         if len(datos.encode('utf-8')) > LIMITE_ENTRADA:
             raise AnalisisNoDisponible('El contexto supera el límite del piloto. Reduzca los fragmentos vinculados.')
         # El modo json_object exige JSON sintácticamente válido, pero no garantiza
-        # sus campos. Especificamos el esquema esperado para HU09/HU10 antes de
+        # sus campos. Especificamos el esquema esperado antes de
         # que los servicios apliquen su validación estricta, sin debilitarla.
         instrucciones = instruccion + ' Responde exclusivamente JSON válido.'
         if isinstance(esquema, dict) and esquema.get('type') == 'object':
@@ -84,8 +124,8 @@ class APIJSON:
                 lineas = texto.splitlines()
                 texto = '\n'.join(lineas[1:-1]).strip()
             resultado = json.loads(texto)
-            if not isinstance(resultado, dict):
-                raise ValueError('Se esperaba un objeto JSON')
+            if not _cumple_esquema(resultado, esquema):
+                raise AnalisisNoDisponible('La IA devolvió una respuesta fuera del esquema esperado.')
             return resultado
         except HTTPError as exc:
             # No mostrar cuerpos de respuesta ni encabezados de un proveedor externo.
@@ -127,7 +167,33 @@ class APISuficiencia:
         self.cliente = cliente
 
     def __call__(self, entrada):
-        return self.cliente.consultar(entrada, ESQUEMA_SUFICIENCIA, INSTRUCCION_SUFICIENCIA)
+        esquema = deepcopy(ESQUEMA_SUFICIENCIA)
+        ids = [fuente['id'] for fuente in entrada.get('fuentes', []) if fuente.get('id')]
+        esquema['properties']['referencias']['items']['enum'] = ids
+        resultado = self.cliente.consultar(entrada, esquema, INSTRUCCION_SUFICIENCIA)
+        referencias = resultado['referencias']
+        preguntas = resultado['preguntas']
+        if any(not pregunta.strip() or not pregunta.strip().endswith('?') for pregunta in preguntas):
+            raise AnalisisNoDisponible('La API devolvió preguntas inválidas para HU09.')
+        if resultado['estado'] == 'SUFICIENTE' and (not referencias or preguntas):
+            raise AnalisisNoDisponible('La API devolvió una suficiencia sin fuentes válidas.')
+        return resultado
+
+
+class APIBibliografia:
+    def __init__(self, cliente):
+        self.cliente = cliente
+
+    def __call__(self, entrada):
+        esquema = deepcopy(ESQUEMA_BIBLIOGRAFIA)
+        ids = [publicacion['id'] for publicacion in entrada.get('publicaciones', [])]
+        esquema['properties']['sugerencias']['items']['properties']['publicacion_id']['enum'] = ids
+        resultado = self.cliente.consultar(entrada, esquema, INSTRUCCION_BIBLIOGRAFIA)
+        sugerencias = resultado['sugerencias']
+        publicacion_ids = [sugerencia['publicacion_id'] for sugerencia in sugerencias]
+        if len(publicacion_ids) != len(set(publicacion_ids)):
+            raise AnalisisNoDisponible('La API repitió publicaciones en las sugerencias.')
+        return resultado
 
 
 class APIValoracion:
@@ -135,4 +201,7 @@ class APIValoracion:
         self.cliente = cliente
 
     def __call__(self, entrada):
-        return self.cliente.consultar(entrada, ESQUEMA_VALORACION, INSTRUCCION_VALORACION)
+        esquema = deepcopy(ESQUEMA_VALORACION)
+        ids = [fuente['id'] for fuente in entrada.get('fuentes', []) if fuente.get('id')]
+        esquema['properties']['referencias']['items']['enum'] = ids
+        return self.cliente.consultar(entrada, esquema, INSTRUCCION_VALORACION)

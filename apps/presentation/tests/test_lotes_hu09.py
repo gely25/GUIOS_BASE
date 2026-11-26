@@ -3,7 +3,7 @@ from datetime import date
 from django.core.exceptions import ValidationError, PermissionDenied
 from apps.application.services.lotes_hu09 import LotesHU09Service as Lotes
 from apps.data.models import LoteHU09
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -13,7 +13,8 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
                               ValoracionSubfactor)
 
 
-@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'], HU09_EMBEDDING_MODEL='', HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+                   GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
 class LotesHU09Tests(TestCase):
     @classmethod
     def setUpTestData(cls):

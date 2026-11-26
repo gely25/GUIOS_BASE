@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.data.models import ValoracionSubfactor
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from .preguntas import PreguntasService
 from .preparacion_hu10 import PreparacionHU10Service
 
@@ -110,7 +110,7 @@ class AIService:
         ids_validos = {f['id'] for f in fila['fuentes']}
         entrada = cls._construir_entrada(dict(fila, evaluacion_id=evaluacion_id))
 
-        # Invocar al proveedor local fuera de la transacción de escritura.
+        # Invocar al proveedor fuera de la transacción de escritura.
         salida_modelo = proveedor(entrada)
         valor, justificacion, referencias = cls._validar_respuesta_modelo(salida_modelo, ids_validos)
         justificacion_persistida = formatear_justificacion_hu10(justificacion, referencias)

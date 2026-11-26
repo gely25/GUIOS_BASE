@@ -24,15 +24,13 @@ from apps.data.models import (
     Usuario,
     ValoracionSubfactor,
 )
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 
 
 @override_settings(
     PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
-    HU09_OLLAMA_MODEL='qwen2.5:1.5b',
-    HU10_OLLAMA_MODEL='qwen2.5:1.5b',
-    HU09_EMBEDDING_MODEL='',
-    GUIOS_AI_BACKEND='ollama',  # Los mocks de esta clase reemplazan a Ollama, no a Gemini.
+    GUIOS_AI_GEMINI_API_KEY='test-gemini-key',
+    GUIOS_AI_GEMINI_MODEL='test-gemini-model',
 )
 class HU10ValoracionTests(TestCase):
     @classmethod
@@ -133,15 +131,17 @@ class HU10ValoracionTests(TestCase):
         self._habilitar_subfactor()
         self.client.force_login(self.actor)
         url = reverse('presentation:decisor-revision-valoraciones')
-        with patch('apps.presentation.views.preguntas.OllamaValoracion') as mock_ollama:
-            mock_ollama.return_value.return_value = {
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            proveedor = obtener.return_value
+            proveedor.return_value = {
                 'valor_preliminar': 3,
                 'justificacion': 'Cumple parcialmente según la evidencia documental.',
                 'referencias': [f'E:{self.evidencia.pk}'],
             }
             resp = self.client.post(url, {'evaluacion': self.ev.pk, 'valoracion': self.val.pk, 'accion': 'valorar_hu10'})
             self.assertEqual(resp.status_code, 302)
-            mock_ollama.assert_called_once_with('qwen2.5:1.5b')
+            obtener.assert_called_once_with('valoracion')
+            proveedor.assert_called_once()
 
         pagina = self.client.get(url, {'evaluacion': self.ev.pk})
         self.assertContains(pagina, 'Propuesta preliminar IA (HU10): 3/4')

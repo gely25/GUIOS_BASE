@@ -15,7 +15,8 @@ URL = reverse('presentation:decisor-revision-valoraciones')
 CARGA = reverse('presentation:decisor-carga-documental')
 
 
-@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+                   GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
 class RevisionFaltantesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -170,7 +171,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
     """Pantalla «Análisis de IA en curso»: solo encadena HU09 y HU10 existentes."""
 
     def test_la_pantalla_analiza_sola_los_subfactores_con_evidencia(self):
-        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'):
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model'):
             r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
         self.assertEqual([o['vid'] for o in r.context['ia_objetivos']], [self.v1.pk])
         self.assertContains(r, 'id="rv-objetivos"')
@@ -180,9 +181,9 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         self.assertEqual(datos[self.v1.pk]['est'], 'ANALISIS_PENDIENTE')
 
     def test_sin_modelo_configurado_avisa_y_no_arranca_el_analisis(self):
-        with override_settings(HU09_OLLAMA_MODEL='', GUIOS_AI_BACKEND='ollama'):
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
             r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
-        self.assertContains(r, 'HU09_OLLAMA_MODEL')
+        self.assertContains(r, 'GUIOS_AI_*')
         self.assertNotContains(r, 'data-auto="1"')
         self.assertContains(r, 'id="rv"')
 
@@ -199,7 +200,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
             ValoracionSubfactor_objs.update(valor_ia=3, justificacion_ia='Respuesta del modelo')
             return {}
 
-        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct', HU09_EMBEDDING_MODEL=''), \
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model'), \
              mock.patch('apps.presentation.views.revision_humana.PreparacionHU10Service.obtener', side_effect=obtener), \
              mock.patch('apps.presentation.views.revision_humana.SuficienciaService.analizar', return_value=(None, 2)) as suf, \
              mock.patch('apps.presentation.views.revision_humana.AIService.generar_propuesta_preliminar', side_effect=propuesta) as ia, \
@@ -215,7 +216,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
 
     def test_endpoint_no_valora_si_el_subfactor_pide_revision_manual(self):
         fila = {'valoracion_id': self.v2.pk, 'estado': 'REVISION_MANUAL'}
-        with override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct'), \
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model'), \
              mock.patch('apps.presentation.views.revision_humana.PreparacionHU10Service.obtener', return_value={'subfactores': [fila]}), \
              mock.patch('apps.presentation.views.revision_humana.SuficienciaService.analizar') as suf, \
              mock.patch('apps.presentation.views.revision_humana.AIService.generar_propuesta_preliminar') as ia:
@@ -226,8 +227,8 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         ia.assert_not_called()
 
     def test_endpoint_sin_modelo_devuelve_error_claro(self):
-        with override_settings(HU09_OLLAMA_MODEL='', GUIOS_AI_BACKEND='ollama'):
+        with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
             r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
         self.assertEqual(r.status_code, 400)
-        self.assertIn('no está configurado', r.json()['error'])
+        self.assertIn('Configure las claves y modelos', r.json()['error'])
 

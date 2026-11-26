@@ -5,8 +5,8 @@ import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
 
-from apps.external_services.api_ia import APIJSON, APIPreguntas, APISuficiencia, APIValoracion
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.api_ia import APIBibliografia, APIJSON, APIPreguntas, APISuficiencia, APIValoracion
+from apps.external_services.ai_errors import AnalisisNoDisponible
 
 
 class _Respuesta:
@@ -62,10 +62,64 @@ class APIIATests(unittest.TestCase):
         self.assertEqual(peticion['response_format'], {'type': 'json_object'})
 
     @patch('apps.external_services.api_ia.urlopen')
+    def test_sugerencias_bibliograficas_usan_json_y_contexto_no_confiable(self, abrir):
+        salida = {'sugerencias': [{
+            'publicacion_id': 7,
+            'pertinencia': 85,
+            'justificacion': 'El resumen estudia la adopción de software libre.',
+        }]}
+        abrir.return_value = _Respuesta(json.dumps({
+            'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(salida)}}]
+        }).encode('utf-8'))
+        entrada = {'factor': {'id': 2, 'nombre': 'Adopción'}, 'publicaciones': [{'id': 7, 'titulo': 'Estudio', 'resumen': ''}]}
+
+        self.assertEqual(APIBibliografia(self.cliente)(entrada), salida)
+
+        peticion = json.loads(abrir.call_args.args[0].data)
+        instruccion = peticion['messages'][0]['content']
+        self.assertIn('datos no confiables', instruccion)
+        for campo in ('publicacion_id', 'pertinencia', 'justificacion'):
+            self.assertIn(f'"{campo}"', instruccion)
+        self.assertEqual(peticion['response_format'], {'type': 'json_object'})
+
+    @patch('apps.external_services.api_ia.urlopen')
     def test_json_incorrecto_rechazado(self, abrir):
         abrir.return_value = _Respuesta(b'{"choices":[{"finish_reason":"stop","message":{"content":"no-json"}}]}')
         with self.assertRaises(AnalisisNoDisponible):
             APIPreguntas(self.cliente)({'max_preguntas': 1})
+
+    @patch('apps.external_services.api_ia.urlopen')
+    def test_respuesta_fuera_del_esquema_rechazada(self, abrir):
+        salida = {'preguntas': [42]}
+        abrir.return_value = _Respuesta(json.dumps({
+            'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(salida)}}]
+        }).encode('utf-8'))
+        with self.assertRaisesRegex(AnalisisNoDisponible, 'fuera del esquema'):
+            APIPreguntas(self.cliente)({'max_preguntas': 1})
+
+    @patch('apps.external_services.api_ia.urlopen')
+    def test_suficiencia_no_valida_sin_referencias(self, abrir):
+        salida = {'estado': 'SUFICIENTE', 'justificacion': 'Contexto suficiente.',
+                  'referencias': [], 'preguntas': []}
+        abrir.return_value = _Respuesta(json.dumps({
+            'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(salida)}}]
+        }).encode('utf-8'))
+        with self.assertRaisesRegex(AnalisisNoDisponible, 'sin fuentes válidas'):
+            APISuficiencia(self.cliente)({'fuentes': []})
+
+    @patch('apps.external_services.api_ia.urlopen')
+    def test_bibliografia_rechaza_ids_ajenos_al_contexto(self, abrir):
+        salida = {'sugerencias': [{
+            'publicacion_id': 8,
+            'pertinencia': 85,
+            'justificacion': 'Justificación de prueba.',
+        }]}
+        abrir.return_value = _Respuesta(json.dumps({
+            'choices': [{'finish_reason': 'stop', 'message': {'content': json.dumps(salida)}}]
+        }).encode('utf-8'))
+        entrada = {'publicaciones': [{'id': 7}]}
+        with self.assertRaisesRegex(AnalisisNoDisponible, 'fuera del esquema'):
+            APIBibliografia(self.cliente)(entrada)
 
     @patch('apps.external_services.api_ia.urlopen')
     def test_sin_respuesta_completa(self, abrir):

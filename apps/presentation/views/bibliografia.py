@@ -19,6 +19,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from apps.application.services.bibliographic import BibliographicService
+from apps.external_services.ai_errors import AnalisisNoDisponible
+from apps.external_services.proveedor_ia import obtener_proveedor
 from apps.presentation.forms import RevisionVinculoForm, VinculoManualForm
 
 servicio = BibliographicService()
@@ -97,6 +99,19 @@ def busquedas_view(request):
 
     if request.method == 'POST':
         accion = request.POST.get('accion')
+        if accion == 'analizar_ia':
+            try:
+                total_sugerencias = servicio.sugerir_publicaciones_ia(
+                    request.user.pk, busqueda.pk, obtener_proveedor('bibliografia'))
+            except (AnalisisNoDisponible, ValidationError) as error:
+                messages.error(request, _errores(error))
+            else:
+                if total_sugerencias:
+                    vinculos = 'vínculo sugerido' if total_sugerencias == 1 else 'vínculos sugeridos'
+                    messages.success(request, f'La IA propuso {total_sugerencias} {vinculos}. Revísalos antes de aprobarlos.')
+                else:
+                    messages.success(request, 'La IA no encontró publicaciones claramente pertinentes para este factor.')
+            return redirect(reverse('presentation:admin-bibliografia-busquedas') + f'?id={busqueda.pk}{page_suffix}#bib-resultados-titulo')
         if accion == 'revisar_lote':
             # Permite revisar varios vínculos explícitamente seleccionados sin
             # aprobar en silencio todas las sugerencias recuperadas.

@@ -59,16 +59,22 @@ Flujo del administrador en `/administracion/actualizacion-bibliografica/`:
    La consulta combina contexto FLOSS + «adoption» + términos en inglés del factor
    (`business_rules/glosario_bibliografico.py`). Fuente: OpenAlex (`external_services/bibliografia/`).
 2. **`python manage.py procesar_busquedas`** ejecuta la cola en segundo plano (la interfaz muestra el
-   progreso). Guarda publicaciones sin duplicar (DOI o título+año) y sugiere factores por palabras clave
-   (`business_rules/coincidencia.py`). Sin IA.
-3. **Revisar**: el administrador aprueba o rechaza cada sugerencia o vincula a mano. Solo lo aprobado cuenta.
-4. **Recalcular**: crea un borrador de catálogo con `TC = TC GUIOS 2021 + publicaciones aprobadas de
+   progreso) y guarda publicaciones sin duplicar (DOI o título+año).
+3. **Analizar con IA**: desde el detalle de una búsqueda completada, el administrador puede pedir a la IA
+   que evalúe las publicaciones recuperadas para el factor y explique cada sugerencia. El análisis es a demanda.
+4. **Revisar**: el administrador aprueba o rechaza cada sugerencia o vincula a mano. Solo lo aprobado cuenta.
+5. **Recalcular**: crea un borrador de catálogo con `TC = TC GUIOS 2021 + publicaciones aprobadas de
    2020–2025`, y r_i, IL e IS recalculados (`business_rules/rules_engine.py`).
-5. **Publicar**: el borrador pasa a ACTIVO y la versión anterior a HISTORICO. Las evaluaciones guardan
+6. **Publicar**: el borrador pasa a ACTIVO y la versión anterior a HISTORICO. Las evaluaciones guardan
    su versión, así que no cambian.
 
-Variables opcionales en `.env`: `BIBLIOGRAPHIC_API_KEY` (key gratuita de OpenAlex con cupo propio),
-`BIBLIOGRAPHIC_BASE_URL`, `BIBLIOGRAPHIC_TIMEOUT`, `BIBLIOGRAPHIC_MAX_RESULTADOS`.
+Variables bibliográficas opcionales en `.env`: `BIBLIOGRAPHIC_API_KEY` (key gratuita de OpenAlex con cupo propio),
+`BIBLIOGRAPHIC_BASE_URL`, `BIBLIOGRAPHIC_TIMEOUT` y `BIBLIOGRAPHIC_MAX_RESULTADOS`. Para sugerencias bibliográficas
+y análisis HU09/HU10, configura una o más APIs externas con pares clave/modelo: `GUIOS_AI_GEMINI_API_KEY` /
+`GUIOS_AI_GEMINI_MODEL`, `GUIOS_AI_OPENAI_API_KEY` / `GUIOS_AI_OPENAI_MODEL` y `GUIOS_AI_GROQ_API_KEY` /
+`GUIOS_AI_GROQ_MODEL`. Las solicitudes se envían en paralelo y se utiliza la primera respuesta válida;
+`GUIOS_AI_TIMEOUT` limita cada llamada. Los fragmentos de evidencia y respuestas de HU09/HU10 se comparten con
+cada proveedor configurado, por lo que se deben revisar sus políticas de privacidad y uso. Ver `.env.example`.
 
 Nota: el TC de 2021 pudo incluir artículos de 2020–2021 que la búsqueda vuelva a encontrar; como no
 existe la lista de referencias original, el administrador debe tenerlo en cuenta al aprobar.

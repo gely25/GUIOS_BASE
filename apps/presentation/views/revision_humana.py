@@ -3,7 +3,6 @@ import json
 import re
 from decimal import Decimal
 
-from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -16,8 +15,7 @@ from apps.application.services.ai import AIService
 from apps.application.services.preguntas import PreguntasService
 from apps.application.services.preparacion_hu10 import PreparacionHU10Service
 from apps.application.services.suficiencia import SuficienciaService
-from apps.external_services.ollama_embeddings import OllamaEmbeddings
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from apps.external_services.proveedor_ia import configurado, modelo_activo, obtener_proveedor
 from apps.application.services.revision_humana import RevisionHumanaService, ESTADOS_VALIDOS, _modo_valido, _lote_activo, _version
 from apps.data.models import BorradorRevisionHumana, Evaluacion, Evidencia, FragmentoDocumento, ReaperturaRevisionHumana, RevisionHumana, ValoracionSubfactor
@@ -149,7 +147,7 @@ def _version_borrador_actual(v):
 def _analizar_ia(actor, eid, vid):
     """Encadena los servicios existentes: suficiencia (HU09) y propuesta preliminar (HU10) de un subfactor."""
     if not configurado():
-        raise ValidationError('El análisis con IA no está configurado (HU09_OLLAMA_MODEL o GUIOS_AI_*).')
+        raise ValidationError('Configure las claves y modelos de Gemini, OpenAI o Groq para usar el análisis externo.')
     modelo = modelo_activo()
 
     def fila():
@@ -161,8 +159,7 @@ def _analizar_ia(actor, eid, vid):
     nuevas = 0
     try:
         if f['estado'] == 'ANALISIS_PENDIENTE':
-            vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-            _, nuevas = SuficienciaService.analizar(actor, eid, vid, obtener_proveedor('suficiencia'), modelo, vectorizador, generar_preguntas=False)
+            _, nuevas = SuficienciaService.analizar(actor, eid, vid, obtener_proveedor('suficiencia'), modelo, generar_preguntas=False)
             f = fila()
         valor = ValoracionSubfactor.objects.filter(pk=vid).values_list('valor_ia', flat=True).first()
         if f and f['estado'] == 'PROPUESTA_HABILITADA' and valor is None:
@@ -433,7 +430,7 @@ def revision_humana_view(request):
     estados_ia = {k: f['estado'] for k, f in filas_ia.items()}
     objetivos = [v for v in valoraciones if abierto and v.estado_validacion == 'PENDIENTE' and v.valor_confirmado is None and v.valor_ia is None
                  and v.n_evidencia and estados_ia.get(v.pk) in ('ANALISIS_PENDIENTE', 'PROPUESTA_HABILITADA')]
-    ctx.update(ia_disponible=configurado(), ia_pendientes=len(objetivos), ia_remota=settings.GUIOS_AI_BACKEND == 'api',
+    ctx.update(ia_disponible=configurado(), ia_pendientes=len(objetivos), ia_remota=configurado(),
                ia_objetivos=[{'vid': v.pk, 'nombre': v.subfactor.descripcion[:140]} for v in objetivos])
     # Solo presentación: datos de la revisión rápida (un registro por subfactor; la evidencia se abre en un modal).
     rv_datos = []

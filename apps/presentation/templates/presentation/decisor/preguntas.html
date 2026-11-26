@@ -58,7 +58,8 @@
                     </div>
                     {% if total %}<progress id="hu09-progreso" value="{{ respondidas }}" max="{{ total }}" aria-label="Progreso de respuestas"></progress>{% endif %}
                     <p class="hu09-muted">Desconocidas: <span id="hu09-desconocidas">{{ desconocidas }}</span> · Sin aporte: <span id="hu09-no-informativas">{{ no_informativas }}</span> · Descartadas: {{ descartadas }}.</p>
-                    <p class="hu09-muted">{% if modelo_ia %}Modelo local HU09: <strong>{{ modelo_ia }}</strong> · Comparación: {% if modelo_embeddings %}semántica ({{ modelo_embeddings }}){% else %}textual{% endif %}.{% else %}Análisis IA local HU09 no configurado. Puede responder manualmente.{% endif %}</p>
+                    <p class="hu09-muted">{% if modelo_ia %}Proveedores externos HU09: <strong>{{ modelo_ia }}</strong> · Comparación de preguntas similares: textual.{% else %}Proveedores externos de IA no configurados. Puede responder manualmente.{% endif %}</p>
+                    {% if modelo_ia %}<p class="hu09-muted">Aviso: al analizar se envían a las APIs configuradas los fragmentos de evidencia y las respuestas vinculadas a este subfactor. Se utiliza la primera respuesta válida, sin combinar resultados; otras solicitudes ya iniciadas pueden continuar hasta su tiempo límite. Revise las condiciones de privacidad de cada proveedor.</p>{% endif %}
                 </section>
 
                 <section class="dashboard-block hu09-panel">
@@ -77,7 +78,7 @@
                         <div>Habilitados <strong id="hu10-habilitados">{{ habilitados_hu10 }}</strong></div>
                         <div>Con propuesta <strong id="hu10-generadas">{{ propuestas_hu10_listas }}</strong></div>
                     </div>
-                    <p class="hu09-muted">{% if modelo_hu10 %}Modelo local HU10: <strong>{{ modelo_hu10 }}</strong>. Genera puntuaciones preliminares (1 a 4) con citas verificables y las envía a revisión humana (HU11).{% else %}Configure un modelo local HU10 admitido.{% endif %}</p>
+                    <p class="hu09-muted">{% if modelo_hu10 %}Proveedores externos HU10: <strong>{{ modelo_hu10 }}</strong>. Genera puntuaciones preliminares (1 a 4) con citas verificables y las envía a revisión humana (HU11).{% else %}Configure al menos una API externa de IA para HU10.{% endif %}</p>
                 </section>
             </div>
 
@@ -158,7 +159,7 @@
 
                             {% if editable and fila.editable and modelo_ia and not fila.suficiencia %}
                                 {% if fila.cupo_ia %}
-                                <form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="analizar">Analizar vacíos con IA</button><span class="hu09-wait" role="status" hidden>Analizando información con el modelo local…</span></form>
+                                <form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="analizar">Analizar vacíos con IA</button><span class="hu09-wait" role="status" hidden>Analizando información con las APIs externas…</span></form>
                                 {% else %}<p class="hu09-muted">Cupo de preguntas pendientes alcanzado. Responda o descarte preguntas antes de analizar nuevamente.</p>{% endif %}
                             {% endif %}
 
@@ -175,7 +176,7 @@
                                 {% else %}<p class="hu09-muted">Aún no se ha evaluado la suficiencia.</p>{% endif %}
 
                                 {% if editable and fila.editable and modelo_ia and fila.sin_pendientes and not fila.suficiencia_vigente %}
-                                <form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="suficiencia">Evaluar suficiencia y adaptar preguntas</button><span class="hu09-wait" role="status" hidden>Evaluando suficiencia con el modelo local…</span></form>
+                                <form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}"><button class="hu09-secondary" type="submit" name="accion" value="suficiencia">Evaluar suficiencia y adaptar preguntas</button><span class="hu09-wait" role="status" hidden>Evaluando suficiencia con las APIs externas…</span></form>
                                 {% elif not fila.sin_pendientes %}<p class="hu09-muted">Responda o descarte las preguntas pendientes antes de reevaluar.</p>{% endif %}
 
                                 {% if fila.historial %}<details class="hu09-history"><summary>Historial de suficiencia ({{ fila.historial|length }})</summary>
