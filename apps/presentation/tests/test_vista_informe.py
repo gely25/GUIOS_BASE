@@ -68,6 +68,27 @@ class ResultadosInformeVistaTests(TestCase):
         self.assertContains(respuesta, 'v1.0')
         self.assertContains(respuesta, 'data-hoja', count=4)
 
+    def test_informe_muestra_contexto_de_la_ficha(self):
+        organizacion = self.evaluacion.organizacion
+        organizacion.sector = "Educación"
+        organizacion.tamano = "Mediana"
+        organizacion.objetivo_adopcion = "Modernizar la gestión documental"
+        organizacion.save(update_fields=["sector", "tamano", "objetivo_adopcion"])
+        software = self.evaluacion.software
+        software.descripcion = "Suite ofimática para documentos institucionales"
+        software.save(update_fields=["descripcion"])
+        self.client.force_login(self.decisor)
+
+        respuesta = self.client.get(self.url_informe)
+
+        self.assertContains(respuesta, "Contexto de la evaluación")
+        self.assertContains(respuesta, "Educación")
+        self.assertContains(respuesta, "Mediana")
+        self.assertContains(respuesta, "Modernizar la gestión documental")
+        self.assertContains(respuesta, "TDF")
+        self.assertContains(respuesta, "Suite ofimática para documentos institucionales")
+        self.assertContains(respuesta, "no intervienen en los cálculos")
+
     def test_informe_explica_por_que_un_factor_esta_en_contra(self):
         self.client.force_login(self.decisor)
         respuesta = self.client.get(self.url_informe)

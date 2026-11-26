@@ -108,9 +108,15 @@ class PmFodaTests(TestCase):
     def test_reabrir_una_valoracion_retira_pm_y_foda(self):
         self.confirmar_todo()
         Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
+        self.ev.refresh_from_db()
+        self.assertEqual(self.ev.estado, Evaluacion.CERRADA)
+        self.assertIsNotNone(self.ev.fecha_fin)
         v, _ = self.v[('Compatibilidad', 0)]
         version = RevisionHumanaService.obtener(self.actor, self.ev.pk, v.pk)['version']
         RevisionHumanaService.reabrir(self.actor, self.ev.pk, v.pk, 'Corregir dato.', version)
+        self.ev.refresh_from_db()
+        self.assertEqual(self.ev.estado, Evaluacion.EN_PROCESO)
+        self.assertIsNone(self.ev.fecha_fin)
         self.assertIsNone(self.ef(self.f_ext).ponderacion_media)
         self.assertIsNone(self.ef(self.f_amb).clasificacion_foda)
         self.assertFalse(Servicio.vista_previa(self.actor, self.ev.pk)['lista'])
@@ -126,6 +132,9 @@ class PmFodaTests(TestCase):
     def test_calculo_persiste_recomendacion_hu13(self):
         self.confirmar_todo()
         Servicio.calcular_y_guardar(self.actor, self.ev.pk, {self.f_amb.pk: 'interno'})
+        self.ev.refresh_from_db()
+        self.assertEqual(self.ev.estado, Evaluacion.CERRADA)
+        self.assertIsNotNone(self.ev.fecha_fin)
         resultado = ResultadoEvaluacion.objects.get(evaluacion=self.ev)
         self.assertEqual(resultado.version_regla, '2.0')
         self.assertIn(resultado.recomendacion, (

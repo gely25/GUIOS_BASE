@@ -13,6 +13,20 @@ dice lo mismo en el mismo orden. Contexto: doc (DocumentoVista).
         <div><dt>Regla de recomendación</dt><dd>v{{ doc.version_regla }}</dd></div>
     </dl>
 
+    {% if doc.sector or doc.tamano or doc.objetivo_adopcion or doc.proveedor or doc.descripcion_software %}
+    <section class="ih-contexto" aria-label="Contexto de la evaluación">
+        <h3>Contexto de la evaluación</h3>
+        <dl>
+            <div><dt>Sector</dt><dd>{{ doc.sector|default:"No especificado" }}</dd></div>
+            <div><dt>Tamaño de la organización</dt><dd>{{ doc.tamano|default:"No especificado" }}</dd></div>
+            <div><dt>Proveedor</dt><dd>{{ doc.proveedor|default:"No especificado" }}</dd></div>
+            <div><dt>Objetivo de adopción</dt><dd>{{ doc.objetivo_adopcion|default:"No especificado" }}</dd></div>
+            <div><dt>Descripción del software</dt><dd>{{ doc.descripcion_software|default:"No especificado" }}</dd></div>
+        </dl>
+        <p>Datos declarados en la ficha inicial como referencia para el decisor; no intervienen en los cálculos ni en la recomendación.</p>
+    </section>
+    {% endif %}
+
     <div class="ih-sec">
         <h3><i>1</i>Recomendación</h3>
         <div class="ih-reco">

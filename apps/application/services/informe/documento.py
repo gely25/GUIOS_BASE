@@ -63,6 +63,11 @@ def _limpio(texto: str, maximo: int = MAX_FRAGMENTO) -> str:
     return plano if len(plano) <= maximo else plano[: maximo - 1].rstrip() + "…"
 
 
+def _texto_contexto(texto: Optional[str]) -> Optional[str]:
+    limpio = _limpio(texto, 220)
+    return limpio or None
+
+
 def _justificacion_util(texto: str) -> str:
     """La justificación solo se muestra si dice algo más que «Valoración manual del decisor: …»."""
     limpio = _limpio(texto, 200)
@@ -163,6 +168,11 @@ class DocumentoVista:
     a_favor: int
     en_contra: int
     total: int
+    sector: Optional[str] = None
+    tamano: Optional[str] = None
+    objetivo_adopcion: Optional[str] = None
+    proveedor: Optional[str] = None
+    descripcion_software: Optional[str] = None
     proporciones: list = field(default_factory=list)     # [(clase, plural, cantidad, porcentaje)]
     atender: List[FilaAtender] = field(default_factory=list)
     atender_extra: int = 0
@@ -349,6 +359,10 @@ def construir_documento(informe: InformeEvaluacion, emitido) -> DocumentoVista:
     return DocumentoVista(
         evaluacion_id=informe.evaluacion_id, software=informe.software_completo,
         organizacion=informe.organizacion, decisor=informe.decisor, emitido=emitido,
+        sector=_texto_contexto(informe.sector), tamano=_texto_contexto(informe.tamano),
+        objetivo_adopcion=_texto_contexto(informe.objetivo_adopcion),
+        proveedor=_texto_contexto(informe.proveedor),
+        descripcion_software=_texto_contexto(informe.descripcion_software),
         version_regla=informe.version_regla, fecha_resultado=informe.fecha_resultado, letra=letra,
         titulo_recomendacion=informe.recomendacion, sintesis=_sintesis(letra, a_favor, en_contra, total_clasificados, n_info, n_importantes),
         a_favor=a_favor, en_contra=en_contra, total=len(factores), proporciones=proporciones,

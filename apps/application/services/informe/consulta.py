@@ -142,6 +142,10 @@ def cargar_informe(usuario, evaluacion_id: Optional[int] = None) -> InformeEvalu
         explicacion=resultado.explicacion,
         version_regla=resultado.version_regla,
         fecha_resultado=resultado.fecha_generacion,
+        sector=evaluacion.organizacion.sector,
+        tamano=evaluacion.organizacion.tamano,
+        objetivo_adopcion=evaluacion.organizacion.objetivo_adopcion,
+        descripcion_software=evaluacion.software.descripcion,
         resumen_foda=ResumenFoda(
             fortalezas=conteo[FORTALEZA], oportunidades=conteo[OPORTUNIDAD],
             debilidades=conteo[DEBILIDAD], amenazas=conteo[AMENAZA], sin_clasificar=sin_clasificar),

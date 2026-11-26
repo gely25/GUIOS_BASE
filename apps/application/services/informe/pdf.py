@@ -354,6 +354,25 @@ def _pagina_resumen(doc: DocumentoVista, est, p, ancho):
                            ("BOTTOMPADDING", (0, 0), (-1, 0), 1)]))
     h += [t, Spacer(1, 14)]
 
+    if any((doc.sector, doc.tamano, doc.objetivo_adopcion, doc.proveedor, doc.descripcion_software)):
+        contexto = Table([
+            [Paragraph(f"<b>Sector</b><br/>{texto_pdf(doc.sector or 'No especificado')}", est["celda"]),
+             Paragraph(f"<b>Tamaño de la organización</b><br/>{texto_pdf(doc.tamano or 'No especificado')}", est["celda"])],
+            [Paragraph(f"<b>Objetivo de adopción</b><br/>{texto_pdf(doc.objetivo_adopcion or 'No especificado')}", est["celda"]),
+             Paragraph(f"<b>Proveedor</b><br/>{texto_pdf(doc.proveedor or 'No especificado')}", est["celda"])],
+            [Paragraph(f"<b>Descripción del software</b><br/>{texto_pdf(doc.descripcion_software or 'No especificado')}", est["celda"]), ""],
+        ], colWidths=[ancho / 2, ancho / 2])
+        contexto.setStyle(TableStyle([
+            ("SPAN", (0, 2), (1, 2)), ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#faf7f1")),
+            ("BOX", (0, 0), (-1, -1), 0.5, BORDE), ("INNERGRID", (0, 0), (-1, -1), 0.3, LINEA),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"), ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7), ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        h += [Paragraph("Contexto de la evaluación", est["reco_t"]), contexto,
+              p("Datos declarados en la ficha inicial como referencia para el decisor; no intervienen en los cálculos ni en la recomendación.", "nota"),
+              Spacer(1, 8)]
+
     h += [_Encabezado(1, "Recomendación", ancho), Spacer(1, 6)]
     reco = Table([[_Letra(doc.letra), [p(doc.titulo_recomendacion, "reco_t"), p(doc.sintesis, "reco_p")]]],
                  colWidths=[1.9 * cm, ancho - 1.9 * cm])

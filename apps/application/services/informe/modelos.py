@@ -137,6 +137,10 @@ class InformeEvaluacion:
     explicacion: Optional[str]
     version_regla: str
     fecha_resultado: datetime
+    sector: Optional[str] = None
+    tamano: Optional[str] = None
+    objetivo_adopcion: Optional[str] = None
+    descripcion_software: Optional[str] = None
     resumen_foda: ResumenFoda = field(default_factory=ResumenFoda)
     factores: List[FactorInforme] = field(default_factory=list)
     documentos: List[DocumentoInforme] = field(default_factory=list)
