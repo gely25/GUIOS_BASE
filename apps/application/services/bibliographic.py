@@ -11,7 +11,7 @@ Los cálculos viven en apps/business_rules; las consultas, en apps/data/reposito
 
 from typing import Callable, Optional, Sequence
 
-from apps.application.services.actualizacion_bibliografica import busquedas, revision, versiones
+from apps.application.services.actualizacion_bibliografica import busquedas, revision, sugerencias_ia, versiones
 from apps.application.services.indicadores_literatura import (
     FactorCatalogo,
     IndicadoresLiteratura,
@@ -60,6 +60,10 @@ class BibliographicService:
         busqueda = repo.obtener_busqueda(busqueda_id)
         factores = repo_catalogo.factores_de(repo_catalogo.version_activa())
         return busqueda, repo.resultados_de(busqueda), factores
+
+    @staticmethod
+    def sugerir_publicaciones_ia(actor_id, busqueda_id, proveedor):
+        return sugerencias_ia.sugerir_publicaciones(actor_id, busqueda_id, proveedor)
 
     @staticmethod
     def resumen_vinculos():

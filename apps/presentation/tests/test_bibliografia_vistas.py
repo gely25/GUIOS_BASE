@@ -65,9 +65,21 @@ class VistasBibliografiaTests(TestCase):
         bloqueo = Factor.objects.get(nombre='Bloqueo de proveedores')
         busqueda = BusquedaBibliografica.objects.get(factor=bloqueo)
         detalle = url('admin-bibliografia-busquedas') + f'?id={busqueda.pk}'
-        self.assertContains(self.client.get(detalle), 'Vendor lock-in and open source adoption')
+        self.assertContains(self.client.get(detalle), 'Analizar publicaciones con IA')
+        proveedor = lambda entrada: {
+            'sugerencias': [{
+                'publicacion_id': p['id'],
+                'pertinencia': 88,
+                'justificacion': 'El título aborda adopción de software de código abierto.',
+            } for p in entrada['publicaciones']]
+        }
+        with mock.patch('apps.presentation.views.bibliografia.obtener_proveedor', return_value=proveedor):
+            respuesta = self.client.post(detalle, {'accion': 'analizar_ia'}, follow=True)
+        self.assertContains(respuesta, 'IA propuso 1 vínculo')
+        self.assertContains(respuesta, 'Vendor lock-in and open source adoption')
 
         vinculo = PublicacionFactor.objects.get(factor=bloqueo)
+        self.assertEqual((vinculo.origen, vinculo.estado), (PublicacionFactor.IA, PublicacionFactor.SUGERIDA))
         self.client.post(detalle, {'accion': 'revisar', 'vinculo': vinculo.pk, 'decision': 'aprobar'})
         vinculo.refresh_from_db()
         self.assertEqual(vinculo.estado, PublicacionFactor.APROBADA)

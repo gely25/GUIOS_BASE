@@ -81,7 +81,9 @@ class SuficienciaService:
         if rondas >= MAX_RONDAS:
             estado, motivo, refs, elegidas = 'REVISION_MANUAL', 'Límite de rondas alcanzado. El decisor debe revisar la información disponible.', [], []
         else:
-            estado, motivo, refs, preguntas = _validar(proveedor(entrada), entrada)
+            respuesta = proveedor(entrada)
+            modelo = getattr(proveedor, 'ultimo_identificador', None) or modelo
+            estado, motivo, refs, preguntas = _validar(respuesta, entrada)
             conocidas = [p['texto'] for p in fila['preguntas'] + fila['preguntas_descartadas']]
             elegidas = _filtrar_semantica(conocidas, preguntas, MAX_PENDIENTES, vectorizador) if generar_preguntas else []
             rondas += 1

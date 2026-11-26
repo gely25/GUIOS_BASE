@@ -1,13 +1,10 @@
 """Trabajador independiente para la cola HU09 (una instancia local)."""
 import time
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import close_old_connections
 from apps.application.services.lotes_hu09 import LotesHU09Service
 from apps.data.models import LoteHU09
-from apps.external_services.ollama_suficiencia import OllamaSuficiencia
-from apps.external_services.ollama_embeddings import OllamaEmbeddings
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from apps.external_services.proveedor_ia import obtener_proveedor, modelo_activo
 
 
@@ -25,8 +22,7 @@ class Command(BaseCommand):
             self.stdout.write('Lote reencolado; conserva los resultados parciales.')
             return
         try:
-            proveedor = (obtener_proveedor('suficiencia') if settings.GUIOS_AI_BACKEND == 'api' else OllamaSuficiencia(settings.HU09_OLLAMA_MODEL))
-            vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
+            proveedor = obtener_proveedor('suficiencia')
         except AnalisisNoDisponible as exc:
             raise CommandError(str(exc)) from exc
         self.stdout.write('Worker HU09 listo. Ctrl+C para detener.')
@@ -36,7 +32,7 @@ class Command(BaseCommand):
                 lote = LotesHU09Service.tomar()
                 if lote:
                     self.stdout.write(f'Procesando lote #{lote.pk}')
-                    LotesHU09Service.procesar(lote, proveedor, modelo_activo(), vectorizador)
+                    LotesHU09Service.procesar(lote, proveedor, modelo_activo())
                     self.stdout.write(f'Lote #{lote.pk} finalizado.')
                 if options['once']:
                     return

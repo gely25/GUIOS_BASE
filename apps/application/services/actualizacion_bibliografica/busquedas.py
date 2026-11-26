@@ -1,5 +1,5 @@
 """
-Búsqueda bibliográfica automatizada (RF01) y registro de publicaciones (RF02, sin IA).
+Búsqueda bibliográfica automatizada (RF01) y registro de publicaciones (RF02).
 
 `lanzar_actualizacion` solo deja las búsquedas en cola (PENDIENTE) y vuelve enseguida.
 `manage.py procesar_busquedas` las ejecuta en segundo plano con `ejecutar_busqueda`.
@@ -13,8 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.business_rules.coincidencia import sugerir_factores
-from apps.business_rules.glosario_bibliografico import construir_consulta, terminos_de
+from apps.business_rules.glosario_bibliografico import construir_consulta
 from apps.business_rules.rules_engine import ANIO_FIN, ANIO_INICIO
 from apps.data.repositorios import bibliografia as repo
 from apps.data.repositorios import catalogo as repo_catalogo
@@ -26,11 +25,6 @@ log = logging.getLogger(__name__)
 
 Busqueda = repo.Busqueda
 MINUTOS_COLGADA = 30
-
-
-def terminos_por_factor(factores):
-    """Términos de coincidencia: glosario en inglés + nombre del factor en español."""
-    return {f.pk: (*terminos_de(f.nombre), f.nombre) for f in factores}
 
 
 def lanzar_actualizacion(actor_id, factor_ids=None, fuente=None):
@@ -57,8 +51,8 @@ def lanzar_actualizacion(actor_id, factor_ids=None, fuente=None):
 
 def ejecutar_busqueda(busqueda, fuente=None, maximo=None):
     """
-    Consulta la fuente, guarda las publicaciones (deduplicadas) y sugiere factores por
-    palabras clave. Si la fuente falla, la búsqueda queda FALLIDA y no se interrumpe nada más.
+    Consulta la fuente y guarda publicaciones deduplicadas. La IA las analiza a demanda
+    desde la revisión administrativa. Si la fuente falla, la búsqueda queda FALLIDA.
     """
     fuente = fuente or fuente_configurada()
     maximo = maximo or settings.BIBLIOGRAPHIC_MAX_RESULTADOS
@@ -70,16 +64,11 @@ def ejecutar_busqueda(busqueda, fuente=None, maximo=None):
                                  fecha_fin=timezone.now(), progreso=100)
         return busqueda
 
-    factores = repo_catalogo.factores_de(repo_catalogo.version_activa())
-    terminos = terminos_por_factor(factores)
     total = len(resultados)
     for posicion, resultado in enumerate(resultados, start=1):
         with transaction.atomic():
             publicacion = repo.guardar_publicacion(resultado, fuente.nombre)
             repo.registrar_resultado(busqueda, publicacion, posicion)
-            for sugerencia in sugerir_factores(publicacion.titulo, publicacion.resumen or '', terminos):
-                repo.sugerir_vinculo(publicacion, sugerencia.clave, sugerencia.pertinencia,
-                                     sugerencia.justificacion)
         if posicion % 10 == 0 or posicion == total:
             repo.actualizar_busqueda(busqueda, progreso=int(posicion * 100 / total))
 

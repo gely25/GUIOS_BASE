@@ -1,11 +1,33 @@
-import json, time, urllib.request as u
-from django.conf import settings as s
-for m in ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"]:
+import time
+
+from django.conf import settings
+
+from apps.external_services.ai_errors import AnalisisNoDisponible
+from apps.external_services.api_ia import APIJSON
+
+
+MODELOS = ("gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite")
+ESQUEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["ok"],
+    "properties": {"ok": {"type": "boolean"}},
+}
+
+for modelo in MODELOS:
     t = time.time()
-    cuerpo = json.dumps({"model": m, "messages": [{"role": "user", "content": "Responde JSON {\"ok\":true}"}], "response_format": {"type": "json_object"}}).encode()
-    r = u.Request(s.GUIOS_AI_BASE_URL + "/chat/completions", data=cuerpo, headers={"Authorization": "Bearer " + s.GUIOS_AI_API_KEY, "Content-Type": "application/json"})
     try:
-        u.urlopen(r, timeout=90).read()
-        print(m, "OK", round(time.time() - t, 1), "s")
-    except Exception as e:
-        print(m, "FALLA", repr(e))
+        cliente = APIJSON(
+            settings.GUIOS_AI_GEMINI_API_KEY,
+            modelo,
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+            settings.GUIOS_AI_TIMEOUT,
+        )
+        respuesta = cliente.consultar(
+            {"solicitud": 'Devuelve {"ok": true}.'},
+            ESQUEMA,
+            "Responde con el objeto JSON de prueba solicitado.",
+        )
+        print(modelo, "OK", respuesta, round(time.time() - t, 1), "s")
+    except AnalisisNoDisponible as error:
+        print(modelo, "FALLA", str(error))

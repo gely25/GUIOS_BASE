@@ -41,6 +41,7 @@ class BusquedaBibliografica(models.Model):
     mensaje_error = models.TextField(blank=True, null=True)
     fecha_inicio = models.DateTimeField(null=True, blank=True)
     fecha_fin = models.DateTimeField(null=True, blank=True)
+    analisis_ia_completado = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'busqueda_bibliografica'
@@ -99,7 +100,8 @@ class PublicacionFactor(models.Model):
 
     MANUAL = 'MANUAL'
     PALABRAS_CLAVE = 'PALABRAS_CLAVE'
-    ORIGENES = [(MANUAL, 'Manual'), (PALABRAS_CLAVE, 'Palabras clave')]
+    IA = 'IA'
+    ORIGENES = [(MANUAL, 'Manual'), (PALABRAS_CLAVE, 'Palabras clave'), (IA, 'Inteligencia artificial')]
 
     SUGERIDA = 'SUGERIDA'
     APROBADA = 'APROBADA'
@@ -125,7 +127,7 @@ class PublicacionFactor(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['publicacion', 'factor'], name='pubfactor_publicacion_factor_unico'),
             models.CheckConstraint(
-                condition=Q(origen__in=['MANUAL', 'PALABRAS_CLAVE']), name='pubfactor_origen_valido'),
+                condition=Q(origen__in=['MANUAL', 'PALABRAS_CLAVE', 'IA']), name='pubfactor_origen_valido'),
             models.CheckConstraint(
                 condition=Q(estado__in=['SUGERIDA', 'APROBADA', 'RECHAZADA']), name='pubfactor_estado_valido'),
             models.CheckConstraint(

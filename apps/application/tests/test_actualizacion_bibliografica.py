@@ -23,6 +23,7 @@ from apps.data.models import (
     Usuario,
 )
 from apps.external_services.bibliografia import ErrorFuenteCientifica, ResultadoPublicacion
+from apps.external_services.ai_errors import AnalisisNoDisponible
 
 servicio = BibliographicService()
 
@@ -109,13 +110,9 @@ class ProcesarTests(Base):
         self.assertEqual(set(BusquedaBibliografica.objects.values_list('estado', flat=True)),
                          {BusquedaBibliografica.COMPLETADA})
 
-    def test_sugiere_factores_por_palabras_clave_sin_aprobarlos(self):
+    def test_no_crea_sugerencias_antes_del_analisis_ia_a_demanda(self):
         self.lanzar_y_procesar(FuenteFalsa([LOCK_IN, SIN_DOI]), [self.bloqueo.pk])
-        sugerencia = self.vinculo(Publicacion.objects.get(doi='10.1/lock'), self.bloqueo)
-        self.assertEqual((sugerencia.estado, sugerencia.origen),
-                         (PublicacionFactor.SUGERIDA, PublicacionFactor.PALABRAS_CLAVE))
-        self.assertIn('vendor lock-in', sugerencia.justificacion)
-        self.assertTrue(PublicacionFactor.objects.filter(factor=self.usabilidad).exists())
+        self.assertFalse(PublicacionFactor.objects.exists())
 
     def test_si_la_fuente_falla_la_busqueda_queda_fallida_y_las_demas_siguen(self):
         fuente = FuenteFalsa([LOCK_IN], fallar_en=['"usability"'])
@@ -142,6 +139,17 @@ class RevisionTests(Base):
         self.lanzar_y_procesar(FuenteFalsa([LOCK_IN, SIN_DOI, ANTIGUA]), [self.bloqueo.pk])
         self.busqueda = BusquedaBibliografica.objects.get()
         self.lock = Publicacion.objects.get(doi='10.1/lock')
+        servicio.sugerir_publicaciones_ia(
+            self.admin.pk,
+            self.busqueda.pk,
+            lambda entrada: {
+                'sugerencias': [{
+                    'publicacion_id': self.lock.pk,
+                    'pertinencia': 92,
+                    'justificacion': 'El resumen estudia dependencia del proveedor.',
+                }]
+            },
+        )
 
     def test_aprobar_marca_la_publicacion_como_seleccionada(self):
         v = self.vinculo(self.lock, self.bloqueo)
@@ -172,6 +180,55 @@ class RevisionTests(Base):
         v = self.vinculo(self.lock, self.bloqueo)
         with self.assertRaises(PermissionDenied):
             servicio.revisar_vinculo(self.decisor.pk, self.busqueda.pk, v.pk, aprobar=True)
+
+
+class SugerenciasIATests(Base):
+
+    def setUp(self):
+        self.lanzar_y_procesar(FuenteFalsa([LOCK_IN, SIN_DOI]), [self.bloqueo.pk])
+        self.busqueda = BusquedaBibliografica.objects.get()
+        self.lock = Publicacion.objects.get(doi='10.1/lock')
+
+    def test_guarda_sugerencia_de_ia_pendiente_con_justificacion(self):
+        def proveedor(entrada):
+            self.assertEqual(entrada['factor']['nombre'], self.bloqueo.nombre)
+            return {
+                'sugerencias': [{
+                    'publicacion_id': self.lock.pk,
+                    'pertinencia': 91.5,
+                    'justificacion': 'El resumen aborda dependencia de proveedores.',
+                }]
+            }
+
+        total = servicio.sugerir_publicaciones_ia(self.admin.pk, self.busqueda.pk, proveedor)
+
+        vinculo = self.vinculo(self.lock, self.bloqueo)
+        self.busqueda.refresh_from_db()
+        self.assertEqual(total, 1)
+        self.assertEqual((vinculo.estado, vinculo.origen), (PublicacionFactor.SUGERIDA, PublicacionFactor.IA))
+        self.assertEqual(vinculo.pertinencia, 91.5)
+        self.assertIn('dependencia de proveedores', vinculo.justificacion)
+        self.assertTrue(self.busqueda.analisis_ia_completado)
+
+    def test_rechaza_ids_que_no_pertenecen_al_lote_y_no_persiste_nada(self):
+        with self.assertRaisesMessage(AnalisisNoDisponible, 'publicación inexistente o repetida'):
+            servicio.sugerir_publicaciones_ia(
+                self.admin.pk, self.busqueda.pk,
+                lambda entrada: {
+                    'sugerencias': [{
+                        'publicacion_id': 999999,
+                        'pertinencia': 80,
+                        'justificacion': 'No verificable.',
+                    }]
+                },
+            )
+        self.assertFalse(PublicacionFactor.objects.exists())
+        self.busqueda.refresh_from_db()
+        self.assertFalse(self.busqueda.analisis_ia_completado)
+
+    def test_el_analisis_ia_requiere_administrador(self):
+        with self.assertRaises(PermissionDenied):
+            servicio.sugerir_publicaciones_ia(self.decisor.pk, self.busqueda.pk, lambda _: {})
 
 
 class VersionesTests(Base):

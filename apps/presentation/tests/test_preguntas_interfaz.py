@@ -9,7 +9,8 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
                               ValoracionSubfactor)
 
 
-@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'], HU09_EMBEDDING_MODEL='', GUIOS_AI_BACKEND='ollama')
+@override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
+                   GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
 class PreguntasInterfazTests(TestCase):
     @classmethod
     def setUpTestData(cls):
@@ -106,41 +107,44 @@ class PreguntasInterfazTests(TestCase):
         p.refresh_from_db()
         self.assertEqual(p.respuesta, 'No lo sé')
 
-    @override_settings(HU09_OLLAMA_MODEL='')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL='')
     def test_ia_desactivada_conserva_modo_manual(self):
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
         res = self.post('analizar', valoracion=v.pk)
         self.assertContains(res, 'no está configurado', status_code=400)
         self.assertFalse(PreguntaComplementaria.objects.exists())
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_ia_propuesta_para_subfactor_seleccionado(self):
         from unittest.mock import patch
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
-        with patch('apps.presentation.views.preguntas.OllamaPreguntas') as proveedor:
-            proveedor.return_value.return_value = ['¿Cada cuánto se actualiza?']
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            proveedor = obtener.return_value
+            proveedor.return_value = ['¿Cada cuánto se actualiza?']
             self.assertEqual(self.post('analizar', valoracion=v.pk).status_code, 302)
-            proveedor.return_value.assert_called_once()
+            obtener.assert_called_once_with('preguntas')
+            proveedor.assert_called_once()
         self.assertEqual(PreguntaComplementaria.objects.get().texto, '¿Cada cuánto se actualiza?')
         self.assertContains(self.client.get(self.url, {'evaluacion': self.ev.pk}), 'Analizar vacíos con IA')
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_ia_proveedor_no_disponible_no_crea_preguntas(self):
         from unittest.mock import patch
-        from apps.external_services.ollama_preguntas import AnalisisNoDisponible
+        from apps.external_services.ai_errors import AnalisisNoDisponible
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
-        with patch('apps.presentation.views.preguntas.OllamaPreguntas') as proveedor:
-            proveedor.return_value.side_effect = AnalisisNoDisponible('Proveedor no disponible')
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            obtener.return_value.side_effect = AnalisisNoDisponible('Proveedor no disponible')
             self.assertContains(self.post('analizar', valoracion=v.pk), 'Proveedor no disponible', status_code=400)
         self.assertFalse(PreguntaComplementaria.objects.exists())
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_ia_no_analiza_subfactor_excluido(self):
         from unittest.mock import patch
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=1)
-        with patch('apps.presentation.views.preguntas.OllamaPreguntas') as proveedor:
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            proveedor = obtener.return_value
             self.assertEqual(self.post('analizar', valoracion=v.pk).status_code, 400)
-            proveedor.return_value.assert_not_called()
+            proveedor.assert_not_called()
         self.assertFalse(PreguntaComplementaria.objects.exists())
 
     def test_descartar_excluye_del_progreso_y_muestra_historial(self):
@@ -153,7 +157,7 @@ class PreguntasInterfazTests(TestCase):
         self.assertNotContains(res, 'Guardar respuesta')
         self.assertEqual(self.post('responder', pregunta=p.pk, respuesta='Texto').status_code, 400)
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_cupo_lleno_oculta_analisis(self):
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
         PreguntasService.registrar_vacios(self.actor, self.ev.pk, v.pk, ['¿Una?', '¿Dos?', '¿Tres?'])
@@ -178,34 +182,25 @@ class PreguntasInterfazTests(TestCase):
         self.assertEqual(res.context['total'], 1)
         self.assertEqual(res.context['descartadas'], 0)
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct', HU09_EMBEDDING_MODEL='bge-m3')
-    def test_embeddings_configurados_se_utilizan(self):
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
+    def test_preguntas_repetidas_se_filtran_textualmente(self):
         from unittest.mock import patch
         v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
-        with patch('apps.presentation.views.preguntas.OllamaPreguntas') as generador, patch('apps.presentation.views.preguntas.OllamaEmbeddings') as embeddings:
-            generador.return_value.return_value = ['¿Qué versiones admite?', '¿Cuáles son las ediciones compatibles?']
-            embeddings.return_value.return_value = [[1, 0], [1, 0]]
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            proveedor = obtener.return_value
+            proveedor.return_value = ['¿Qué versiones admite?', '¿Qué versiones admite?']
             self.assertEqual(self.post('analizar', valoracion=v.pk).status_code, 302)
-            embeddings.assert_called_once_with('bge-m3')
+            proveedor.assert_called_once()
         self.assertEqual(PreguntaComplementaria.objects.count(), 1)
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct', HU09_EMBEDDING_MODEL='bge-m3')
-    def test_fallo_embeddings_no_guarda(self):
-        from unittest.mock import patch
-        from apps.external_services.ollama_preguntas import AnalisisNoDisponible
-        v = ValoracionSubfactor.objects.get(evaluacion_factor__evaluacion=self.ev, evaluacion_factor__importancia_relativa=3)
-        with patch('apps.presentation.views.preguntas.OllamaPreguntas') as generador, patch('apps.presentation.views.preguntas.OllamaEmbeddings') as embeddings:
-            generador.return_value.return_value = ['¿Qué versiones admite?']
-            embeddings.return_value.side_effect = AnalisisNoDisponible('Embeddings no disponibles')
-            self.assertContains(self.post('analizar', valoracion=v.pk), 'Embeddings no disponibles', status_code=400)
-        self.assertFalse(PreguntaComplementaria.objects.exists())
-
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_suficiencia_muestra_resultado_orientativo(self):
         from unittest.mock import patch
         vid = PreguntasService.contexto(self.actor, self.ev.pk)[0]['valoracion_id']
-        with patch('apps.presentation.views.preguntas.OllamaSuficiencia') as proveedor:
-            proveedor.return_value.return_value = {'estado': 'INSUFICIENTE', 'justificacion': 'Sin fuentes disponibles', 'referencias': [], 'preguntas': []}
+        def proveedor(_):
+            return {'estado': 'INSUFICIENTE', 'justificacion': 'Sin fuentes disponibles', 'referencias': [], 'preguntas': []}
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            obtener.return_value = proveedor
             self.assertEqual(self.post('suficiencia', valoracion=vid).status_code, 302)
         res = self.client.get(self.url, {'evaluacion': self.ev.pk})
         self.assertContains(res, 'Revisión manual necesaria')
@@ -270,12 +265,14 @@ class PreguntasInterfazTests(TestCase):
         self.assertEqual(datos['desconocidas'], 0)
         self.assertContains(self.client.get(self.url, {'evaluacion': self.ev.pk}), 'Sin aporte')
 
-    @override_settings(HU09_OLLAMA_MODEL='qwen3:4b-instruct')
+    @override_settings(GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
     def test_historial_y_estado_entrega_visibles(self):
         from unittest.mock import patch
         vid = PreguntasService.contexto(self.actor, self.ev.pk)[0]['valoracion_id']
-        with patch('apps.presentation.views.preguntas.OllamaSuficiencia') as proveedor:
-            proveedor.return_value.return_value = {'estado': 'INSUFICIENTE', 'justificacion': 'Sin fuentes', 'referencias': [], 'preguntas': []}
+        def proveedor(_):
+            return {'estado': 'INSUFICIENTE', 'justificacion': 'Sin fuentes', 'referencias': [], 'preguntas': []}
+        with patch('apps.presentation.views.preguntas.obtener_proveedor') as obtener:
+            obtener.return_value = proveedor
             self.assertEqual(self.post('suficiencia', valoracion=vid).status_code, 302)
         res = self.client.get(self.url, {'evaluacion': self.ev.pk})
         self.assertContains(res, 'Historial de suficiencia (1)')

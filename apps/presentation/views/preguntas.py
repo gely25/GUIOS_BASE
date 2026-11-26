@@ -1,5 +1,4 @@
 """Interfaz HU09 y HU10 sobre la ruta de revisión de evidencia y valoración preliminar."""
-from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
@@ -11,14 +10,11 @@ from django.utils import timezone
 from apps.application.services.ai import AIService, ESCALA_HU10
 from apps.application.services.preguntas import PreguntasService, estado_respuesta
 from apps.application.services.analisis_preguntas import AnalisisPreguntasService, MAX_PENDIENTES
-from apps.external_services.ollama_preguntas import AnalisisNoDisponible, OllamaPreguntas
-from apps.external_services.ollama_embeddings import OllamaEmbeddings
-from apps.external_services.ollama_valoracion import OllamaValoracion
+from apps.external_services.ai_errors import AnalisisNoDisponible
 from apps.data.models import Evaluacion, Evidencia, HistorialSuficiencia, ValoracionSubfactor
 from apps.application.services.suficiencia import SuficienciaService
 from apps.application.services.preparacion_hu10 import PreparacionHU10Service
 from apps.application.services.lotes_hu09 import LotesHU09Service, ACTIVOS
-from apps.external_services.ollama_suficiencia import OllamaSuficiencia
 from apps.external_services.proveedor_ia import obtener_proveedor, modelo_activo, configurado
 
 
@@ -94,9 +90,8 @@ def preguntas_view(request):
                     return HttpResponseBadRequest('Subfactor inválido.')
                 if not configurado():
                     raise ValidationError('El servicio de IA no está configurado. Puede continuar manualmente.')
-                proveedor = (obtener_proveedor('suficiencia') if settings.GUIOS_AI_BACKEND == 'api' else OllamaSuficiencia(settings.HU09_OLLAMA_MODEL))
-                vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-                registro, cantidad = SuficienciaService.analizar(request.user, eid, vid, proveedor, modelo_activo(), vectorizador)
+                proveedor = obtener_proveedor('suficiencia')
+                registro, cantidad = SuficienciaService.analizar(request.user, eid, vid, proveedor, modelo_activo())
                 messages.success(request, f'Revisión de suficiencia: {cantidad} preguntas nuevas. Consulte el resultado orientativo del subfactor.')
             elif accion == 'analizar':
                 vid = _id(request.POST.get('valoracion'))
@@ -104,28 +99,25 @@ def preguntas_view(request):
                     return HttpResponseBadRequest('Subfactor inválido.')
                 if not configurado():
                     raise ValidationError('El servicio de IA no está configurado. Puede continuar manualmente.')
-                analizador = (obtener_proveedor('preguntas') if settings.GUIOS_AI_BACKEND == 'api' else OllamaPreguntas(settings.HU09_OLLAMA_MODEL))
-                vectorizador = OllamaEmbeddings(settings.HU09_EMBEDDING_MODEL) if settings.HU09_EMBEDDING_MODEL else None
-                nuevas = AnalisisPreguntasService.analizar(request.user, eid, analizador, valoracion_id=vid, vectorizador=vectorizador)
+                analizador = obtener_proveedor('preguntas')
+                nuevas = AnalisisPreguntasService.analizar(request.user, eid, analizador, valoracion_id=vid)
                 messages.success(request, f'Análisis IA del subfactor: {len(nuevas)} preguntas nuevas. El resultado no certifica suficiencia.')
             elif accion == 'valorar_hu10':
                 vid = _id(request.POST.get('valoracion'))
                 if vid is None:
                     return HttpResponseBadRequest('Subfactor inválido.')
-                modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
-                if not (modelo_activo(hu10=True) if settings.GUIOS_AI_BACKEND == 'api' else modelo_hu10):
+                if not modelo_activo():
                     raise ValidationError('Configure el servicio de IA para HU10 o continúe manualmente.')
-                proveedor_hu10 = (obtener_proveedor('valoracion') if settings.GUIOS_AI_BACKEND == 'api' else OllamaValoracion(modelo_hu10))
+                proveedor_hu10 = obtener_proveedor('valoracion')
                 propuesta = AIService.generar_propuesta_preliminar(request.user, eid, vid, proveedor_hu10)
                 messages.success(
                     request,
                     f"Propuesta preliminar IA generada ({propuesta['valor_ia']}/4 · {propuesta['etiqueta']}) con fuentes {', '.join(propuesta['referencias'])}. Lista para revisión humana (HU11)."
                 )
             elif accion == 'valorar_hu10_lote':
-                modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
-                if not (modelo_activo(hu10=True) if settings.GUIOS_AI_BACKEND == 'api' else modelo_hu10):
+                if not modelo_activo():
                     raise ValidationError('Configure el servicio de IA para HU10 o continúe manualmente.')
-                proveedor_hu10 = (obtener_proveedor('valoracion') if settings.GUIOS_AI_BACKEND == 'api' else OllamaValoracion(modelo_hu10))
+                proveedor_hu10 = obtener_proveedor('valoracion')
                 resumen_lote = AIService.generar_propuestas_pendientes(request.user, eid, proveedor_hu10)
                 if resumen_lote['generadas']:
                     messages.success(
@@ -195,7 +187,6 @@ def preguntas_view(request):
             p['borrador'] = respuesta_enviada if error and p['pregunta_id'] == pid else p['respuesta']
     habilitados_hu10 = sum(1 for f in filas if f['estado_hu10'] == 'PROPUESTA_HABILITADA')
     propuestas_hu10_listas = sum(1 for f in filas if f['tiene_propuesta_hu10'])
-    modelo_hu10 = getattr(settings, 'HU10_OLLAMA_MODEL', '') or settings.HU09_OLLAMA_MODEL
     return render(request, 'presentation/decisor/preguntas.html', {
         'evaluaciones': evaluaciones, 'evaluacion': evaluacion, 'filas': filas,
         'lote': lote_actual,
@@ -205,7 +196,7 @@ def preguntas_view(request):
         'habilitados_hu10': habilitados_hu10,
         'propuestas_hu10_listas': propuestas_hu10_listas,
         'modelo_ia': modelo_activo(),
-        'modelo_hu10': modelo_activo(hu10=True),
-        'modelo_embeddings': settings.HU09_EMBEDDING_MODEL, 'error': error,
+        'modelo_hu10': modelo_activo(),
+        'modelo_embeddings': '', 'error': error,
         'editable': evaluacion.estado == 'EN_PROCESO' and evaluacion.fecha_fin is None,
     }, status=400 if error else 200)

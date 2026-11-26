@@ -21,7 +21,18 @@
                 <h2 class="admin-panel-title">Consulta</h2>
                 <p class="bib-consulta"><code>{{ busqueda.consulta }}</code></p>
                 {% if busqueda.mensaje_error %}<p class="bib-aviso bib-aviso-error" role="alert">{{ busqueda.mensaje_error }}</p>{% endif %}
-                <p class="bib-nota">Las sugerencias proceden de coincidencias de palabras clave. Solo los vínculos aprobados cuentan para el TC. Compruebe la pertinencia y los datos bibliográficos antes de aceptarlos.</p>
+                <p class="bib-nota">OpenAlex recupera publicaciones para esta búsqueda. Al analizar, los títulos y resúmenes seleccionados se envían a las APIs externas configuradas; se conserva la primera respuesta válida. La IA puede proponer vínculos con el factor y explicar el motivo; solo los vínculos que el administrador apruebe cuentan para el TC.</p>
+                {% if busqueda.estado == 'COMPLETADA' and resultados.paginator.count %}
+                    {% if busqueda.analisis_ia_completado %}
+                    <p class="bib-nota" role="status">Análisis de IA completado. Revisa las sugerencias antes de aprobarlas.</p>
+                    {% else %}
+                    <form method="post" action="?id={{ busqueda.pk }}&page={{ resultados.number }}#bib-resultados-titulo">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="analizar_ia">
+                        <button type="submit" class="btn-top-action">Analizar publicaciones con IA</button>
+                    </form>
+                    {% endif %}
+                {% endif %}
             </section>
             <section class="dashboard-block bib-tarjeta" aria-labelledby="bib-resultados-titulo">
                 <div class="bib-titulo-flex">

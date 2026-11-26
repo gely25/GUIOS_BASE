@@ -144,12 +144,18 @@ def marcar_seleccionada(busqueda_id, publicacion_id):
 
 # --- Vínculos publicación-factor --------------------------------------------
 
-def sugerir_vinculo(publicacion, factor_id, pertinencia, justificacion):
-    """Crea la sugerencia si no hay ya un vínculo (no pisa lo que el administrador revisó)."""
-    PublicacionFactor.objects.get_or_create(
+def sugerir_vinculo(publicacion, factor_id, pertinencia, justificacion, origen):
+    """Crea o actualiza solo sugerencias pendientes; no pisa decisiones del administrador."""
+    vinculo, creado = PublicacionFactor.objects.get_or_create(
         publicacion=publicacion, factor_id=factor_id,
         defaults={'pertinencia': pertinencia, 'justificacion': justificacion,
-                  'origen': PublicacionFactor.PALABRAS_CLAVE, 'estado': PublicacionFactor.SUGERIDA})
+                  'origen': origen, 'estado': PublicacionFactor.SUGERIDA})
+    if not creado and vinculo.estado == PublicacionFactor.SUGERIDA:
+        vinculo.pertinencia = pertinencia
+        vinculo.justificacion = justificacion
+        vinculo.origen = origen
+        vinculo.save(update_fields=['pertinencia', 'justificacion', 'origen'])
+    return vinculo
 
 
 def obtener_vinculo(vinculo_id, bloquear=False):

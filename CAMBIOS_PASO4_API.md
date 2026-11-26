@@ -20,39 +20,27 @@ validación humana y las reglas de cálculo originales.
 - Se mantiene la comprobación de propiedad, roles, exclusión de IR 1, CSRF y la
   regla: solo un valor confirmado contribuye a resultados.
 
-## IA: despliegue sin obligar a instalar Ollama
+## IA con proveedores externos
 
-El adaptador de IA generativa HU09/HU10 ofrece dos opciones:
+HU02, HU09 y HU10 pueden usar Gemini, OpenAI y Groq. Configure para cada proveedor
+una clave y un modelo mediante `GUIOS_AI_GEMINI_API_KEY` /
+`GUIOS_AI_GEMINI_MODEL`, `GUIOS_AI_OPENAI_API_KEY` / `GUIOS_AI_OPENAI_MODEL` y
+`GUIOS_AI_GROQ_API_KEY` / `GUIOS_AI_GROQ_MODEL`. Se consultan en paralelo y se usa
+la primera respuesta válida según el contrato de la aplicación. `GUIOS_AI_TIMEOUT`
+limita cada solicitud; las llamadas que ya empezaron pueden continuar hasta ese límite.
+Los endpoints HTTPS están fijados por proveedor. Consulte `.env.example` para los
+nombres de variables y modelos de ejemplo.
 
-- `GUIOS_AI_BACKEND=ollama`: conserva el proveedor local anterior.
-- `GUIOS_AI_BACKEND=api`: utiliza Chat Completions compatible por HTTPS,
-  con autenticación desde variables de entorno. Se incluye ejemplo con Gemini.
+Al usar HU09/HU10, los fragmentos de evidencia y las respuestas vinculadas se envían
+a cada proveedor configurado; HU02 envía títulos y resúmenes bibliográficos. Revise las
+condiciones de privacidad, límites y facturación de cada proveedor. No se incluyen
+claves en el repositorio. La disponibilidad y los costes dependen de las cuentas
+configuradas.
 
-Ajuste de `.env` **solo en el servidor o equipo local**, nunca en GitHub:
-
-```ini
-GUIOS_AI_BACKEND=api
-GUIOS_AI_API_KEY=PEGAR_CLAVE_REAL_SOLO_EN_ENV
-GUIOS_AI_MODEL=gemini-2.5-flash
-GUIOS_AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-GUIOS_AI_TIMEOUT=25
-HU09_EMBEDDING_MODEL=
-```
-
-La API utiliza el contexto documental de cada subfactor; al activarla, partes del
-contenido de los documentos pueden enviarse al proveedor externo. Utilice archivos
-apropiados para ese tratamiento y consulte las condiciones de privacidad y uso del proveedor.
-
-**Importante:** el modelo de embeddings usado para la recuperación documental principal
-se genera de forma determinista en `RetrievalService` y almacena vectores de 1536
-componentes en pgvector. `HU09_EMBEDDING_MODEL` controla una comparación semántica
-local opcional y puede dejarse vacío si no se dispone de Ollama. No modificar la
-longitud de los vectores ni ejecutar migraciones de embeddings para instalar este parche.
-
-No se incluyen llamadas pagadas ni claves. La disponibilidad, cuotas y costes
-reales dependen de la cuenta y el proveedor elegido. Si falla la API, el servicio
-presenta un error controlado y la valoración humana manual sigue disponible
-cuando no hay un lote de IA activo.
+La recuperación documental principal sigue usando `RetrievalService` y pgvector.
+El filtro opcional local de similitud semántica de preguntas se retiró; el filtrado
+conservador de preguntas similares sigue siendo textual. Si las APIs fallan, se
+muestra un error controlado y la revisión manual sigue disponible.
 
 ## Prueba en tu equipo
 
