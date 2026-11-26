@@ -220,7 +220,9 @@
     }
     // Errores de una sola respuesta de la IA: se reintenta el subfactor y, si persiste, se deja pendiente y se sigue.
     const LOCAL = /datos inválidos|no terminó|formato inválido|contexto supera|supera el límite|preguntas inválidas/i;
-    const PARALELO = 1;
+    // Subfactores analizados a la vez. Cada uno ya consulta en paralelo a todos los proveedores
+    // configurados; si alguno alcanza su límite (429), la cola espera y se reanuda sola.
+    const PARALELO = 6;
     const ESPERA_LIMITE = 60;
     let esperasLimite = 0;
     const dormir = ms => new Promise(f => setTimeout(f, ms));
@@ -229,7 +231,7 @@
         if (!pendientes.length) { caja.hidden = true; return; }
         corriendo = true;
         q('rv-ia-retry').hidden = true;
-        let hechos = 0, con = 0, omitidos = 0, fatal = null, i = 0;
+        let hechos = 0, fatal = null, i = 0;
         const base = objetivos.length - pendientes.length;
         const progreso = () => { q('rv-ia-t').innerHTML = `La IA está analizando la evidencia: <b>${base + hechos} de ${objetivos.length}</b>. Puedes ir revisando mientras tanto.`; };
         progreso();
@@ -239,10 +241,9 @@
                 const r = porId(o.vid);
                 if (r.ok) { hechos++; continue; }
                 for (let intento = 0; intento < 2; intento++) {
-                    try { await analizar(o); if (r.ia != null) con++; break; }
+                    try { await analizar(o); break; }
                     catch (err) {
                         if (!LOCAL.test(err.message)) { fatal = err.message; break; }
-                        if (intento === 1) omitidos++;
                     }
                 }
                 if (fatal) return;
@@ -266,8 +267,13 @@
             q('rv-ia-t').textContent = `El análisis con IA se detuvo después de ${base + hechos} de ${objetivos.length}: ${fatal}`;
             q('rv-ia-retry').hidden = false;
         } else {
-            q('rv-ia-t').textContent = `La IA terminó: ${con} con propuesta, ${pendientes.length - con - omitidos} que necesitan tu criterio` + (omitidos ? ` y ${omitidos} que no pudo leer (puedes reintentar o valorarlos tú).` : '.');
-            if (omitidos) q('rv-ia-retry').hidden = false;
+            // Totales de toda la evaluación (no solo de esta tanda), con los mismos criterios que las pestañas.
+            const conEvidencia = filas.filter(r => !r.ok && r.nev);
+            const listas = filas.filter(r => tipo(r) === 'li').length;
+            const sinLeer = conEvidencia.filter(r => r.ia == null && PEND.includes(r.est)).length;
+            const criterio = conEvidencia.filter(r => tipo(r) === 'at').length - sinLeer;
+            q('rv-ia-t').textContent = `La IA terminó: ${listas} listas para aceptar y ${criterio} con evidencia que necesitan tu criterio` + (sinLeer ? `. ${sinLeer} no se pudieron analizar (puedes reintentar o valorarlos tú).` : '.');
+            if (sinLeer) q('rv-ia-retry').hidden = false;
         }
         pintar();
     }
