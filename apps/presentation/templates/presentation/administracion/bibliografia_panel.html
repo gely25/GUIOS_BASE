@@ -64,7 +64,7 @@ y entrar a revisar resultados o recalcular el catálogo.
 
             {% if not version_activa %}
             <p class="bib-aviso bib-aviso-error" role="alert">
-                No hay catálogo cargado. Ejecuta <code>python manage.py cargar_catalogo_guios</code>.
+                No hay un catálogo disponible. Solicite al equipo de soporte que lo cargue.
             </p>
             {% endif %}
 
@@ -87,8 +87,7 @@ y entrar a revisar resultados o recalcular el catálogo.
                     </p>
                     {% if not estado.terminado %}
                     <p class="bib-nota">
-                        Las búsquedas se ejecutan en segundo plano con
-                        <code>python manage.py procesar_busquedas</code>. Si el progreso no avanza, comprueba que ese proceso esté corriendo.
+                        Las búsquedas se ejecutan en segundo plano. Si el progreso se detiene, contacte al equipo de soporte.
                     </p>
                     {% endif %}
                 </div>

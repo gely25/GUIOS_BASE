@@ -148,7 +148,9 @@ class RevisionHumanaTests(TestCase):
     def test_respuestas_se_distinguen_de_documentos_y_no_se_modifican(self):
         p = PreguntasService.registrar_vacios(self.actor, self.ev.pk, self.v.pk, ['¿Formatos?'])[0]
         PreguntasService.responder(self.actor, self.ev.pk, p.pk, 'Admite ODF 1.2.')
-        r = self.resolver()
+        self.v.refresh_from_db()
+        self.assertIsNone(self.v.valor_ia)
+        r = self.resolver(modo='MANUAL', valor=4)
         p.refresh_from_db()
         self.assertEqual(p.respuesta, 'Admite ODF 1.2.')
         self.assertEqual({f['origen'] for f in r.fuentes}, {'DOCUMENTO', 'DECLARACION_DECISOR'})

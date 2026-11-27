@@ -29,6 +29,9 @@ __all__.append('AnalisisSuficiencia')
 from .lotes_hu09 import LoteHU09
 __all__.append('LoteHU09')
 
+from .planificacion_ia import CredencialBloqueadaIA, IntentoIA, TareaIA, UnidadCuotaIA
+__all__.extend(['CredencialBloqueadaIA', 'IntentoIA', 'TareaIA', 'UnidadCuotaIA'])
+
 from .suficiencia import HistorialSuficiencia
 __all__.append('HistorialSuficiencia')
 

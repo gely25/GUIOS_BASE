@@ -176,6 +176,7 @@ class PdfDelInformeTests(SimpleTestCase):
             self.assertIn(esperado, texto)
         self.assertNotIn("EN_PROCESO", texto)
         self.assertNotIn("Versión del catálogo", texto)
+        self.assertNotRegex(texto, r"\b(?:HU[- ]?\d+|RF\d+)\b|GUIOS_AI_|python manage\.py")
 
     def test_el_pdf_tiene_las_cuatro_partes_en_paginas_separadas(self):
         pdf = generar_pdf(_informe([_factor("Compatibilidad", "Oportunidad", "4.00", [4])]), AHORA)

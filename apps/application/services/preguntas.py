@@ -86,13 +86,24 @@ class PreguntasService:
         ).select_related('fragmento__documento').order_by('pk') if e.fragmento.contenido.strip()]
 
     @staticmethod
+    def invalidar_propuestas(evaluacion, valoraciones):
+        """Invalida propuestas pendientes bajo el bloqueo de la evaluación."""
+        ValoracionSubfactor.objects.filter(
+            evaluacion_factor__evaluacion=evaluacion, pk__in=valoraciones,
+            estado_validacion=ValoracionSubfactor.PENDIENTE,
+            valor_confirmado__isnull=True, valor_ia__isnull=False,
+        ).update(valor_ia=None, justificacion_ia=None)
+
+    @staticmethod
     def _registrar(valoracion, texto, origen):
         if not isinstance(texto, str) or not texto.strip() or len(texto.strip()) > 1000:
             raise ValidationError('La pregunta debe contener entre 1 y 1000 caracteres.')
         texto = texto.strip()
         clave = sha256(' '.join(texto.split()).casefold().encode('utf-8')).hexdigest()
-        pregunta, _ = PreguntaComplementaria.objects.get_or_create(
+        pregunta, creada = PreguntaComplementaria.objects.get_or_create(
             valoracion=valoracion, clave=clave, defaults={'texto': texto, 'origen': origen})
+        if creada and valoracion.valor_ia is not None:
+            PreguntasService.invalidar_propuestas(valoracion.evaluacion_factor.evaluacion_id, [valoracion.pk])
         return pregunta
 
     @classmethod
@@ -156,6 +167,7 @@ class PreguntasService:
         pregunta.respondido_por_id = actor.pk
         pregunta.fecha_respuesta = timezone.now()
         pregunta.save(update_fields=['respuesta', 'respondido_por', 'fecha_respuesta'])
+        cls.invalidar_propuestas(evaluacion, [pregunta.valoracion_id])
         return pregunta
 
     @classmethod
@@ -181,6 +193,7 @@ class PreguntasService:
         pregunta.save(update_fields=['descartada_por', 'fecha_descarte'])
         # El historial conserva la huella original; la conclusión actual queda obsoleta.
         AnalisisSuficiencia.objects.filter(valoracion_id=pregunta.valoracion_id).update(huella='')
+        cls.invalidar_propuestas(evaluacion, [pregunta.valoracion_id])
         return pregunta
 
     @classmethod
@@ -213,12 +226,17 @@ class PreguntasService:
         pregunta.descartada_por = None
         pregunta.save(update_fields=['fecha_descarte', 'descartada_por'])
         AnalisisSuficiencia.objects.filter(valoracion_id=pregunta.valoracion_id).update(huella='')
+        cls.invalidar_propuestas(evaluacion, [pregunta.valoracion_id])
         return pregunta
 
     @classmethod
     def contexto(cls, actor, evaluacion_id, valoracion_id=None):
         """Entrada auditable para futuros análisis HU09/HU10, sin asignar puntuaciones."""
-        evaluacion = cls._evaluacion(actor, evaluacion_id)
+        return cls._contexto(cls._evaluacion(actor, evaluacion_id), valoracion_id)
+
+    @classmethod
+    def _contexto(cls, evaluacion, valoracion_id=None):
+        """Construye el contexto de una evaluación cuya autorización ya se comprobó."""
         resultado = []
         valoraciones = cls._valoraciones(evaluacion)
         if valoracion_id is not None:

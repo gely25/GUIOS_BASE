@@ -8,6 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 
+from apps.external_services.tests.fixtures_ia import IAConfiguradaPruebas
 from apps.data.models import (CatalogoVersion, Dimension, Documento, Evaluacion, EvaluacionFactor, Evidencia, Factor,
     FragmentoDocumento, Organizacion, PreguntaComplementaria, Software, Subfactor, Usuario, ValoracionSubfactor)
 
@@ -17,7 +18,7 @@ CARGA = reverse('presentation:decisor-carga-documental')
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
                    GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
-class RevisionFaltantesTests(TestCase):
+class RevisionFaltantesTests(IAConfiguradaPruebas, TestCase):
     @classmethod
     def setUpTestData(cls):
         CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
@@ -183,7 +184,7 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
     def test_sin_modelo_configurado_avisa_y_no_arranca_el_analisis(self):
         with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
             r = self.client.get(URL, {'etapa': 'validacion', 'evaluacion': self.ev.pk})
-        self.assertContains(r, 'GUIOS_AI_*')
+        self.assertContains(r, 'Puede valorarlos manualmente.')
         self.assertNotContains(r, 'data-auto="1"')
         self.assertContains(r, 'id="rv"')
 
@@ -230,5 +231,5 @@ class AnalisisIAPaso4Tests(RevisionFaltantesTests):
         with override_settings(GUIOS_AI_GEMINI_API_KEY='', GUIOS_AI_GEMINI_MODEL=''):
             r = self.post('analizar_ia_hu11', valoracion=self.v1.pk)
         self.assertEqual(r.status_code, 400)
-        self.assertIn('Configure las claves y modelos', r.json()['error'])
+        self.assertIn('El análisis con IA no está disponible. Puede valorar manualmente.', r.json()['error'])
 

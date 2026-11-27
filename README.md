@@ -8,32 +8,61 @@ Documentos del proyecto: [`RUTAS_NAVEGACION.md`](RUTAS_NAVEGACION.md) (pantallas
 
 ## Puesta en marcha (Windows / PowerShell)
 
-Requisitos: Python 3.12, PostgreSQL 17 con la extensión **pgvector** instalada en el servidor.
+Instala Python 3.12 y PostgreSQL 17 con la extensión pgvector disponible en el servidor. Ejecuta desde la raíz del repositorio.
 
 ~~~powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env          # luego edita .env con tus datos
-psql -U postgres -c "CREATE DATABASE guios_pro_db_dev;"
-python manage.py check_db            # comprueba PostgreSQL y pgvector
-python manage.py migrate
-python manage.py cargar_catalogo_guios  # catálogo GUIOS 2021 (versión v1-2021)
-python manage.py cargar_datos_demo   # usuarios de prueba (solo bases terminadas en _dev)
-python manage.py test                # toda la suite debe pasar
-python manage.py runserver
-python manage.py procesar_busquedas  # en otra terminal: ejecuta las búsquedas bibliográficas (HU02)
+py -3.12 -m venv venv  # solo al instalar
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+psql -h localhost -U postgres -c "CREATE DATABASE guios_pro_ai_dev;"  # solo para una base nueva
 ~~~
 
-Abre `http://127.0.0.1:8000/` e inicia sesión con un usuario de [`DATOS_DEMO.md`](DATOS_DEMO.md).
+Configura `DB_NAME=guios_pro_ai_dev`, `DB_HOST=localhost`, usuario y contraseña de PostgreSQL en `.env`. Comprueba el destino local antes de aplicar migraciones.
 
-### Con Docker
+~~~powershell
+.\venv\Scripts\python.exe manage.py check_db
+.\venv\Scripts\python.exe manage.py migrate --plan
+.\venv\Scripts\python.exe manage.py migrate  # instalación nueva; habilita vector en la base
+.\venv\Scripts\python.exe manage.py cargar_catalogo_guios
+.\venv\Scripts\python.exe manage.py cargar_datos_demo  # opcional, para una base de demostración
+~~~
 
-Si prefieres no instalar Python ni PostgreSQL localmente, sigue [`DOCKER.md`](DOCKER.md):
-levanta la aplicación, PostgreSQL con pgvector y el procesador de búsquedas con Docker Compose.
+Para actualizar una instalación local de esta rama que ya tiene 0015, respalda la base y revisa el plan de 0016/0017 antes de aplicarlo con el script protegido.
 
-El archivo `.env` es local y **nunca se sube** a Git. Las variables están descritas en `.env.example`.
-Si falta una variable obligatoria, `settings.py` indica cuál es.
+~~~powershell
+.\scripts\ia-local.ps1 -Accion Plan
+.\scripts\ia-local.ps1 -Accion Migrar
+~~~
+
+### Piloto de IA y workers
+
+El perfil local usa Gemini 3.5 Flash-Lite y Cloudflare Llama 3.3 70B en sus niveles gratuitos. Configura en `.env` `GUIOS_AI_GEMINI_API_KEY`, `GUIOS_AI_GEMINI_MODEL`, `GUIOS_AI_CLOUDFLARE_API_KEY` (alias `GUIOS_AI_CLOUDFLARE_API_TOKEN`), `GUIOS_AI_CLOUDFLARE_ACCOUNT_ID` y `GUIOS_AI_CLOUDFLARE_MODEL`. Usa exactamente los modelos del perfil. Confirma en cada cuenta que no admite cobros ni excedentes y crea `autorizacion-gratuita.json` según el esquema documentado. Conserva el manifiesto, las claves y los datos de prueba fuera de Git. [Perfil local](config/ia-local.json) · [Esquema de autorización](docs/PLAN_IMPLEMENTACION.md#ejecutar-el-benchmark-aislado)
+
+~~~powershell
+.\scripts\ia-local.ps1 -Accion Configurar
+.\scripts\ia-local.ps1 -Accion Cuotas
+.\scripts\ia-local.ps1 -Accion Django
+~~~
+
+Abre `http://127.0.0.1:8000/`. Desde la raíz, inicia cada worker en su propia terminal PowerShell con el mismo perfil.
+
+~~~powershell
+.\scripts\ia-local.ps1 -Accion Busquedas   # HU02, cola de búsquedas OpenAlex
+.\scripts\ia-local.ps1 -Accion Worker      # HU09, cola de suficiencia
+~~~
+
+En HU02, el administrador abre el detalle de una búsqueda completada y solicita el análisis. En HU09, el decisor encola el lote desde Preguntas y espera su finalización. La pantalla habilita HU10 al recibir el estado final. Las propuestas se revisan y se confirman manualmente en HU11. Para iniciar solo la web, usa `.\venv\Scripts\python.exe manage.py runserver`. La IA permanece inactiva si falta la configuración autorizada.
+
+### Verificaciones sin inferencia
+
+~~~powershell
+.\venv\Scripts\python.exe manage.py test --noinput
+.\venv\Scripts\python.exe manage.py check
+.\venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.\venv\Scripts\python.exe manage.py migrate --plan
+~~~
+
+El usuario de PostgreSQL necesita crear la base de pruebas y habilitar pgvector en ella.
 
 ## Acceso y roles (HU01)
 
@@ -48,8 +77,7 @@ Si falta una variable obligatoria, `settings.py` indica cuál es.
 - Cerrar sesión es un POST a `/salir/` (botón en la barra superior).
 - Los mensajes de error del login son genéricos: no revelan si el correo existe.
 
-Pendiente de HU01: pantalla de gestión de usuarios y roles (hoy es una maqueta) y límite de intentos
-fallidos de login.
+El registro público crea cuentas de Decisor. Los administradores se incorporan desde la gestión autenticada de usuarios o mediante la carga local de datos de demostración para el piloto. Limitar los intentos de acceso sigue siendo una tarea de despliegue.
 
 ## Actualización bibliográfica (HU02)
 
@@ -68,13 +96,8 @@ Flujo del administrador en `/administracion/actualizacion-bibliografica/`:
 6. **Publicar**: el borrador pasa a ACTIVO y la versión anterior a HISTORICO. Las evaluaciones guardan
    su versión, así que no cambian.
 
-Variables bibliográficas opcionales en `.env`: `BIBLIOGRAPHIC_API_KEY` (key gratuita de OpenAlex con cupo propio),
-`BIBLIOGRAPHIC_BASE_URL`, `BIBLIOGRAPHIC_TIMEOUT` y `BIBLIOGRAPHIC_MAX_RESULTADOS`. Para sugerencias bibliográficas
-y análisis HU09/HU10, configura una o más APIs externas con pares clave/modelo: `GUIOS_AI_GEMINI_API_KEY` /
-`GUIOS_AI_GEMINI_MODEL`, `GUIOS_AI_OPENAI_API_KEY` / `GUIOS_AI_OPENAI_MODEL` y `GUIOS_AI_GROQ_API_KEY` /
-`GUIOS_AI_GROQ_MODEL`. Las solicitudes se envían en paralelo y se utiliza la primera respuesta válida;
-`GUIOS_AI_TIMEOUT` limita cada llamada. Los fragmentos de evidencia y respuestas de HU09/HU10 se comparten con
-cada proveedor configurado, por lo que se deben revisar sus políticas de privacidad y uso. Ver `.env.example`.
+OpenAlex tiene cupo propio. Configura `BIBLIOGRAPHIC_API_KEY` y consulta las opciones de búsqueda en `.env.example`.
+PostgreSQL coordina las cuotas de IA y permite concurrencia en lotes o subfactores independientes. Cada tarea tiene un único intento activo y el fallback es secuencial. Usa únicamente evidencia que la cuenta autorizada pueda tratar según sus condiciones de uso. El [plan de implementación](docs/PLAN_IMPLEMENTACION.md) recoge las mediciones, la recuperación manual y los límites operativos.
 
 Nota: el TC de 2021 pudo incluir artículos de 2020–2021 que la búsqueda vuelva a encontrar; como no
 existe la lista de referencias original, el administrador debe tenerlo en cuenta al aprobar.
@@ -160,11 +183,11 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 
 | Historia | Dónde se implementa | Estado |
 |----------|---------------------|--------|
-| HU01 Acceso y roles (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, roles, menú y permisos: hecho. Gestión de usuarios: pendiente |
+| HU01 Acceso y roles (antes José) | `data/models/usuarios.py`, `business_rules/menu.py`, `presentation/` | Acceso, permisos por rol y gestión de usuarios. Registro público limitado a Decisor |
 | HU03 / HU04 Indicadores IL e IS | `business_rules/il.py`, `is_.py`, `application/services/indicadores_literatura/` | Hecho (lee la versión activa del catálogo) |
 | HU06 Importancia relativa (IR) | `business_rules/ir.py`, `application/services/importancia.py` | Hecho: pantalla de valoración de factores (ID, IR, exclusión de IR = 1) |
-| HU09 Preguntas por información faltante (antes José) | `application/services/ai.py` | Pendiente |
-| HU11 Revisión humana de valoraciones (antes José) | `application/services/evaluation.py` | Pendiente |
+| HU09 Preguntas por información faltante (antes José) | `application/services/lotes_hu09.py`, `suficiencia.py` | Implementada. Piloto real de dos subfactores |
+| HU11 Revisión humana de valoraciones (antes José) | `application/services/revision_humana.py` | Confirmación humana y trazabilidad exigidas para resultados |
 | HU12 PM y FODA | `business_rules/pm.py`, `foda.py`, `application/services/pm_foda.py` | Hecho: se calculan y guardan en la pantalla de Resultados. Falta la recomendación (HU13) y el informe (HU14). Ver `HU12_RESULTADOS.md` |
 
 ### Jorge
@@ -173,7 +196,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 |----------|---------------------|--------|
 | HU07 Documentos | `application/services/document.py` | Pendiente |
 | HU08 Recuperación de evidencia | `application/services/retrieval.py` (pgvector) | Pendiente |
-| HU10 IA | `application/services/ai.py` | Pendiente |
+| HU10 IA | `application/services/ai.py` | Implementada. Dos propuestas del piloto pendientes de HU11 |
 
 ### Joseph
 
@@ -187,7 +210,7 @@ Cada persona tiene su tabla. «Dónde» indica el archivo principal de la histor
 
 | Historia | Dónde se implementa | Estado |
 |----------|---------------------|--------|
-| HU02 Actualización bibliográfica | `application/services/actualizacion_bibliografica/`, `business_rules/rules_engine.py`, `external_services/bibliografia/` | Hecho sin IA (OpenAlex + sugerencias por palabras clave + revisión manual) |
+| HU02 Actualización bibliográfica | `application/services/actualizacion_bibliografica/`, `business_rules/rules_engine.py`, `external_services/bibliografia/` | OpenAlex, sugerencias de IA verificadas en el piloto y revisión manual |
 | HU14 Informe | `application/services/report.py` | Pendiente |
 
 ## Estado

@@ -132,9 +132,6 @@ class RegistroForm(forms.Form):
         label='Correo electrónico', max_length=150,
         widget=forms.EmailInput(attrs={'autocomplete': 'username',
                                        'placeholder': 'usuario@organizacion.com'}))
-    rol = forms.ChoiceField(
-        label='Tipo de cuenta', choices=[(Usuario.DECISOR, 'Decisor'), (Usuario.ADMINISTRADOR, 'Administrador')], initial=Usuario.DECISOR,
-        widget=forms.RadioSelect)
     password1 = forms.CharField(
         label='Contraseña', strip=False,
         widget=forms.PasswordInput(attrs={'autocomplete': 'new-password', 'placeholder': 'Mínimo 8 caracteres'}))

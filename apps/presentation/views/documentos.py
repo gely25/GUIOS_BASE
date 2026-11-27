@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q, ProtectedError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +20,7 @@ from apps.application.services.preguntas import PreguntasService
 from apps.application.services.retrieval import RetrievalService
 from apps.presentation.views import evidencia_carga
 from apps.presentation.views.fragmentos_panel import contexto_panel
-from apps.data.models import Documento, Evaluacion, Evidencia, FragmentoDocumento, Subfactor
+from apps.data.models import Documento, Evaluacion, Evidencia, FragmentoDocumento, Subfactor, ValoracionSubfactor
 
 
 def _obtener_evaluacion_activa(request):
@@ -150,14 +151,25 @@ def carga_documental_view(request):
             except InvalidOperation:
                 relevancia = None
 
-            evidencia, creada = Evidencia.objects.get_or_create(
-                valoracion=valoracion,
-                fragmento=fragmento,
-                defaults={'referencia': ubicacion, 'relevancia': relevancia},
-            )
-            if not creada and not evidencia.referencia:
-                evidencia.referencia = ubicacion
-                evidencia.save(update_fields=['referencia'])
+            with transaction.atomic():
+                vigente = Evaluacion.objects.select_for_update().get(pk=evaluacion.pk)
+                if (vigente.estado != Evaluacion.EN_PROCESO or vigente.fecha_fin is not None
+                        or not PreguntasService._valoraciones(vigente).filter(
+                            pk=valoracion.pk, estado_validacion='PENDIENTE', valor_confirmado__isnull=True,
+                        ).exists()):
+                    messages.error(request, 'Reabra la valoración antes de cambiar sus fuentes.')
+                    return redirect(url_destino)
+                evidencia, creada = Evidencia.objects.get_or_create(
+                    valoracion=valoracion,
+                    fragmento=fragmento,
+                    defaults={'referencia': ubicacion, 'relevancia': relevancia},
+                )
+                if not creada and not evidencia.referencia and ubicacion:
+                    evidencia.referencia = ubicacion
+                    evidencia.save(update_fields=['referencia'])
+                    creada = True
+                if creada:
+                    PreguntasService.invalidar_propuestas(vigente, [valoracion.pk])
 
             messages.success(
                 request,
@@ -179,8 +191,20 @@ def carga_documental_view(request):
                 messages.error(request, 'El nombre es demasiado largo (máximo 255 caracteres).')
             else:
                 anterior = doc.nombre
-                doc.nombre = nuevo
-                doc.save(update_fields=['nombre'])
+                with transaction.atomic():
+                    vigente = Evaluacion.objects.select_for_update().get(pk=evaluacion.pk)
+                    relacionadas = ValoracionSubfactor.objects.filter(evaluacion_factor__evaluacion=vigente,
+                        evidencias__fragmento__documento=doc)
+                    if nuevo != anterior:
+                        if (vigente.estado != Evaluacion.EN_PROCESO or vigente.fecha_fin is not None
+                                or relacionadas.filter(valor_confirmado__isnull=False).exists()):
+                            messages.error(request, 'Reabra las valoraciones vinculadas antes de cambiar sus fuentes.')
+                            return redirect(url_destino)
+                        doc.nombre = nuevo
+                        doc.save(update_fields=['nombre'])
+                        ids = list(relacionadas.values_list('pk', flat=True).distinct())
+                        if ids:
+                            PreguntasService.invalidar_propuestas(vigente, ids)
                 messages.success(request, f'Documento renombrado: «{anterior}» → «{nuevo}».')
             return redirect(url_destino)
 
@@ -220,7 +244,7 @@ def carga_documental_view(request):
             doc = cargados[0]
             messages.success(
                 request,
-                f'Documento «{doc.nombre}» ({doc.tipo}) procesado e indexado en pgvector: {fragmentos_total} fragmentos.'
+                f'Documento «{doc.nombre}» ({doc.tipo}) listo para consultar. Fragmentos disponibles: {fragmentos_total}.'
             )
             if len(archivos) == 1 and request.POST.get('volver') != 'validacion':
                 return redirect(f'{url_destino}&doc_id={doc.documento_id}')

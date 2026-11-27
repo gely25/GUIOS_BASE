@@ -104,7 +104,10 @@ class DocumentServiceTests(TestCase):
                     servicio.procesar_carga(self.evaluacion, self.decisor, invalido)
 
                 archivo1 = self._crear_docx()
+                contenido = archivo1.read()
+                archivo1.seek(0)
                 servicio.procesar_carga(self.evaluacion, self.decisor, archivo1)
-                archivo2 = self._crear_docx()
+                # Los metadatos ZIP de un DOCX nuevo pueden cambiar aunque el texto sea idéntico.
+                archivo2 = SimpleUploadedFile(archivo1.name, contenido, content_type=archivo1.content_type)
                 with self.assertRaises(ValidationError):
                     servicio.procesar_carga(self.evaluacion, self.decisor, archivo2)

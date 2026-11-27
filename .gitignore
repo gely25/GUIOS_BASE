@@ -6,9 +6,22 @@ ENV/
 
 # Variables de entorno (nunca se suben; se comparte solo .env.example)
 .env
-.env.local
-.env.*.local
+.env.*
 !.env.example
+/.envrc
+
+# Autorizaciones, datos locales y salidas del piloto
+/autorizacion*.json
+/benchmark-*/
+/hu02-*.json
+/hu09-*.json
+/hu10-*.json
+/artifacts/
+*.dump
+*.pem
+*.key
+.pgpass
+pgpass.conf
 
 # Bytecode y caché de Python
 __pycache__/

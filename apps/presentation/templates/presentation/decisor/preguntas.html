@@ -1,7 +1,7 @@
 {% extends 'presentation/layouts/base.html' %}
 {% load static %}
 {% block title %}Revisión y valoración preliminar | GUIOS PRO{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}"><script src="{% static 'presentation/js/preguntas.js' %}" defer></script>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}"><script src="{% static 'presentation/js/preguntas.js' %}?v=2" defer></script>{% endblock %}
 {% block content %}
 <div class="workspace-screen-layout">
     {% include 'presentation/includes/app_sidebar.html' with current_area='decisor' %}
@@ -16,7 +16,7 @@
                 </div>
                 <div class="hu09-heading">
                     <a class="hu09-secondary" href="{% url 'presentation:decisor-carga-documental' %}{% if evaluacion %}?evaluacion_id={{ evaluacion.pk }}{% endif %}">Ir a carga documental</a>
-                    <a class="hu09-secondary" href="?etapa=validacion{% if evaluacion %}&amp;evaluacion={{ evaluacion.pk }}{% endif %}">Ir a validación humana (HU11)</a>
+                    <a class="hu09-secondary" href="?etapa=validacion{% if evaluacion %}&amp;evaluacion={{ evaluacion.pk }}{% endif %}">Ir a validación humana</a>
                 </div>
             </div>
 
@@ -28,14 +28,14 @@
                 <span class="hu10-step-badge">Paso 1 · Selección de evaluación</span>
                 <div class="hu09-heading">
                     <h2 class="block-title">Evaluación activa</h2>
-                    {% if evaluacion %}<span class="hu09-tag">{{ evaluacion.software.nombre }} · {{ evaluacion.estado }}</span>{% endif %}
+                    {% if evaluacion %}<span class="hu09-tag">{{ evaluacion.software.nombre }} · {{ evaluacion.get_estado_display }}</span>{% endif %}
                 </div>
                 {% if evaluaciones %}
                 <form method="get" class="hu09-pick">
                     <label for="evaluacion">Evaluación</label>
                     <select name="evaluacion" id="evaluacion" required>
                         <option value="">Seleccione una evaluación</option>
-                        {% for ev in evaluaciones %}<option value="{{ ev.pk }}" {% if ev.pk == evaluacion.pk %}selected{% endif %}>{{ ev.software.nombre }} · #{{ ev.pk }} · {{ ev.estado }}</option>{% endfor %}
+                        {% for ev in evaluaciones %}<option value="{{ ev.pk }}" {% if ev.pk == evaluacion.pk %}selected{% endif %}>{{ ev.software.nombre }} · #{{ ev.pk }} · {{ ev.get_estado_display }}</option>{% endfor %}
                     </select>
                     <button class="btn-top-action" type="submit">Consultar</button>
                 </form>
@@ -46,7 +46,7 @@
             <!-- PASO 2: Resumen de progreso y acciones globales -->
             <div class="hu10-grid-2">
                 <section class="dashboard-block hu09-panel">
-                    <span class="hu10-step-badge">Paso 2A · Preguntas y suficiencia (HU09)</span>
+                    <span class="hu10-step-badge">Paso 2A · Preguntas y suficiencia</span>
                     <div class="hu09-heading">
                         <h2 class="block-title">Progreso de respuestas</h2>
                         {% if editable %}<form method="post">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><button type="submit" name="accion" value="detectar" class="btn-top-action">Detectar ausencia de evidencia</button></form>{% else %}<span>Solo lectura</span>{% endif %}
@@ -58,19 +58,21 @@
                     </div>
                     {% if total %}<progress id="hu09-progreso" value="{{ respondidas }}" max="{{ total }}" aria-label="Progreso de respuestas"></progress>{% endif %}
                     <p class="hu09-muted">Desconocidas: <span id="hu09-desconocidas">{{ desconocidas }}</span> · Sin aporte: <span id="hu09-no-informativas">{{ no_informativas }}</span> · Descartadas: {{ descartadas }}.</p>
-                    <p class="hu09-muted">{% if modelo_ia %}Proveedores externos HU09: <strong>{{ modelo_ia }}</strong> · Comparación de preguntas similares: textual.{% else %}Proveedores externos de IA no configurados. Puede responder manualmente.{% endif %}</p>
-                    {% if modelo_ia %}<p class="hu09-muted">Aviso: al analizar se envían a las APIs configuradas los fragmentos de evidencia y las respuestas vinculadas a este subfactor. Se utiliza la primera respuesta válida, sin combinar resultados; otras solicitudes ya iniciadas pueden continuar hasta su tiempo límite. Revise las condiciones de privacidad de cada proveedor.</p>{% endif %}
+                    <p class="hu09-muted">{% if modelo_ia %}Servicios de IA disponibles: <strong>{{ modelo_ia }}</strong>.{% else %}La IA no está disponible. Puede responder manualmente.{% endif %}</p>
+                    {% if modelo_ia %}<p class="hu09-muted">Cada análisis envía los fragmentos de evidencia y las respuestas vinculadas a este subfactor a un proveedor autorizado a la vez. Si el intento termina con un fallo recuperable, el sistema puede probar otro proveedor. Revise sus condiciones de privacidad.</p>{% endif %}
                 </section>
 
                 <section class="dashboard-block hu09-panel">
-                    <span class="hu10-step-badge">Paso 2B · Valoración preliminar IA (HU10)</span>
+                    <span class="hu10-step-badge">Paso 2B · Valoración preliminar con IA</span>
                     <div class="hu09-heading">
                         <h2 class="block-title">Propuestas preliminares (1 a 4)</h2>
                         {% if editable and modelo_hu10 %}
-                        <form method="post">
+                        <form method="post" class="hu09-ai" id="hu10-lote-form" data-disponible="{{ hu10.disponible|yesno:'1,0' }}">
                             {% csrf_token %}
                             <input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}">
-                            <button type="submit" name="accion" value="valorar_hu10_lote" class="btn-top-action" {% if not habilitados_hu10 %}disabled{% endif %}>Generar propuestas HU10 pendientes</button>
+                            <input type="hidden" name="accion" value="valorar_hu10_lote">
+                            <button type="submit" id="hu10-iniciar-lote" class="btn-top-action" {% if not hu10.disponible %}disabled{% endif %}>Generar propuestas pendientes</button>
+                            <span class="hu09-wait" role="status" hidden>Generando propuestas preliminares…</span>
                         </form>
                         {% endif %}
                     </div>
@@ -78,17 +80,18 @@
                         <div>Habilitados <strong id="hu10-habilitados">{{ habilitados_hu10 }}</strong></div>
                         <div>Con propuesta <strong id="hu10-generadas">{{ propuestas_hu10_listas }}</strong></div>
                     </div>
-                    <p class="hu09-muted">{% if modelo_hu10 %}Proveedores externos HU10: <strong>{{ modelo_hu10 }}</strong>. Genera puntuaciones preliminares (1 a 4) con citas verificables y las envía a revisión humana (HU11).{% else %}Configure al menos una API externa de IA para HU10.{% endif %}</p>
+                    <p id="hu10-estado" class="hu09-muted" role="status">{% if lote_activo %}Esperando a que termine el análisis de suficiencia.{% elif hu10.disponible %}Propuestas pendientes habilitadas: {{ hu10.pendientes }}.{% elif hu10.generadas and not hu10.pendientes %}Propuestas generadas. Revise las valoraciones en Validación humana.{% else %}No hay propuestas pendientes habilitadas para IA.{% endif %}</p>
+                    <p class="hu09-muted">{% if modelo_hu10 %}Servicios de IA disponibles: <strong>{{ modelo_hu10 }}</strong>. Las propuestas incluyen una puntuación preliminar de 1 a 4 y fuentes verificables. El decisor las revisa y confirma en Validación humana.{% else %}La IA no está disponible para generar valoraciones preliminares.{% endif %}</p>
                 </section>
             </div>
 
             {% if modelo_ia or lote %}
-            <section class="dashboard-block hu09-panel" id="hu09-lote" data-url="?evaluacion={{ evaluacion.pk }}&amp;estado_lote=1">
+            <section class="dashboard-block hu09-panel" id="hu09-lote" data-url="?evaluacion={{ evaluacion.pk }}&amp;estado_lote=1" data-activo="{{ lote_activo|yesno:'1,0' }}">
                 <div class="hu09-heading">
                     <h2 class="block-title">Análisis masivo de suficiencia</h2>
-                    {% if editable and modelo_ia %}<form method="post">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><button type="submit" name="accion" value="lote" class="btn-top-action" id="hu09-iniciar-lote" {% if lote.estado == 'EN_COLA' or lote.estado == 'EN_PROCESO' %}disabled{% endif %}>Analizar subfactores disponibles</button></form>{% endif %}
+                    {% if editable and modelo_ia %}<form method="post" class="hu09-ai">{% csrf_token %}<input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}"><input type="hidden" name="accion" value="lote"><button type="submit" class="btn-top-action" id="hu09-iniciar-lote" {% if lote_activo %}disabled{% endif %}>Analizar subfactores disponibles</button><span class="hu09-wait" role="status" hidden>Encolando análisis de suficiencia…</span></form>{% endif %}
                 </div>
-                <p id="hu09-lote-estado" role="status" aria-live="polite">{% if lote %}Lote #{{ lote.id }} · {{ lote.estado }} · {{ lote.procesados }}/{{ lote.total }}{% else %}Sin análisis masivo registrado.{% endif %}</p>
+                <p id="hu09-lote-estado" role="status" aria-live="polite">{% if lote %}Análisis #{{ lote.id }} · {{ lote.etiqueta_estado }} · {{ lote.procesados }}/{{ lote.total }}{% else %}Sin análisis masivo registrado.{% endif %}</p>
                 <progress id="hu09-lote-progreso" value="{{ lote.procesados|default:0 }}" max="{{ lote.total|default:1 }}" aria-label="Progreso del análisis masivo"></progress>
                 <p id="hu09-lote-resumen" class="hu09-muted">{% if lote %}Preguntas nuevas: {{ lote.preguntas_nuevas }} · Omitidos: {{ lote.omitidos }} · Errores: {{ lote.errores }}{% else %}Se omiten los subfactores con preguntas pendientes o análisis vigente.{% endif %}</p>
             </section>
@@ -165,7 +168,7 @@
 
                             <!-- Bloque 2: Evaluación de suficiencia (HU09) -->
                             <div class="hu09-suficiencia">
-                                <h5>2. Evaluación de suficiencia (HU09)</h5>
+                                <h5>2. Evaluación de suficiencia</h5>
                                 {% if fila.suficiencia %}
                                     {% if not fila.suficiencia_vigente %}<p class="hu09-muted">Análisis desactualizado. La información cambió.</p>{% else %}
                                         <p class="hu09-conclusion" data-estado="{{ fila.suficiencia.estado }}"><strong>{% if fila.suficiencia.estado == 'SUFICIENCIA_PROPUESTA' %}Suficiencia propuesta por IA{% elif fila.suficiencia.estado == 'FALTAN_DATOS' %}Faltan datos{% else %}Revisión manual necesaria{% endif %}</strong></p>
@@ -180,33 +183,34 @@
                                 {% elif not fila.sin_pendientes %}<p class="hu09-muted">Responda o descarte las preguntas pendientes antes de reevaluar.</p>{% endif %}
 
                                 {% if fila.historial %}<details class="hu09-history"><summary>Historial de suficiencia ({{ fila.historial|length }})</summary>
-                                {% for registro in fila.historial %}<div class="hu09-evidence"><strong>{{ registro.fecha|date:'d/m/Y H:i' }} · {{ registro.estado }} · ronda {{ registro.rondas }}</strong><p>{{ registro.justificacion }}</p><small>Modelo: {{ registro.modelo }}{% if registro.legado %} · Importado del resultado anterior{% elif registro.actor_id %} · Usuario #{{ registro.actor_id }}{% endif %}{% if registro.referencias %} · Referencias históricas: {{ registro.referencias|join:', ' }}{% endif %}</small></div>{% endfor %}
+                                {% for registro in fila.historial %}<div class="hu09-evidence"><strong>{{ registro.fecha|date:'d/m/Y H:i' }} · {% if registro.estado == 'SUFICIENCIA_PROPUESTA' %}Suficiencia propuesta por IA{% elif registro.estado == 'FALTAN_DATOS' %}Faltan datos{% else %}Revisión manual necesaria{% endif %} · ronda {{ registro.rondas }}</strong><p>{{ registro.justificacion }}</p><small>Modelo: {{ registro.modelo }}{% if registro.legado %} · Importado del resultado anterior{% elif registro.actor_id %} · Usuario #{{ registro.actor_id }}{% endif %}{% if registro.referencias %} · Referencias históricas: {{ registro.referencias|join:', ' }}{% endif %}</small></div>{% endfor %}
                                 <small>Las referencias históricas identifican las fuentes de entonces; su contenido actual puede haber cambiado.</small></details>{% endif %}
                             </div>
 
                             <!-- Bloque 3: Valoración preliminar con IA (HU10) -->
                             <div class="hu10-box {% if fila.tiene_propuesta_hu10 %}hu10-box-propuesta{% endif %}">
-                                <p class="hu09-entrega"><strong>Preparación para HU10:</strong> <span>{% if fila.estado_hu10 == 'PROPUESTA_HABILITADA' %}Contexto disponible para propuesta preliminar{% elif fila.estado_hu10 == 'REVISION_MANUAL' %}Revisión manual necesaria{% elif fila.estado_hu10 == 'PREGUNTAS_PENDIENTES' %}Preguntas pendientes{% elif fila.estado_hu10 == 'ANALISIS_EN_CURSO' %}Análisis en curso{% elif fila.estado_hu10 == 'SOLO_LECTURA' %}Solo lectura{% else %}Análisis pendiente o desactualizado{% endif %}</span></p>
+                                <p class="hu09-entrega"><strong>Preparación para la valoración:</strong> <span>{{ fila.etiqueta_estado_hu10 }}</span></p>
 
                                 {% if fila.tiene_propuesta_hu10 %}
                                 <div class="hu10-score-row">
-                                    <span class="hu10-score">Propuesta preliminar IA (HU10): {{ fila.valor_ia }}/4 · {{ fila.etiqueta_ia }}</span>
-                                    <span class="hu09-tag hu09-done">Guardada para HU11</span>
+                                    <span class="hu10-score">Propuesta preliminar de IA: {{ fila.valor_ia }}/4 · {{ fila.etiqueta_ia }}</span>
+                                    <span class="hu09-tag hu09-done">Guardada para validación humana</span>
                                 </div>
                                 <div class="hu09-evidence">{{ fila.justificacion_ia }}</div>
                                 {% endif %}
 
                                 <div class="hu10-actions-row">
-                                    {% if editable and fila.editable and fila.estado_hu10 == 'PROPUESTA_HABILITADA' %}
-                                    <form method="post" class="hu09-ai">
+                                    {% if editable and fila.editable and modelo_hu10 %}
+                                    <form method="post" class="hu09-ai hu10-individual" data-valoracion="{{ fila.valoracion_id }}" {% if fila.estado_hu10 != 'PROPUESTA_HABILITADA' %}hidden{% endif %}>
                                         {% csrf_token %}
                                         <input type="hidden" name="evaluacion" value="{{ evaluacion.pk }}">
                                         <input type="hidden" name="valoracion" value="{{ fila.valoracion_id }}">
-                                        <button class="btn-top-action" type="submit" name="accion" value="valorar_hu10">{% if fila.tiene_propuesta_hu10 %}Regenerar valoración preliminar (HU10){% else %}Generar valoración preliminar (HU10){% endif %}</button>
-                                        <span class="hu09-wait" role="status" hidden>Generando propuesta preliminar con IA local…</span>
+                                        <input type="hidden" name="accion" value="valorar_hu10">
+                                        <button class="btn-top-action" type="submit">{% if fila.tiene_propuesta_hu10 %}Regenerar valoración preliminar{% else %}Generar valoración preliminar{% endif %}</button>
+                                        <span class="hu09-wait" role="status" hidden>Generando propuesta preliminar…</span>
                                     </form>
                                     {% endif %}
-                                    <a class="hu09-secondary" href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ fila.valoracion_id }}">Revisar y confirmar en validación humana (HU11)</a>
+                                    <a class="hu09-secondary" href="?etapa=validacion&amp;evaluacion={{ evaluacion.pk }}&amp;valoracion={{ fila.valoracion_id }}">Revisar y confirmar la valoración</a>
                                 </div>
                                 <small class="hu09-muted">Conclusión orientativa con evidencia verificable; no asigna puntuación definitiva ni reemplaza la validación humana.</small>
                             </div>

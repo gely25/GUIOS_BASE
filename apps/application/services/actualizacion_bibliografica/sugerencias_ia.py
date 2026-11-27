@@ -6,9 +6,10 @@ from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from apps.data.models import BusquedaBibliografica, BusquedaPublicacion, PublicacionFactor
+from apps.data.models import BusquedaBibliografica, BusquedaPublicacion, Publicacion, PublicacionFactor
 from apps.data.repositorios import bibliografia as repo
 from apps.external_services.ai_errors import AnalisisNoDisponible
+from ..tareas_ia import en_orden, solicitar
 
 from .autorizacion import autorizar_administrador
 
@@ -101,13 +102,17 @@ def sugerir_publicaciones(actor_id, busqueda_id, proveedor):
         {'id': publicacion.pk, 'titulo': publicacion.titulo, 'resumen': publicacion.resumen or ''}
         for publicacion in publicaciones.values()
     ]
-    ids_validos = set(publicaciones)
     sugerencias = []
-    for lote in _lotes(busqueda.factor, por_id):
-        entrada = _entrada(busqueda.factor, lote)
+    factor = busqueda.factor
+
+    def analizar(lote):
+        entrada = _entrada(factor, lote)
         ids_lote = {publicacion['id'] for publicacion in lote}
-        respuesta = proveedor(entrada)
-        sugerencias.extend(_validar_respuesta(respuesta, ids_lote))
+        respuesta = solicitar(proveedor, entrada, ['busqueda', busqueda_id], actor_id)
+        return _validar_respuesta(respuesta, ids_lote)
+
+    for validadas in en_orden(proveedor, analizar, _lotes(factor, por_id)):
+        sugerencias.extend(validadas)
 
     with transaction.atomic():
         bloqueada = BusquedaBibliografica.objects.select_for_update().get(pk=busqueda_id)
@@ -115,12 +120,17 @@ def sugerir_publicaciones(actor_id, busqueda_id, proveedor):
             raise ValidationError('La búsqueda dejó de estar completada durante el análisis.')
         if bloqueada.analisis_ia_completado:
             raise ValidationError('Esta búsqueda ya fue analizada con IA.')
-        vinculadas = set(
-            BusquedaPublicacion.objects.filter(
-                busqueda=bloqueada, publicacion_id__in=ids_validos,
-            ).values_list('publicacion_id', flat=True)
-        )
-        if vinculadas != ids_validos:
+        # Dos búsquedas pueden compartir publicaciones en distinto orden.
+        list(Publicacion.objects.select_for_update().filter(pk__in=publicaciones)
+             .order_by('pk').values_list('pk', flat=True))
+        vigentes = [
+            {'id': pk, 'titulo': titulo, 'resumen': resumen or ''}
+            for pk, titulo, resumen in BusquedaPublicacion.objects.filter(busqueda=bloqueada)
+            .order_by('posicion', 'pk')
+            .values_list('publicacion_id', 'publicacion__titulo', 'publicacion__resumen')
+        ]
+        if (bloqueada.factor_id != factor.pk or bloqueada.factor.nombre != factor.nombre
+                or vigentes != por_id):
             raise ValidationError('Los resultados de la búsqueda cambiaron durante el análisis.')
         for sugerencia in sugerencias:
             repo.sugerir_vinculo(

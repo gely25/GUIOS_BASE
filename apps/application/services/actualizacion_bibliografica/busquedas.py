@@ -41,7 +41,7 @@ def lanzar_actualizacion(actor_id, factor_ids=None, fuente=None):
             factores = [f for f in factores if f.pk in set(factor_ids)]
         if not factores:
             raise ValidationError('No hay factores activos en el catálogo vigente. '
-                                  'Carga el catálogo con: python manage.py cargar_catalogo_guios')
+                                  'Solicite al equipo de soporte que cargue el catálogo.')
         lote = uuid.uuid4()
         nombre_fuente = (fuente or fuente_configurada()).nombre
         repo.crear_busquedas(lote, [(f.pk, construir_consulta(f.nombre)) for f in factores],

@@ -10,9 +10,11 @@ Nada de aquí cambia la lógica existente de HU07/HU08:
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Count
 
-from apps.data.models import Documento, Evidencia, FragmentoDocumento
+from apps.application.services.preguntas import PreguntasService
+from apps.data.models import Documento, Evaluacion, Evidencia, FragmentoDocumento
 
 TOP_POR_SUBFACTOR = 3
 MAX_NOMBRES_SIN_EVIDENCIA = 10
@@ -104,10 +106,18 @@ def preparar_evidencia(servicio_retrieval, evaluacion, valoraciones):
     return creadas, len({t.split(':')[0] for t in propuestas})
 
 
+@transaction.atomic
 def vincular_en_lote(servicio_retrieval, evaluacion, valoraciones, seleccion):
     """Crea las evidencias confirmadas. `seleccion`: textos «valoracion_id:fragmento_id:similitud»."""
-    validas = {v.pk: v for v in valoraciones}
+    # Coordinar los cambios de evidencia con la validación final de HU09/HU10/HU11.
+    evaluacion = Evaluacion.objects.select_for_update().get(pk=evaluacion.pk)
+    if evaluacion.estado != Evaluacion.EN_PROCESO or evaluacion.fecha_fin is not None:
+        return 0, 0
+    validas = PreguntasService._valoraciones(evaluacion).filter(
+        pk__in=[v.pk for v in valoraciones], estado_validacion='PENDIENTE', valor_confirmado__isnull=True,
+    ).in_bulk()
     creadas = existentes = 0
+    afectadas = set()
     for texto in seleccion:
         partes = (texto or '').split(':')
         if len(partes) != 3 or not partes[0].isdigit() or not partes[1].isdigit():
@@ -126,4 +136,8 @@ def vincular_en_lote(servicio_retrieval, evaluacion, valoraciones, seleccion):
             defaults={'referencia': servicio_retrieval._formatear_ubicacion(fragmento), 'relevancia': relevancia})
         creadas += 1 if creada else 0
         existentes += 0 if creada else 1
+        if creada:
+            afectadas.add(valoracion.pk)
+    if afectadas:
+        PreguntasService.invalidar_propuestas(evaluacion, afectadas)
     return creadas, existentes

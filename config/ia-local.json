@@ -1,0 +1,40 @@
+{
+  "autorizacion": "autorizacion-gratuita.json",
+  "trabajadores_lote": 5,
+  "timeout": 15,
+  "cooldown": 60,
+  "espera_segundos": 5,
+  "reserva_segundos": 120,
+  "reuso_segundos": 3600,
+  "proveedores": {
+    "gemini": {
+      "modelo": "gemini-3.5-flash-lite",
+      "unidad": "gemini-proyecto-dev",
+      "politica": {
+        "rpm": 12, "tpm": 250000, "rpd": 30, "concurrencia": 3,
+        "margen_tokens_entrada": 256, "tokens_por_intento": 65536, "max_tokens_salida": 2048, "reconciliar_uso": true
+      },
+      "perfil": {
+        "bibliografia": {"validado": true, "calidad": 1, "latencia_ms": 927.59},
+        "preguntas": {"validado": true, "calidad": 0.5, "latencia_ms": 837.27},
+        "suficiencia": {"validado": true, "calidad": 1, "latencia_ms": 990.16},
+        "valoracion": {"validado": true, "calidad": 1, "latencia_ms": 1084.05}
+      }
+    },
+    "cloudflare": {
+      "modelo": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "unidad": "cloudflare-cuenta-dev",
+      "politica": {
+        "rpm": 30, "tpm": null, "rpd": null, "concurrencia": 2,
+        "margen_tokens_entrada": 256, "tokens_por_intento": 65536, "max_tokens_salida": 2048, "reconciliar_uso": true,
+        "unidades_diarias": 10000, "neurons_por_millon_entrada": 26668, "neurons_por_millon_salida": 204805
+      },
+      "perfil": {
+        "bibliografia": {"validado": true, "calidad": 1, "latencia_ms": 2145.82},
+        "preguntas": {"validado": true, "calidad": 0.5, "latencia_ms": 1169.45},
+        "suficiencia": {"validado": true, "calidad": 1, "latencia_ms": 2306.19},
+        "valoracion": {"validado": true, "calidad": 1, "latencia_ms": 3834.99}
+      }
+    }
+  }
+}

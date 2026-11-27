@@ -92,7 +92,7 @@ class LanzarTests(Base):
 
     def test_sin_catalogo_avisa_como_cargarlo(self):
         CatalogoVersion.objects.update(estado=CatalogoVersion.HISTORICO)
-        with self.assertRaisesMessage(ValidationError, 'cargar_catalogo_guios'):
+        with self.assertRaisesMessage(ValidationError, 'Solicite al equipo de soporte que cargue el catálogo.'):
             servicio.lanzar_actualizacion(self.admin.pk)
 
 
@@ -229,6 +229,16 @@ class SugerenciasIATests(Base):
     def test_el_analisis_ia_requiere_administrador(self):
         with self.assertRaises(PermissionDenied):
             servicio.sugerir_publicaciones_ia(self.decisor.pk, self.busqueda.pk, lambda _: {})
+
+    def test_contexto_bibliografico_modificado_no_persiste_sugerencias(self):
+        def proveedor(_):
+            Publicacion.objects.filter(pk=self.lock.pk).update(resumen='Resumen editado.')
+            return {'sugerencias': [{'publicacion_id': self.lock.pk, 'pertinencia': 80,
+                                     'justificacion': 'Justificación del resumen anterior.'}]}
+
+        with self.assertRaisesMessage(ValidationError, 'resultados de la búsqueda cambiaron'):
+            servicio.sugerir_publicaciones_ia(self.admin.pk, self.busqueda.pk, proveedor)
+        self.assertFalse(PublicacionFactor.objects.exists())
 
 
 class VersionesTests(Base):

@@ -1,0 +1,17 @@
+{
+  "gemini/gemma-4-26b-a4b-it": {
+    "rpm": 30, "tpm": 16000, "rpd": 14400, "concurrencia": 1,
+    "margen_tokens_entrada": 256, "tokens_por_intento": 8192,
+    "max_tokens_salida": 2048, "reconciliar_uso": true
+  },
+  "gemini/gemma-4-31b-it": {
+    "rpm": 30, "tpm": 16000, "rpd": 14400, "concurrencia": 1,
+    "margen_tokens_entrada": 256, "tokens_por_intento": 8192,
+    "max_tokens_salida": 2048, "reconciliar_uso": true
+  },
+  "gemini/gemini-3.1-flash-lite": {
+    "rpm": 15, "tpm": 250000, "rpd": 500, "concurrencia": 1,
+    "margen_tokens_entrada": 256, "tokens_por_intento": 65536,
+    "max_tokens_salida": 2048, "reconciliar_uso": true
+  }
+}

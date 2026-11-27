@@ -62,11 +62,12 @@ class RevisionHumanaInterfazTests(TestCase):
         res = self.get()
         self.assertContains(res, 'Software propio HU11')
         self.assertNotContains(res, 'Software privado HU11')
-        self.assertContains(self.client.get(self.url), 'Ir a validación humana (HU11)')
+        self.assertContains(self.client.get(self.url), 'Ir a validación humana')
 
     def test_comparacion_fuentes_y_exclusion(self):
         p = PreguntasService.registrar_vacios(self.actor, self.ev.pk, self.v.pk, ['¿Formatos?'])[0]
         PreguntasService.responder(self.actor, self.ev.pk, p.pk, 'Admite ODF.')
+        ValoracionSubfactor.objects.filter(pk=self.v.pk).update(valor_ia=4, justificacion_ia='Propuesta tras responder.')
         res = self.get(evaluacion=self.ev.pk, valoracion=self.v.pk)
         datos = self.datos(res)[self.v.pk]
         self.assertEqual(datos['ia'], 4)
