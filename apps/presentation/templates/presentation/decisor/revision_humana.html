@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Revisión de evidencia | GUIOS PRO{% endblock %}
 {% block extra_head %}<link rel="stylesheet" href="{% static 'presentation/css/preguntas.css' %}"><link rel="stylesheet" href="{% static 'presentation/css/revision_humana.css' %}?v=18"><link rel="stylesheet" href="{% static 'presentation/css/revision_rapida.css' %}?v=5">{% endblock %}
-{% block extra_js %}<script src="{% static 'presentation/js/revision_rapida.js' %}?v=13" defer></script><script src="{% static 'presentation/js/revision_faltantes.js' %}?v=1" defer></script>{% endblock %}
+{% block extra_js %}<script src="{% static 'presentation/js/revision_rapida.js' %}?v=14" defer></script><script src="{% static 'presentation/js/revision_faltantes.js' %}?v=1" defer></script>{% endblock %}
 {% block content %}
 <div class="workspace-screen-layout">
     {% include 'presentation/includes/app_sidebar.html' with current_area='decisor' %}
@@ -60,9 +60,9 @@
 <div class="rv-dimbar" id="rv-dimbar" role="group" aria-label="Filtrar por dimensión"></div>
 <section class="rv-card">
  <div class="rv-tabs" role="tablist">
-  <button class="rv-tab" role="tab" type="button" data-tab="at" aria-selected="true">Necesitan tu atención <small id="rv-n-at"></small></button>
-  <button class="rv-tab" role="tab" type="button" data-tab="li" aria-selected="false">Listas para aceptar <small id="rv-n-li"></small></button>
-  <button class="rv-tab" role="tab" type="button" data-tab="ok" aria-selected="false">Confirmadas <small id="rv-n-ok"></small></button>
+  <button class="rv-tab" role="tab" type="button" data-tab="at" aria-selected="true">Necesitan tu atención <small id="rv-n-at" hidden></small></button>
+  <button class="rv-tab" role="tab" type="button" data-tab="li" aria-selected="false">Listas para aceptar <small id="rv-n-li" hidden></small></button>
+  <button class="rv-tab" role="tab" type="button" data-tab="ok" aria-selected="false">Confirmadas <small id="rv-n-ok" hidden></small></button>
  </div>
  <div class="rv-panel" id="rv-panel"></div>
 </section>

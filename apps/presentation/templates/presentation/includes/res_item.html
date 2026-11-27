@@ -2,7 +2,7 @@
 <li class="res-item">
     <div class="res-item-cab">
         <span class="res-item-nombre"><strong>{{ f.factor }}</strong><small class="res-item-imp" title="Importancia relativa (IR), de 1 a 4">Importancia {{ f.ir|default_if_none:"—" }}/4</small></span>
-        <span class="res-item-valor" title="Cumplimiento (PM) de 0 a 4">{{ f.pm|floatformat:2 }}<small>/4</small></span>
+        <span class="res-item-valor" title="Cumplimiento (PM) de 1 a 4">{{ f.pm|floatformat:2 }}<small>/4</small></span>
     </div>
     <div class="res-pista res-pista--grupo" role="img" aria-label="Cumplimiento {{ f.pm|floatformat:2 }} de 4"><span style="width: {{ f.porcentaje }}%"></span></div>
 </li>
