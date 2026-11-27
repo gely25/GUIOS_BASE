@@ -10,6 +10,7 @@ from apps.data.models import ValoracionSubfactor
 from apps.external_services.ai_errors import AnalisisNoDisponible
 from .preguntas import PreguntasService
 from .preparacion_hu10 import PreparacionHU10Service
+from .tareas_ia import en_orden, solicitar
 
 ESCALA_HU10 = {
     1: 'No cumple',
@@ -67,7 +68,7 @@ class AIService:
     @staticmethod
     def _validar_respuesta_modelo(respuesta, ids_validos: set[str]) -> tuple[int, str, list[str]]:
         if not isinstance(respuesta, dict) or set(respuesta.keys()) != {'valor_preliminar', 'justificacion', 'referencias'}:
-            raise AnalisisNoDisponible('El modelo devolvió una estructura inválida para HU10.')
+            raise AnalisisNoDisponible('La IA devolvió una propuesta de valoración con formato inválido.')
 
         valor = respuesta.get('valor_preliminar')
         if type(valor) is not int or valor not in (1, 2, 3, 4):
@@ -91,13 +92,14 @@ class AIService:
         return valor, justificacion.strip(), referencias
 
     @classmethod
-    def generar_propuesta_preliminar(cls, actor, evaluacion_id: int, valoracion_id: int, proveedor) -> dict:
+    def generar_propuesta_preliminar(cls, actor, evaluacion_id: int, valoracion_id: int, proveedor,
+                                    *, solo_pendiente=False) -> dict | None:
         """
         Genera y persiste la propuesta preliminar (1..4) para un subfactor habilitado (PROPUESTA_HABILITADA),
         conservando la propuesta original para revisión humana en HU11.
         """
-        preparacion = PreparacionHU10Service.obtener(actor, evaluacion_id)
-        fila = next((f for f in preparacion['subfactores'] if f['valoracion_id'] == valoracion_id), None)
+        preparacion = PreparacionHU10Service.obtener(actor, evaluacion_id, valoracion_id)
+        fila = next(iter(preparacion['subfactores']), None)
         if fila is None:
             raise ValidationError('Subfactor no disponible en esta evaluación.')
         if fila['estado'] != 'PROPUESTA_HABILITADA':
@@ -109,20 +111,37 @@ class AIService:
 
         ids_validos = {f['id'] for f in fila['fuentes']}
         entrada = cls._construir_entrada(dict(fila, evaluacion_id=evaluacion_id))
+        anterior = ValoracionSubfactor.objects.filter(pk=valoracion_id).values_list(
+            'valor_ia', 'justificacion_ia',
+        ).first()
+        if anterior is None:
+            raise ValidationError('Subfactor no disponible en esta evaluación.')
+        if solo_pendiente and anterior[0] in ESCALA_HU10:
+            return None
 
         # Invocar al proveedor fuera de la transacción de escritura.
-        salida_modelo = proveedor(entrada)
+        salida_modelo = solicitar(
+            proveedor, entrada, ['evaluacion', evaluacion_id, valoracion_id, fila['huella']], actor.pk,
+        )
         valor, justificacion, referencias = cls._validar_respuesta_modelo(salida_modelo, ids_validos)
         justificacion_persistida = formatear_justificacion_hu10(justificacion, referencias)
 
         with transaction.atomic():
             evaluacion = PreguntasService._evaluacion(actor, evaluacion_id, escritura=True)
             valoracion = PreguntasService._valoracion_editable(evaluacion, valoracion_id)
-            PreparacionHU10Service.validar_vigencia(actor, evaluacion.pk, valoracion.pk, fila['huella'])
+            vigente = PreparacionHU10Service._validar_vigencia(evaluacion, valoracion.pk, fila['huella'])
+            if cls._construir_entrada(dict(vigente, evaluacion_id=evaluacion_id)) != entrada:
+                raise ValidationError('La suficiencia o las fuentes cambiaron durante el análisis. Repita la operación.')
 
-            valoracion.valor_ia = valor
-            valoracion.justificacion_ia = justificacion_persistida
-            valoracion.save(update_fields=['valor_ia', 'justificacion_ia'])
+            actual = (valoracion.valor_ia, valoracion.justificacion_ia)
+            propuesta = (valor, justificacion_persistida)
+            if solo_pendiente and actual[0] in ESCALA_HU10:
+                return None
+            if actual != propuesta:
+                if actual != anterior:
+                    raise ValidationError('La propuesta cambió durante el análisis. Revise la valoración vigente.')
+                valoracion.valor_ia, valoracion.justificacion_ia = propuesta
+                valoracion.save(update_fields=['valor_ia', 'justificacion_ia'])
 
         return {
             'valoracion_id': valoracion.pk,
@@ -152,13 +171,17 @@ class AIService:
 
         generadas = 0
         errores = []
-        for vid in pendientes:
+        def generar(vid):
             try:
-                cls.generar_propuesta_preliminar(actor, evaluacion_id, vid, proveedor)
-                generadas += 1
+                propuesta = cls.generar_propuesta_preliminar(actor, evaluacion_id, vid, proveedor, solo_pendiente=True)
             except (ValidationError, AnalisisNoDisponible) as exc:
-                msg = ' '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
-                errores.append(msg)
+                return False, ' '.join(exc.messages) if hasattr(exc, 'messages') else str(exc)
+            return propuesta is not None, None
+
+        for generada, error in en_orden(proveedor, generar, pendientes):
+            generadas += generada
+            if error is not None:
+                errores.append(error)
 
         return {
             'total_habilitados': len(habilitados_ids),

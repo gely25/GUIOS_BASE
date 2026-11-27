@@ -256,14 +256,15 @@
         if (fatal && (/límite de solicitudes/i.test(fatal) || saturada) && esperasLimite < 8) {
             esperasLimite++;
             for (let s = saturada ? 15 : ESPERA_LIMITE; s > 0; s--) {
-                q('rv-ia-t').textContent = `${saturada ? 'La API de IA está saturada' : 'La API de IA alcanzó su límite de uso'}. Se reanuda sola en ${s} s (${base + hechos} de ${objetivos.length} analizados).`;
+                q('rv-ia-t').textContent = `${saturada ? 'El servicio de IA está saturado' : 'El servicio de IA alcanzó su límite de uso'}. Se reanuda sola en ${s} s (${base + hechos} de ${objetivos.length} analizados).`;
                 await dormir(1000);
             }
             return correr();
         }
         corriendo = false;
         if (fatal) {
-            q('rv-ia-t').textContent = `El análisis con IA se detuvo después de ${base + hechos} de ${objetivos.length}: ${fatal}`;
+            const detalle = /estado HTTP \d{3}/i.test(fatal) ? 'El servicio de IA no pudo completar el análisis.' : fatal;
+            q('rv-ia-t').textContent = `El análisis con IA se detuvo después de ${base + hechos} de ${objetivos.length}: ${detalle}`;
             q('rv-ia-retry').hidden = false;
         } else {
             q('rv-ia-t').textContent = `La IA terminó: ${con} con propuesta, ${pendientes.length - con - omitidos} que necesitan tu criterio` + (omitidos ? ` y ${omitidos} que no pudo leer (puedes reintentar o valorarlos tú).` : '.');

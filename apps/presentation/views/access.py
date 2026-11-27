@@ -70,7 +70,7 @@ class AccesoView(LoginView):
 
 
 class RegistroView(FormView):
-    """Registro público: crea una cuenta de Decisor o Administrador e inicia la sesión."""
+    """Crea una cuenta pública de Decisor e inicia la sesión."""
 
     template_name = 'presentation/acceso/registro.html'
     form_class = RegistroForm
@@ -83,10 +83,9 @@ class RegistroView(FormView):
 
     def form_valid(self, form):
         datos = form.cleaned_data
-        # El rol sale de la elección validada del formulario (Decisor o Administrador).
         usuario = Usuario.objects.create_user(
             correo=datos['correo'], password=datos['password1'],
-            nombre=datos['nombre'], rol=datos['rol'])
+            nombre=datos['nombre'], rol=Usuario.DECISOR)
         login(self.request, usuario, backend='django.contrib.auth.backends.ModelBackend')
         return redirect('presentation:' + (menu.inicio_de(usuario.rol) or 'home'))
 

@@ -151,11 +151,28 @@ BIBLIOGRAPHIC_TIMEOUT = int(os.getenv('BIBLIOGRAPHIC_TIMEOUT') or 20)
 # Máximo de publicaciones que se guardan por consulta (una consulta por factor).
 BIBLIOGRAPHIC_MAX_RESULTADOS = int(os.getenv('BIBLIOGRAPHIC_MAX_RESULTADOS') or 50)
 
-# --- IA generativa HU02, HU09 y HU10: proveedores HTTPS en paralelo --------
-GUIOS_AI_GEMINI_API_KEY = os.getenv('GUIOS_AI_GEMINI_API_KEY', '').strip()
-GUIOS_AI_GEMINI_MODEL = os.getenv('GUIOS_AI_GEMINI_MODEL', '').strip()
-GUIOS_AI_OPENAI_API_KEY = os.getenv('GUIOS_AI_OPENAI_API_KEY', '').strip()
-GUIOS_AI_OPENAI_MODEL = os.getenv('GUIOS_AI_OPENAI_MODEL', '').strip()
-GUIOS_AI_GROQ_API_KEY = os.getenv('GUIOS_AI_GROQ_API_KEY', '').strip()
-GUIOS_AI_GROQ_MODEL = os.getenv('GUIOS_AI_GROQ_MODEL', '').strip()
+# --- IA generativa HU02, HU09 y HU10: selección y fallback secuenciales ---
+GUIOS_AI_AUTORIZACION_GRATUITA = os.getenv('GUIOS_AI_AUTORIZACION_GRATUITA', '').strip()
+if GUIOS_AI_AUTORIZACION_GRATUITA:
+    GUIOS_AI_AUTORIZACION_GRATUITA = BASE_DIR / GUIOS_AI_AUTORIZACION_GRATUITA
+for _proveedor in ('GEMINI', 'COHERE', 'GROQ', 'CLOUDFLARE', 'OPENROUTER'):
+    for _campo in ('API_KEY', 'MODEL', 'OPERACIONES', 'UNIDAD_CUOTA'):
+        _variable = f'GUIOS_AI_{_proveedor}_{_campo}'
+        _defecto = 'bibliografia,preguntas,suficiencia,valoracion' if (
+            _proveedor == 'GEMINI' and _campo == 'OPERACIONES'
+        ) else ''
+        globals()[_variable] = os.getenv(_variable, _defecto).strip()
+GUIOS_AI_CLOUDFLARE_API_KEY = GUIOS_AI_CLOUDFLARE_API_KEY or os.getenv(
+    'GUIOS_AI_CLOUDFLARE_API_TOKEN', '',
+).strip()
+GUIOS_AI_CLOUDFLARE_ACCOUNT_ID = os.getenv('GUIOS_AI_CLOUDFLARE_ACCOUNT_ID', '').strip()
 GUIOS_AI_TIMEOUT = int(os.getenv('GUIOS_AI_TIMEOUT', '15'))
+GUIOS_AI_COOLDOWN = max(1, int(os.getenv('GUIOS_AI_COOLDOWN', '60')))
+GUIOS_AI_POLITICAS_CUOTA = os.getenv('GUIOS_AI_POLITICAS_CUOTA', '{}')
+GUIOS_AI_POLITICAS_MODELO = os.getenv('GUIOS_AI_POLITICAS_MODELO', '{}')
+GUIOS_AI_MODELOS_ADICIONALES = os.getenv('GUIOS_AI_MODELOS_ADICIONALES', '{}')
+GUIOS_AI_PERFILES_OPERACION = os.getenv('GUIOS_AI_PERFILES_OPERACION', '{}')
+GUIOS_AI_TRABAJADORES_LOTE = max(1, int(os.getenv('GUIOS_AI_TRABAJADORES_LOTE', '4')))
+GUIOS_AI_ESPERA_SEGUNDOS = max(0, int(os.getenv('GUIOS_AI_ESPERA_SEGUNDOS', '5')))
+GUIOS_AI_RESERVA_SEGUNDOS = max(1, int(os.getenv('GUIOS_AI_RESERVA_SEGUNDOS', '120')))
+GUIOS_AI_REUSO_SEGUNDOS = max(1, int(os.getenv('GUIOS_AI_REUSO_SEGUNDOS', '3600')))

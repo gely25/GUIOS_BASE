@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.core.exceptions import ValidationError, PermissionDenied
+from apps.external_services.tests.fixtures_ia import IAConfiguradaPruebas
 from apps.application.services.lotes_hu09 import LotesHU09Service as Lotes
 from apps.data.models import LoteHU09
 from apps.external_services.ai_errors import AnalisisNoDisponible
@@ -15,7 +16,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
                    GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
-class LotesHU09Tests(TestCase):
+class LotesHU09Tests(IAConfiguradaPruebas, TestCase):
     @classmethod
     def setUpTestData(cls):
         CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')

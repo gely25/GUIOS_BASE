@@ -147,7 +147,7 @@ def _version_borrador_actual(v):
 def _analizar_ia(actor, eid, vid):
     """Encadena los servicios existentes: suficiencia (HU09) y propuesta preliminar (HU10) de un subfactor."""
     if not configurado():
-        raise ValidationError('Configure las claves y modelos de Gemini, OpenAI o Groq para usar el análisis externo.')
+        raise ValidationError('El análisis con IA no está disponible. Puede valorar manualmente.')
     modelo = modelo_activo()
 
     def fila():

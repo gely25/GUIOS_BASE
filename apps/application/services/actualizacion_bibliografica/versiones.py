@@ -38,7 +38,7 @@ def crear_borrador(actor_id):
     activa = repo.version_activa(bloquear=True)
     if activa is None:
         raise ValidationError('No hay versión activa del catálogo. '
-                              'Carga el catálogo con: python manage.py cargar_catalogo_guios')
+                              'Solicite al equipo de soporte que cargue el catálogo.')
     anterior = repo.version_borrador(bloquear=True)
     if anterior is not None:
         repo.eliminar_borrador(anterior)

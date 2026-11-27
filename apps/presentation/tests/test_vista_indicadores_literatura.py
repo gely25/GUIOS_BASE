@@ -33,7 +33,7 @@ class IndicadoresLiteraturaVistaTests(TestCase):
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.status_code, 200)
         self.assertIsNone(respuesta.context['indicadores'])
-        self.assertContains(respuesta, 'cargar_catalogo_guios')
+        self.assertContains(respuesta, 'Solicite al equipo de soporte que lo cargue.')
 
     def test_el_decisor_no_puede_verlos(self):
         self.client.force_login(self.decisor)

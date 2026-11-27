@@ -82,7 +82,7 @@ class RevisionHumanaService:
         # Mismo orden de bloqueo que HU09: evaluación, luego valoración.
         ev = PreguntasService._evaluacion(actor, evaluacion_id, escritura=True)
         if _lote_activo(ev):
-            raise ValidationError('Espere a que termine el análisis de HU09.')
+            raise ValidationError('Espere a que termine el análisis de suficiencia.')
         v = PreguntasService._valoracion_editable(ev, valoracion_id)
         fila = PreguntasService.contexto(actor, ev.pk, valoracion_id=v.pk)[0]
         if not isinstance(version, str) or version != _version(v, fila):
@@ -123,7 +123,7 @@ class RevisionHumanaService:
     def guardar_borrador(cls, actor, evaluacion_id, valoracion_id, modo, valor, justificacion, version, version_borrador):
         ev = PreguntasService._evaluacion(actor, evaluacion_id, escritura=True)
         if _lote_activo(ev):
-            raise ValidationError('Espere a que termine el análisis de HU09.')
+            raise ValidationError('Espere a que termine el análisis de suficiencia.')
         v = PreguntasService._valoracion_editable(ev, valoracion_id)
         fila = PreguntasService.contexto(actor, ev.pk, valoracion_id=v.pk)[0]
         if version != _version(v, fila):
@@ -150,7 +150,7 @@ class RevisionHumanaService:
         """Confirma únicamente borradores explícitamente seleccionados; todo o nada."""
         ev = PreguntasService._evaluacion(actor, evaluacion_id, escritura=True)
         if _lote_activo(ev):
-            raise ValidationError('Espere a que termine el análisis de HU09.')
+            raise ValidationError('Espere a que termine el análisis de suficiencia.')
         if not seleccion or len(seleccion) > 61 or len({s[0] for s in seleccion}) != len(seleccion):
             raise ValidationError('Seleccione entre 1 y 61 borradores distintos.')
         registros = []
@@ -176,7 +176,7 @@ class RevisionHumanaService:
         if ev.estado == Evaluacion.EN_PROCESO and ev.fecha_fin is not None:
             raise ValidationError('La evaluación no admite cambios.')
         if _lote_activo(ev):
-            raise ValidationError('Espere a que termine el análisis de HU09.')
+            raise ValidationError('Espere a que termine el análisis de suficiencia.')
         if not PreguntasService._valoraciones(ev).filter(pk=valoracion_id).exists():
             raise PermissionDenied('Subfactor no disponible.')
         v = ValoracionSubfactor.objects.select_for_update().get(pk=valoracion_id)

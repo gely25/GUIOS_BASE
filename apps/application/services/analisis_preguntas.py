@@ -12,6 +12,7 @@ from django.db import transaction
 from apps.data.models import AnalisisSuficiencia
 
 from apps.application.services.preguntas import PreguntasService, MAX_PENDIENTES
+from .tareas_ia import solicitar
 
 UMBRAL_SEMANTICO = .88
 
@@ -116,7 +117,7 @@ class AnalisisPreguntasService:
                 'preguntas': [{'texto': p['texto'], 'respuesta': p['respuesta'] if p['estado_respuesta'] == 'APORTADA' else '',
                                'estado_respuesta': p['estado_respuesta']} for p in fila['preguntas']],
             }
-            preguntas = analizador(entrada)
+            preguntas = solicitar(analizador, entrada, ['evaluacion', evaluacion_id, fila['valoracion_id']], actor.pk)
             if not isinstance(preguntas, (tuple, list)) or len(preguntas) > MAX_PENDIENTES or any(
                 not isinstance(p, str) or not p.strip() or len(p.strip()) > 1000 for p in preguntas
             ):

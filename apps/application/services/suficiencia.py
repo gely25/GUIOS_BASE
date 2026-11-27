@@ -8,6 +8,7 @@ from django.db import transaction
 from apps.data.models import AnalisisSuficiencia, HistorialSuficiencia
 from .preguntas import PreguntasService, MAX_PENDIENTES
 from .analisis_preguntas import _filtrar_semantica
+from .tareas_ia import solicitar
 
 MAX_RONDAS = 3
 
@@ -20,8 +21,8 @@ def _huella(fila):
     return sha256(json.dumps(fila, sort_keys=True, ensure_ascii=False, default=str).encode()).hexdigest()
 
 
-def _fila(actor, eid, vid):
-    fila = next((f for f in PreguntasService.contexto(actor, eid, valoracion_id=vid) if f['valoracion_id'] == vid), None)
+def _fila(evaluacion, vid):
+    fila = next(iter(PreguntasService._contexto(evaluacion, vid)), None)
     if fila is None or not fila['editable']:
         raise ValidationError('Subfactor no disponible para análisis.')
     return fila
@@ -54,26 +55,27 @@ def _validar(resultado, entrada):
 
 class SuficienciaService:
     @staticmethod
-    def adjuntar(filas):
+    def adjuntar(filas, huellas=None):
         registros = {r.valoracion_id: r for r in AnalisisSuficiencia.objects.filter(
             valoracion_id__in=[f['valoracion_id'] for f in filas])}
         for f in filas:
             r = registros.get(f['valoracion_id'])
-            vigente = bool(r and r.huella == _huella(f))
+            vigente = bool(r and r.huella == (huellas[f['valoracion_id']] if huellas is not None else _huella(f)))
             f['suficiencia'] = r
             f['suficiencia_vigente'] = vigente
         return filas
 
     @classmethod
-    def analizar(cls, actor, eid, vid, proveedor, modelo, vectorizador=None, generar_preguntas=True):
+    def analizar(cls, actor, eid, vid, proveedor, modelo, vectorizador=None, generar_preguntas=True,
+                 *, omitir_vigente=False):
         ev = PreguntasService._evaluacion(actor, eid)
         if ev.estado != 'EN_PROCESO' or ev.fecha_fin is not None:
             raise ValidationError('La evaluación no admite cambios.')
-        fila = _fila(actor, eid, vid)
+        fila = _fila(ev, vid)
         huella = _huella(fila)
         anterior = AnalisisSuficiencia.objects.filter(valoracion_id=vid).first()
         if anterior and anterior.huella == huella:
-            return anterior, 0
+            return (None if omitir_vigente else anterior), 0
         if any(p['estado_respuesta'] == 'PENDIENTE' for p in fila['preguntas']):
             raise ValidationError('Responda o descarte las preguntas pendientes antes de reevaluar.')
         rondas = anterior.rondas if anterior else 0
@@ -81,7 +83,7 @@ class SuficienciaService:
         if rondas >= MAX_RONDAS:
             estado, motivo, refs, elegidas = 'REVISION_MANUAL', 'Límite de rondas alcanzado. El decisor debe revisar la información disponible.', [], []
         else:
-            respuesta = proveedor(entrada)
+            respuesta = solicitar(proveedor, entrada, ['evaluacion', eid, vid, rondas, huella], actor.pk)
             modelo = getattr(proveedor, 'ultimo_identificador', None) or modelo
             estado, motivo, refs, preguntas = _validar(respuesta, entrada)
             conocidas = [p['texto'] for p in fila['preguntas'] + fila['preguntas_descartadas']]
@@ -97,11 +99,12 @@ class SuficienciaService:
             ev = PreguntasService._evaluacion(actor, eid, escritura=True)
             PreguntasService._valoracion_editable(ev, vid)
             actual = AnalisisSuficiencia.objects.filter(valoracion_id=vid).first()
-            if _huella(_fila(actor, eid, vid)) != huella or (actual.fecha if actual else None) != (anterior.fecha if anterior else None):
+            if _huella(_fila(ev, vid)) != huella or (actual.fecha if actual else None) != (anterior.fecha if anterior else None):
                 raise ValidationError('La información cambió durante el análisis. Repita la operación.')
-            nuevas = PreguntasService.registrar_vacios(actor, eid, vid, elegidas)
+            nuevas = PreguntasService.registrar_vacios(actor, eid, vid, elegidas) if elegidas else []
+            huella_final = _huella(_fila(ev, vid)) if nuevas else huella
             registro, _ = AnalisisSuficiencia.objects.update_or_create(valoracion_id=vid, defaults={
-                'huella': _huella(_fila(actor, eid, vid)), 'estado': estado, 'justificacion': motivo,
+                'huella': huella_final, 'estado': estado, 'justificacion': motivo,
                 'referencias': refs, 'rondas': rondas, 'modelo': modelo,
             })
             HistorialSuficiencia.objects.create(valoracion_id=vid, actor_id=actor.pk,

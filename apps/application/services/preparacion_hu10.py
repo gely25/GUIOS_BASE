@@ -22,18 +22,21 @@ class PreparacionHU10Service:
         return 'REVISION_MANUAL'
 
     @classmethod
-    def obtener(cls, actor, evaluacion_id):
+    def obtener(cls, actor, evaluacion_id, valoracion_id=None):
         """Contexto con procedencia explícita; las respuestas no son hechos certificados.
 
         HU10 debe comprobar vigencia antes de guardar su propia propuesta.
         No se permite valorar automáticamente una fila en revisión manual.
         """
-        ev = PreguntasService._evaluacion(actor, evaluacion_id)
+        return cls._preparar(PreguntasService._evaluacion(actor, evaluacion_id), valoracion_id)
+
+    @classmethod
+    def _preparar(cls, ev, valoracion_id=None):
         abierto = ev.estado == 'EN_PROCESO' and ev.fecha_fin is None
         activo = LoteHU09.objects.filter(evaluacion=ev, estado__in=('EN_COLA', 'EN_PROCESO')).exists()
-        filas = PreguntasService.contexto(actor, evaluacion_id)
+        filas = PreguntasService._contexto(ev, valoracion_id)
         huellas = {f['valoracion_id']: _huella(f) for f in filas}
-        SuficienciaService.adjuntar(filas)
+        SuficienciaService.adjuntar(filas, huellas)
         datos = []
         for f in filas:
             r = f['suficiencia']
@@ -55,11 +58,12 @@ class PreparacionHU10Service:
 
     @classmethod
     def validar_vigencia(cls, actor, eid, vid, huella):
-        """HU10 debe invocar dentro de su transacción, tras bloquear evaluación/valoración.
+        return cls._validar_vigencia(PreguntasService._evaluacion(actor, eid), vid, huella)
 
-        Devuelve el contexto vigente solo para una propuesta automática habilitada.
-        """
-        fila = next((f for f in cls.obtener(actor, eid)['subfactores'] if f['valoracion_id'] == vid), None)
+    @classmethod
+    def _validar_vigencia(cls, evaluacion, vid, huella):
+        """Valida el subfactor de una evaluación cuya autorización ya se comprobó."""
+        fila = next(iter(cls._preparar(evaluacion, vid)['subfactores']), None)
         if not fila or fila['estado'] != 'PROPUESTA_HABILITADA' or fila['huella'] != huella:
-            raise ValidationError('El contexto HU09 cambió o requiere revisión antes de valorar.')
+            raise ValidationError('La información cambió o requiere revisión antes de generar una valoración preliminar.')
         return fila

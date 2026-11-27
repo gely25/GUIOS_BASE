@@ -3,6 +3,7 @@ from datetime import date
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
+from apps.external_services.tests.fixtures_ia import IAConfiguradaPruebas
 from apps.application.services.preguntas import PreguntasService
 from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, EvaluacionFactor, Factor,
                               Organizacion, PreguntaComplementaria, Software, Subfactor, Usuario,
@@ -11,7 +12,7 @@ from apps.data.models import (CatalogoVersion, Dimension, Evaluacion, Evaluacion
 
 @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
                    GUIOS_AI_GEMINI_API_KEY='test-key', GUIOS_AI_GEMINI_MODEL='test-model')
-class PreguntasInterfazTests(TestCase):
+class PreguntasInterfazTests(IAConfiguradaPruebas, TestCase):
     @classmethod
     def setUpTestData(cls):
         CatalogoVersion.objects.filter(estado='ACTIVO').update(estado='HISTORICO')
@@ -276,7 +277,7 @@ class PreguntasInterfazTests(TestCase):
             self.assertEqual(self.post('suficiencia', valoracion=vid).status_code, 302)
         res = self.client.get(self.url, {'evaluacion': self.ev.pk})
         self.assertContains(res, 'Historial de suficiencia (1)')
-        self.assertContains(res, 'Preparación para HU10:')
+        self.assertContains(res, 'Preparación para la valoración:')
         self.assertContains(res, 'Sin fuentes')
 
 

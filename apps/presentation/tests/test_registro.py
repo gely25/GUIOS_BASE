@@ -1,4 +1,4 @@
-"""Pruebas del registro público (decisor o administrador)."""
+"""Pruebas del registro público y sus permisos."""
 
 from django.test import TestCase
 from django.urls import reverse
@@ -10,14 +10,14 @@ class RegistroTests(TestCase):
 
     def setUp(self):
         self.url = reverse('presentation:registro')
-        self.datos = {'nombre': '  Laura   Pérez ', 'correo': 'Laura@Empresa.com', 'rol': Usuario.DECISOR,
+        self.datos = {'nombre': '  Laura   Pérez ', 'correo': 'Laura@Empresa.com',
                       'password1': 'Clave-Segura-123', 'password2': 'Clave-Segura-123'}
 
     def test_se_abre_sin_sesion_y_el_login_enlaza_al_registro(self):
         res = self.client.get(self.url)
         self.assertContains(res, 'Crear cuenta')
         self.assertContains(res, 'Decisor')
-        self.assertContains(res, 'Administrador')
+        self.assertNotContains(res, 'name="rol"')
         self.assertContains(self.client.get(reverse('presentation:home')), self.url)
 
     def test_crea_un_decisor_guarda_la_clave_cifrada_e_inicia_sesion(self):
@@ -30,16 +30,11 @@ class RegistroTests(TestCase):
         self.assertTrue(usuario.check_password('Clave-Segura-123'))
         self.assertEqual(int(self.client.session['_auth_user_id']), usuario.pk)
 
-    def test_el_rol_es_obligatorio_y_solo_admite_los_dos_roles(self):
-        for rol in ('', 'SUPERUSUARIO'):
-            res = self.client.post(self.url, {**self.datos, 'rol': rol})
-            self.assertEqual(res.status_code, 200)
-        self.assertFalse(Usuario.objects.exists())
-
-    def test_crea_un_administrador_y_lo_lleva_a_su_inicio(self):
+    def test_un_rol_administrativo_inyectado_no_otorga_acceso(self):
         res = self.client.post(self.url, {**self.datos, 'rol': Usuario.ADMINISTRADOR})
-        self.assertRedirects(res, reverse('presentation:admin-inicio'))
-        self.assertEqual(Usuario.objects.get().rol, Usuario.ADMINISTRADOR)
+        self.assertRedirects(res, reverse('presentation:decisor-inicio'))
+        self.assertEqual(Usuario.objects.get().rol, Usuario.DECISOR)
+        self.assertEqual(self.client.get(reverse('presentation:admin-inicio')).status_code, 403)
 
     def test_rechaza_un_correo_repetido_sin_importar_mayusculas(self):
         Usuario.objects.create_user(correo='laura@empresa.com', password='x-Clave-123', nombre='Otra')
