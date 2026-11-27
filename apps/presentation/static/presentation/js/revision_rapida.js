@@ -102,13 +102,19 @@
     function pintar() {
         const c = {at: 0, li: 0, ok: 0};
         filas.forEach(r => c[tipo(r)]++);
-        q('rv-n-at').textContent = c.at; q('rv-n-li').textContent = c.li; q('rv-n-ok').textContent = c.ok;
+        const mostrarConteos = corriendo && !filas.some(r => r.ok || r.ia != null);
+        const globo = texto => mostrarConteos ? `<small>${texto}</small>` : '';
+        Object.entries(c).forEach(([estado, cantidad]) => {
+            const indicador = q('rv-n-' + estado);
+            indicador.textContent = mostrarConteos ? cantidad : '';
+            indicador.hidden = !mostrarConteos;
+        });
         q('rv-resumen').textContent = `${c.ok} de ${filas.length} confirmados`;
         q('rv-bar').style.width = Math.round(c.ok * 100 / filas.length) + '%';
         q('rv-map').innerHTML = dims.map(d => `<div class="rv-map-d"><b style="color:${color(d)}">${esc(d)}</b><div class="rv-sq">${filas.filter(r => r.dim === d).map(r => { const k = tipo(r); return `<i class="${k === 'ok' ? 'ok' : k === 'at' ? 'at' : ''}" title="${esc(r.fac)}"></i>`; }).join('')}</div></div>`).join('');
         document.querySelectorAll('.rv-tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
-        let dh = `<span>Dimensión</span><button class="rv-dchip" type="button" data-a="d" data-d="todas" aria-pressed="${dFilt === 'todas'}">Todas<small>${filas.length - c.ok} por revisar</small></button>`;
-        dims.forEach(d => { dh += `<button class="rv-dchip" type="button" data-a="d" data-d="${esc(d)}" aria-pressed="${dFilt === d}"><i style="background:${color(d)}"></i>${esc(d)}<small>${filas.filter(r => r.dim === d && !r.ok).length}</small></button>`; });
+        let dh = `<span>Dimensión</span><button class="rv-dchip" type="button" data-a="d" data-d="todas" aria-pressed="${dFilt === 'todas'}">Todas${globo((filas.length - c.ok) + ' por revisar')}</button>`;
+        dims.forEach(d => { dh += `<button class="rv-dchip" type="button" data-a="d" data-d="${esc(d)}" aria-pressed="${dFilt === d}"><i style="background:${color(d)}"></i>${esc(d)}${globo(filas.filter(r => r.dim === d && !r.ok).length)}</button>`; });
         q('rv-dimbar').innerHTML = dh;
         let lista = filas.filter(r => tipo(r) === tab && (dFilt === 'todas' || r.dim === dFilt));
         const nTodas = lista.length;
@@ -125,7 +131,7 @@
         } else {
             if (tab === 'at') {
                 h += '<p class="rv-hint">Sin evidencia suficiente o con una propuesta dudosa. Elige tu valoración y queda confirmada. El punto naranja marca lo que propuso la IA.</p>';
-                h += `<div class="rv-filt" role="group" aria-label="Filtrar"><button class="rv-fchip" type="button" data-a="f" data-f="todos" aria-pressed="${fAt === 'todos'}">Todos<small>${nTodas}</small></button><button class="rv-fchip" type="button" data-a="f" data-f="noSe" aria-pressed="${fAt === 'noSe'}">Sin propuesta<small>${nNoSe}</small></button><button class="rv-fchip" type="button" data-a="f" data-f="sinEv" aria-pressed="${fAt === 'sinEv'}">Sin evidencia<small>${nSinEv}</small></button>${nSinAn ? `<button class="rv-fchip" type="button" data-a="f" data-f="sinAn" aria-pressed="${fAt === 'sinAn'}">Pendientes de la IA<small>${nSinAn}</small></button>` : ''}</div>`;
+                h += `<div class="rv-filt" role="group" aria-label="Filtrar"><button class="rv-fchip" type="button" data-a="f" data-f="todos" aria-pressed="${fAt === 'todos'}">Todos${globo(nTodas)}</button><button class="rv-fchip" type="button" data-a="f" data-f="noSe" aria-pressed="${fAt === 'noSe'}">Sin propuesta${globo(nNoSe)}</button><button class="rv-fchip" type="button" data-a="f" data-f="sinEv" aria-pressed="${fAt === 'sinEv'}">Sin evidencia${globo(nSinEv)}</button>${nSinAn ? `<button class="rv-fchip" type="button" data-a="f" data-f="sinAn" aria-pressed="${fAt === 'sinAn'}">Pendientes de la IA${globo(nSinAn)}</button>` : ''}</div>`;
             }
             if (tab === 'li') {
                 const todas = lista.every(r => r.sel);
@@ -233,6 +239,7 @@
         const base = objetivos.length - pendientes.length;
         const progreso = () => { q('rv-ia-t').innerHTML = `La IA está analizando la evidencia: <b>${base + hechos} de ${objetivos.length}</b>. Puedes ir revisando mientras tanto.`; };
         progreso();
+        pintar();
         async function trabajador() {
             while (!fatal && i < pendientes.length) {
                 const o = pendientes[i++];
